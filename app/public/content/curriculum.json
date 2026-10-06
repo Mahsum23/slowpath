@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "title": "slowpath",
-  "generatedAt": "2026-10-03T08:41:08.376Z",
+  "generatedAt": "2026-10-06T10:09:17.347Z",
   "weeks": [
     {
       "id": "track-cpp",
@@ -11,7 +11,7 @@
       "days": 8,
       "availableDays": 8,
       "url": "content/weeks/track-cpp.json",
-      "contentHash": "sha256:2bcbf8bfeb7c33c6c73729546ecc1d0d",
+      "contentHash": "sha256:8e07864176e6d0113a6d59062e27041d",
       "available": true
     },
     {
@@ -22,7 +22,7 @@
       "days": 10,
       "availableDays": 10,
       "url": "content/weeks/track-sql.json",
-      "contentHash": "sha256:f4c9171e214407e9821bc5ecfc68dc5e",
+      "contentHash": "sha256:bd7066cd43e5310ca1cee4b889287a27",
       "available": true
     },
     {
@@ -33,7 +33,7 @@
       "days": 6,
       "availableDays": 6,
       "url": "content/weeks/track-go.json",
-      "contentHash": "sha256:34354f44cb9ac6d26e1d1dac08446589",
+      "contentHash": "sha256:8262e2580b4b9f39508014a9dd0b2bd4",
       "available": true
     }
   ]

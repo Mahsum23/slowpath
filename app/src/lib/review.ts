@@ -67,16 +67,19 @@ export function grade(
   result: Grade,
   now: Date = new Date(),
   rng: Rng = Math.random,
-  opts: { early?: boolean } = {},
+  opts: { early?: boolean; reflex?: boolean } = {},
 ): ReviewCard {
   const seen = card.seen + 1;
   const lastAt = now.toISOString();
+  // A right answer too quick to have read the question is recognition, not recall; any
+  // slower or wrong answer clears the count.
+  const reflex = result === 'good' && opts.reflex ? (card.reflex ?? 0) + 1 : 0;
 
   // Practising a card that wasn't due yet can hurt your schedule but not flatter it.
   // Getting it right when you asked for it early is weak evidence — you chose the card
   // and it was still fresh — so it records the attempt and leaves the interval alone.
   // Failing it is strong evidence either way, and still pulls the card back.
-  if (opts.early && result === 'good') return { ...card, seen, lastAt };
+  if (opts.early && result === 'good') return { ...card, seen, lastAt, reflex };
 
   if (result === 'again') {
     return {
@@ -87,6 +90,7 @@ export function grade(
       seen,
       lapses: card.lapses + 1,
       lastAt,
+      reflex: 0,
     };
   }
 
@@ -102,8 +106,15 @@ export function grade(
     seen,
     lapses: card.lapses,
     lastAt,
+    reflex,
   };
 }
+
+/** Right on reflex this many times running: the card no longer measures anything. */
+export const WORN_AT = 2;
+
+/** Whether a card is being answered from the shape of its text rather than by thinking. */
+export const isWorn = (rc: ReviewCard | undefined): boolean => (rc?.reflex ?? 0) >= WORN_AT;
 
 /**
  * How many cards were answered on local date `on`.
@@ -134,6 +145,19 @@ export interface CardRef {
   dayId: string;
   /** On a quiz card, which question; on a parsons card, which block; on a write card, which challenge. */
   questionId?: string;
+  /**
+   * Set on a card dealt because of a miss, never stored: what it is a follow-up *about*.
+   * A forged follow-up (`about` a card id) is a one-off the model writes about that miss.
+   */
+  followUp?: {
+    label: string;
+    about: string;
+    brief?: string;
+    /** Why it was dealt: after a miss, or because the original had gone to reflex. */
+    reason?: 'miss' | 'reflex';
+    /** The worn card whose schedule this stands in for: its result is credited there. */
+    credit?: string;
+  };
 }
 
 const KINDS = new Set<string>(['quiz', 'explain', 'forge', 'parsons', 'write', 'drill']);
@@ -317,6 +341,17 @@ export function dueCards(deck: CardRef[], state: ReviewState, on: string): CardR
  * that aren't due at all, which is the whole "ask me when I'm not ready" idea: the
  * schedule decides what you *owe*, not what you can be asked.
  */
+/** One card, chosen with probability proportional to its weight. */
+function weighted(xs: CardRef[], weight: (c: CardRef) => number, rng: Rng): CardRef {
+  const ws = xs.map((c) => Math.max(0.01, weight(c)));
+  let r = rng() * ws.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < xs.length; i++) {
+    r -= ws[i];
+    if (r <= 0) return xs[i];
+  }
+  return xs[xs.length - 1];
+}
+
 /** How often a reorder card sits out a deal when other kinds are available. */
 export const PARSONS_SKIP = 0.5;
 
@@ -328,6 +363,8 @@ export function pickNext(
   exclude: ReadonlySet<string> = new Set(),
   /** The kind just dealt: the next card is of another kind whenever another kind exists. */
   avoid?: CardKind,
+  /** How much more a card should count when choosing (focus.ts: cards in a shaky theme). */
+  weight?: (c: CardRef) => number,
 ): CardRef | null {
   let pool = deck.filter((c) => !exclude.has(c.id));
   if (!pool.length) return null;
@@ -345,9 +382,10 @@ export function pickNext(
   const due = pool.filter((c) => isDue(state.cards[c.id], on));
   const resting = pool.filter((c) => !isDue(state.cards[c.id], on));
 
-  if (due.length && resting.length && rng() < WILDCARD_CHANCE) return shuffle(resting, rng)[0];
-  if (due.length) return shuffle(due, rng)[0];
-  return shuffle(resting, rng)[0];
+  const choose = (xs: CardRef[]) => (weight ? weighted(xs, weight, rng) : shuffle(xs, rng)[0]);
+  if (due.length && resting.length && rng() < WILDCARD_CHANCE) return choose(resting);
+  if (due.length) return choose(due);
+  return choose(resting);
 }
 
 /**

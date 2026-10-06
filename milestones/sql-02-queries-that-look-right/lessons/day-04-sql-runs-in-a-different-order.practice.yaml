@@ -42,6 +42,7 @@ setup: |
 write:
   # --- WHERE before GROUP BY, HAVING after it -----------------------------------
   - id: paid-over-100
+    tag: WHERE vs HAVING
     prompt: >
       Which customers have **paid** more than 150 in total? Return `customer_id` and
       `total`, by customer_id. Cancelled and pending orders must not count.
@@ -58,6 +59,7 @@ write:
       - SELECT customer_id, sum(amount) AS total FROM orders WHERE status = 'paid' AND amount > 150 GROUP BY customer_id ORDER BY customer_id;
 
   - id: busy-customers
+    tag: WHERE vs HAVING
     prompt: >
       Which customers placed at least two orders worth more than 50 each? Return
       `customer_id` and that count as `big_orders`, by customer_id.
@@ -74,6 +76,7 @@ write:
       - SELECT customer_id, count(*) AS big_orders FROM orders WHERE amount > 50 GROUP BY customer_id ORDER BY customer_id;
 
   - id: crowded-cities
+    tag: WHERE vs HAVING
     prompt: >
       Return each city with at least two customers: `city` and `customers`, by city.
     hint: A condition on a count can only be checked once the groups exist.
@@ -88,6 +91,7 @@ write:
       - SELECT city, count(*) AS customers FROM customers GROUP BY city HAVING count(*) > 2 ORDER BY city;
 
   - id: paid-and-all
+    tag: aggregate filters
     prompt: >
       For every customer who has orders: `customer_id`, `orders` (all of them) and
       `paid` (only the paid ones), by customer_id. One query, one pass — filtering on
@@ -105,6 +109,7 @@ write:
       - SELECT customer_id, count(*) AS orders, count(status) AS paid FROM orders GROUP BY customer_id ORDER BY customer_id;
 
   - id: share-of-orders
+    tag: aggregate filters
     prompt: >
       For each status: `status` and its `share` of all orders, as a fraction rounded to
       2 decimal places, by status.
@@ -120,6 +125,7 @@ write:
 
   # --- names: what each clause can see ------------------------------------------
   - id: filter-on-net
+    tag: what a clause can see
     prompt: >
       Return `id` and `net` (the amount times 0.8) for orders whose net is over 50, by
       id. Write the expression `amount * 0.8` **once** and filter on the name.
@@ -137,6 +143,7 @@ write:
       - SELECT id, net FROM (SELECT id, amount * 0.8 AS net FROM orders) o WHERE net >= 50 ORDER BY id;
 
   - id: top-gross
+    tag: what a clause can see
     prompt: >
       The three orders with the highest `gross` (amount times 1.2): `id` and `gross`,
       highest first, ties by id. Sort by the alias.
@@ -148,6 +155,7 @@ write:
       - SELECT id, amount * 1.2 AS gross FROM orders LIMIT 3;
 
   - id: rounded-sort
+    tag: what a clause can see
     prompt: >
       Return `id` and `gross` (amount times 1.2) for every order, sorted by gross
       **rounded to the nearest 50**, highest first, then by id. `ORDER BY round(gross / 50)`
@@ -160,6 +168,7 @@ write:
       - SELECT id, amount * 1.2 AS gross FROM orders ORDER BY round(gross / 50) DESC, id;
 
   - id: tags-any-case
+    tag: what a clause can see
     prompt: >
       The `tags` table has labels in mixed case (`Go`, `go`). Count them case-insensitively:
       `label` in lower case, and `uses`, by label. Each label must appear once.
@@ -174,6 +183,7 @@ write:
       - SELECT label, count(*) AS uses FROM tags GROUP BY label ORDER BY label;
 
   - id: per-month
+    tag: GROUP BY rules
     prompt: >
       Orders per month of `placed`: `month` (the first day of the month, as a date) and
       `orders`, in month order.
@@ -189,6 +199,7 @@ write:
 
   # --- grouping rules -------------------------------------------------------------
   - id: by-the-key
+    tag: GROUP BY rules
     prompt: >
       For each customer with orders: `id`, `name`, `city` and `orders` (how many), by id.
       Group by as little as Postgres will let you: just the customers' primary key.
@@ -207,6 +218,7 @@ write:
       - SELECT c.id, c.name, c.city, count(*) AS orders FROM customers c JOIN orders o ON o.customer_id = c.id GROUP BY c.id, c.name, c.city ORDER BY c.id;
 
   - id: biggest-spender
+    tag: GROUP BY rules
     prompt: >
       The customer with the largest **paid** total: `customer_id` and `total`. (Nested
       aggregates like `max(sum(amount))` aren't allowed — sort the groups instead.)
@@ -223,6 +235,7 @@ write:
       - SELECT customer_id, sum(amount) AS total FROM orders WHERE status = 'paid' GROUP BY customer_id ORDER BY total LIMIT 1;
 
   - id: distinct-by-max
+    tag: ORDER BY and LIMIT
     prompt: >
       Every `customer_id` that has an order, once each, ordered by their single largest
       order, biggest first. (`SELECT DISTINCT customer_id … ORDER BY amount` is an error.)
@@ -234,6 +247,7 @@ write:
       - SELECT customer_id FROM orders GROUP BY customer_id ORDER BY customer_id;
 
   - id: how-many-customers
+    tag: counting
     prompt: >
       How many different customers have at least one **paid** order? One row, one column
       named `customers`.
@@ -246,6 +260,7 @@ write:
 
   # --- the empty group ------------------------------------------------------------
   - id: refunds-zero
+    tag: aggregates over nothing
     prompt: >
       Return the total amount of `'refunded'` orders as one value named `total` — `0`
       when there are none, never NULL.
@@ -257,6 +272,7 @@ write:
       - SELECT coalesce(sum(amount), 0) AS total FROM orders WHERE status = 'refunded' GROUP BY status;
 
   - id: always-one-row
+    tag: aggregates over nothing
     prompt: >
       A dashboard tile needs exactly one row for customer 5 even though they have no
       orders: `orders` (the count) and `spent` (the total, 0 if none).
@@ -268,6 +284,7 @@ write:
       - SELECT count(*) AS orders, sum(amount) AS spent FROM orders WHERE customer_id = 5;
 
   - id: over-target
+    tag: aggregates over nothing
     prompt: >
       Has the shop taken more than 600 in **paid** orders? One row: `paid_total`, and a
       boolean `over_target`.
@@ -280,6 +297,7 @@ write:
 
   # --- ORDER BY, then LIMIT -------------------------------------------------------
   - id: second-largest
+    tag: ORDER BY and LIMIT
     prompt: >
       The second-largest order: `id` and `amount`, with ties broken by the smaller id.
     hint: LIMIT runs last, after the sort — and it can skip as well as take.
@@ -290,6 +308,7 @@ write:
       - SELECT id, amount FROM orders ORDER BY amount, id LIMIT 1 OFFSET 1;
 
   - id: latest-per-status
+    tag: ORDER BY and LIMIT
     prompt: >
       For each status, the most recent `placed` date: `status` and `latest`, newest
       first, ties by status.
@@ -302,6 +321,7 @@ write:
 
 drill:
   - id: alias-in-where
+    tag: what a clause can see
     kind: predict
     code: |
       SELECT id, amount * 2 AS doubled FROM orders WHERE doubled > 100;
@@ -324,6 +344,7 @@ drill:
           problem is the name.
 
   - id: having-ordered
+    tag: WHERE vs HAVING
     kind: predict
     code: |
       -- statuses: 7 paid, 3 cancelled, 2 pending
@@ -347,6 +368,7 @@ drill:
           It's a SQL-92 convention that every major engine still honours.
 
   - id: sum-of-nothing
+    tag: aggregates over nothing
     kind: predict
     code: |
       -- no order has status 'refunded'
@@ -371,6 +393,7 @@ drill:
           you always get exactly one row.
 
   - id: grouped-nothing
+    tag: aggregates over nothing
     kind: predict
     code: |
       SELECT status, sum(amount) FROM orders WHERE status = 'refunded' GROUP BY status;
@@ -392,6 +415,7 @@ drill:
           That one-row behaviour belongs to aggregates *without* GROUP BY.
 
   - id: distinct-order-by
+    tag: ORDER BY and LIMIT
     kind: find
     code: |
       SELECT DISTINCT status FROM orders ORDER BY amount;
@@ -413,6 +437,7 @@ drill:
           sort key just has to be one of the things DISTINCT kept.
 
   - id: alias-in-group-by
+    tag: what a clause can see
     kind: predict
     code: |
       SELECT status AS s, count(*) FROM orders GROUP BY s ORDER BY s;
@@ -435,6 +460,7 @@ drill:
           `GROUP BY status` would.
 
   - id: alias-in-having
+    tag: what a clause can see
     kind: predict
     code: |
       SELECT status AS s, count(*) FROM orders GROUP BY s HAVING s <> 'pending';
@@ -455,6 +481,7 @@ drill:
           HAVING is exactly where aggregates *are* allowed. The complaint is about the name.
 
   - id: having-plain-column
+    tag: WHERE vs HAVING
     kind: predict
     code: |
       SELECT status, count(*) FROM orders GROUP BY status HAVING status = 'paid';
@@ -478,6 +505,7 @@ drill:
           still holds its 7 orders.
 
   - id: nested-aggregate
+    tag: GROUP BY rules
     kind: predict
     code: |
       SELECT customer_id, max(sum(amount)) FROM orders GROUP BY customer_id;
@@ -499,6 +527,7 @@ drill:
           That would need a second level of grouping, which a single SELECT doesn't have.
 
   - id: group-by-name
+    tag: GROUP BY rules
     kind: find
     code: |
       SELECT c.name, c.city, count(*)
@@ -525,6 +554,7 @@ drill:
           mean for a group of rows.
 
   - id: alias-shadows-column
+    tag: what a clause can see
     kind: predict
     code: |
       -- tags.label: 'SQL', 'sql', 'Go', 'go', 'go', 'C++'
@@ -549,6 +579,7 @@ drill:
           group: c++ 1, go 1, go 2, sql 1, sql 1.
 
   - id: counting-three-ways
+    tag: counting
     kind: predict
     code: |
       -- 12 orders, from 4 customers, in 3 statuses

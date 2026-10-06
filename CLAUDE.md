@@ -498,6 +498,37 @@ What makes a bank good, as opposed to big:
 
 
 
+## The deck pays attention: misses pull in more, and reflex retires a card
+
+He asked for review that is *intelligent*: when he makes a mistake that idea should get high
+focus, with more diverse challenges on the same theme. And he named the opposite failure:
+repetitive questions he answers without reading the question, "overlearning — mechanical and
+useless". Both are handled in `focus.ts` (pure, tested in `test-focus.mjs`), and both have to
+survive the next person who edits the deck:
+
+- **Every card has a theme.** Banks tag each item with `tag:` — a short human phrase for the
+  one idea it tests (`partial indexes`, `what a clause can see`), finer than the day. Write
+  banks with 3–6 themes of ~4–8 items. Untagged items fall back to their day. The tag is
+  shown to him as "Focus: …", so it must read like something a person would say.
+- **A miss earns follow-ups.** Missing a card queues up to three more, from the same theme
+  first, of different *kinds* from each other and from the miss (a second angle teaches what
+  the same angle again cannot), preferring practice-bank items he has never seen. Unless the
+  mentor is unreachable, the second is a question the model writes about *that exact miss*
+  (`forgePrompt(…, target)`): different shape, different data, never the same trap with new
+  numbers, told what has already been asked. It has no schedule of its own. Capped at 9
+  follow-ups a sitting so one bad day cannot turn the deck into one topic. Never in a
+  practice round, which is a measurement.
+- **A hot theme is dealt more.** Heat is derived from the schedule (a card whose last answer
+  was a miss; halves every four days), never stored, and weights `pickNext`. Today says "Leaning on …".
+- **Reflex retires a card.** Options are reshuffled on every showing (never the authored
+  order). A right answer given faster than the question can be read (under 35% of ~250 wpm,
+  with a floor) is a *reflex*; two in a row (`WORN_AT`) and the card is no longer dealt as
+  itself: a model-written question on the same idea takes its place, or a sibling card if
+  there is no key, and its result is credited to the worn card's schedule. Speed is a proxy,
+  so it only ever *changes the question* — it never marks him wrong.
+- **Follow-up and fresh-angle cards say why** ("Fresh angle: … you'd started answering the
+  original on reflex"). Nothing silent.
+
 A task needs a machine, and not having one is the most common reason a day stalls
 half-finished — which is how the habit dies. So every day carries a **drill** as well as a
 task: two to four exercises in `day-NN-<slug>.drill.yaml`, same answer-key shape as the
