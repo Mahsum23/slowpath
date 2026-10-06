@@ -15,6 +15,7 @@ setup: |
 
 challenges:
   - id: big-spenders
+    tag: WHERE vs HAVING
     prompt: >
       Which customers have **paid** more than 150 in total? Return `customer` and
       `total`, ordered by customer. Cancelled orders must not count towards the sum.
@@ -28,6 +29,7 @@ challenges:
       ORDER BY customer;
 
   - id: filter-an-alias
+    tag: what a clause can see
     prompt: >
       Return `id` and `gross` (the amount times 1.2) for the orders whose gross is over
       100, highest first. `WHERE gross > 100` is an error, so find the way around it
@@ -40,6 +42,7 @@ challenges:
       ORDER BY gross DESC;
 
   - id: zero-not-null
+    tag: aggregates over nothing
     prompt: >
       Return the total amount of orders over 1000, as a single value that is `0` when
       there are none — not NULL.
@@ -48,6 +51,7 @@ challenges:
       SELECT coalesce(sum(amount), 0) AS total FROM orders WHERE amount > 1000;
 
   - id: per-customer
+    tag: ORDER BY and LIMIT
     prompt: >
       Return each customer and how many orders they have, most orders first, ties
       broken by customer name.

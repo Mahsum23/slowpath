@@ -228,7 +228,9 @@
           {#if app.dueNow.length === 1}1 card due{:else if app.dueNow.length}{app.dueNow.length} cards due{:else}Nothing due — practise anyway{/if}
         </strong>
         <em>
-          {#if app.dueNow.length}From days you finished a while ago{:else}Answering early can't push a card further out{/if}
+          {#if app.heats.length}
+            Leaning on <b>{app.heats[0].label}</b> — you've been missing it
+          {:else if app.dueNow.length}From days you finished a while ago{:else}Answering early can't push a card further out{/if}
         </em>
       </span>
       <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" /></svg>
@@ -601,6 +603,11 @@
       background-position: -200% 0;
     }
   }
+  .strip em b {
+    font-weight: 700;
+    color: var(--text);
+  }
+
   .nextup {
     margin: 12px 0 0;
     font-size: 13px;

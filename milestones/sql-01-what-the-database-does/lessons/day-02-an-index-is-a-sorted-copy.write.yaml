@@ -6,6 +6,7 @@ setup: |
 
 challenges:
   - id: expression-index
+    tag: expression indexes
     prompt: >
       Queries keep filtering on `lower(name)`, and the plain index on `name` can't help.
       Create an index on `s` that can.
@@ -17,6 +18,7 @@ challenges:
       WHERE tablename = 's' AND indexdef LIKE '%(lower(name))%';
 
   - id: covering-index
+    tag: covering indexes
     prompt: >
       Create an index on `s(name)` that also carries `note` as a payload column, so a
       query for just those two can be answered from the index alone. Use the clause
@@ -29,6 +31,7 @@ challenges:
       FROM pg_indexes WHERE tablename = 's' AND indexname <> 's_pkey';
 
   - id: prefix-index
+    tag: prefix searches
     prompt: >
       `WHERE name LIKE 'name7%'` can't use an ordinary index when the database's
       collation is not C. Create an index on `s(name)` that sorts by the `"C"` collation.

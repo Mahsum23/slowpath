@@ -23,6 +23,8 @@ export interface QuizOption {
 
 export interface QuizQuestion {
   id: string;
+  /** The one idea this tests, in a phrase ("partial indexes"); see focus.ts. Optional. */
+  tag?: string | null;
   prompt: string;
   options: QuizOption[];
 }
@@ -77,6 +79,7 @@ export interface Day {
  */
 export interface WriteChallenge {
   id: string;
+  tag?: string | null;
   prompt: string;
   solution: string;
   hint: string | null;
@@ -351,6 +354,12 @@ export interface ReviewCard {
   seen: number;
   lapses: number;
   lastAt: string | null;
+  /**
+   * Consecutive right answers given faster than the question can have been read. Absent on
+   * cards from before this existed. Two in a row means the card is answered by reflex, not
+   * recall, and it stops being dealt as itself (see isWorn in review.ts).
+   */
+  reflex?: number;
 }
 
 export interface ReviewState {

@@ -28,7 +28,8 @@ import { deriveStreak, displayedStreak, atRisk } from './streak';
 import { evaluate as evaluateBadges } from './badges';
 import { deriveXp, XP_CLEAN_SWEEP, XP_SESSION } from './xp';
 import { localDateOf, today } from './date';
-import { emptyPractice, finishRound, needsPractice, recordFirst } from './practice';
+import { bankCards, emptyPractice, finishRound, needsPractice, recordFirst } from './practice';
+import { heatMap, type Heat } from './focus';
 
 export type DayState = 'done' | 'current' | 'unlocked' | 'locked' | 'upcoming';
 
@@ -88,6 +89,39 @@ class AppStore {
     );
   }
 
+  /** A day, by id, among the days on this device (any track: a card can come from either). */
+  dayById = (dayId: string): Day | undefined => {
+    for (const w of this.weeks) {
+      const d = w.days.find((x) => x.id === dayId);
+      if (d) return d;
+    }
+    return undefined;
+  };
+
+  /**
+   * Every card that could be put in front of you after a miss: the deck, plus practice-bank
+   * items no round has dealt yet. Those are the freshest follow-ups there are — a question
+   * on the idea you just missed that you have never seen — so a miss reaches into the bank
+   * for them rather than waiting for a round to.
+   */
+  get followPool(): CardRef[] {
+    const have = new Set(this.deck.map((c) => c.id));
+    const extra: CardRef[] = [];
+    for (const { day } of this.availableDays) {
+      if (!this.progress.days[day.id]?.theoryDone) continue;
+      const first = this.progress.days[day.id]?.practice?.first ?? {};
+      for (const c of bankCards(day)) {
+        if (!(`${c.kind}:${c.questionId}` in first) && !have.has(c.id)) extra.push(c);
+      }
+    }
+    return [...this.deck, ...extra];
+  }
+
+  /** The themes with something to worry about right now, hottest first. */
+  get heats(): Heat[] {
+    return heatMap(this.deck, this.progress.review, this.dayById);
+  }
+
   get dueNow(): CardRef[] {
     return dueCards(this.deck, this.progress.review, today());
   }
@@ -127,10 +161,10 @@ class AppStore {
   /**
    * @param early Answered outside its schedule, in a practice run you asked for.
    */
-  async gradeCard(id: string, result: Grade, early = false) {
+  async gradeCard(id: string, result: Grade, early = false, reflex = false) {
     const review = this.progress.review;
     const card = review.cards[id] ?? newCard();
-    review.cards[id] = grade(card, result, new Date(), Math.random, { early });
+    review.cards[id] = grade(card, result, new Date(), Math.random, { early, reflex });
     await this.persist();
   }
 

@@ -31,6 +31,7 @@
       "drill": [
         {
           "id": "d1",
+          "tag": null,
           "kind": "find",
           "code": "package main\n\nimport (\n\t\"fmt\"\n\t\"os\"\n)\n\nfunc main() {\n\tfmt.Println(\"starting\")\n}",
           "prompt": "This is a complete file. Does it build, and if not, what stops it?",
@@ -59,6 +60,7 @@
         },
         {
           "id": "d2",
+          "tag": null,
           "kind": "predict",
           "code": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tvar count int\n\tcount++\n\tfmt.Println(count)\n}",
           "prompt": "What does this print?",
@@ -87,6 +89,7 @@
         },
         {
           "id": "d3",
+          "tag": null,
           "kind": "choose",
           "code": null,
           "prompt": "You are mid-debug. You commented out the only line that used a variable, and now the build fails. You want the build back without deleting your work. What do you write?",
@@ -126,6 +129,7 @@
             "hint": "A file that builds an executable belongs to one particular package, and something has to be imported before it can print.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": "Only package `main` produces an executable, and `main` takes no arguments and returns nothing — the exit code is `os.Exit`'s job, not a return value.",
             "requires": [
@@ -155,6 +159,7 @@
             "hint": "There is an assignment whose target is the identifier that means \"discard\".",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "func main() {\n\tcount := 42\n\tfmt.Println(\"hi\")\n\t// your line goes here\n}",
             "note": "The blank identifier is the compiler's \"yes, I know\". It is deliberately ugly so that it doesn't survive a code review by accident — and note the rule is the `gc` toolchain's, not the language's: the spec only says a compiler *may* reject unused variables.",
             "requires": [
@@ -172,6 +177,7 @@
             "hint": "One character goes where the package's local name would normally go.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": "This is the standard way to register something with a program you never call into directly — importing `net/http/pprof` is how a live profiler gets bolted onto a running server.",
             "requires": [
@@ -193,6 +199,7 @@
             "hint": "The grouped form is the same keyword followed by a parenthesised list, one path per line.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": "`gofmt` sorts the paths inside a group alphabetically and keeps them separated from third-party imports by a blank line. Every one of them must be used, or the build fails.",
             "requires": [
@@ -217,6 +224,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "`go run hello.go` executes your program immediately, the way `python script.py` does. What is it actually doing underneath, and how does that differ from an interpreter?",
           "options": [
             {
@@ -243,6 +251,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "Your Go build fails with `\"os\" imported and not used`. Give two separate reasons the language designers made this an error rather than a warning.",
           "options": [
             {
@@ -269,6 +278,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "A Go \"hello world\" binary is around 2 MB where the C equivalent is a few kilobytes. What is in there, and what do you get in exchange for the size?",
           "options": [
             {
@@ -295,6 +305,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "You are mid-debug, you commented out the only line using a variable, and Go now refuses to compile. What is the one-line escape hatch, and why is it written to be slightly ugly?",
           "options": [
             {
@@ -321,6 +332,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "What does `import _ \"net/http/pprof\"` do, given that the blank identifier means you never refer to the package by name?",
           "options": [
             {
@@ -376,6 +388,7 @@
       "drill": [
         {
           "id": "d1",
+          "tag": null,
           "kind": "predict",
           "code": "total := 1\nif total > 0 {\n\ttotal := 2\n\ttotal++\n\t_ = total\n}\nfmt.Println(total)",
           "prompt": "What does this print?",
@@ -404,6 +417,7 @@
         },
         {
           "id": "d2",
+          "tag": null,
           "kind": "find",
           "code": "var n int = 5\nvar f float64 = 2\nfmt.Println(n / f)",
           "prompt": "Both values are numbers and both are 64 bits wide. What happens here?",
@@ -443,6 +457,7 @@
             "hint": "`var name type` on its own line gives the variable its type's zero value; a pointer's is `nil`.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "func main() {\n\t// your code\n}",
             "note": "There is no uninitialised memory in Go: every variable starts as its type's zero value (`0`, `\"\"`, `nil`, `false`), which is why the C-style \"forgot to initialise\" bug mostly cannot happen.",
             "requires": [
@@ -477,6 +492,7 @@
             "hint": "The short declaration operator is only legal inside a function body.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": "`:=` is function-bodies-only. At package level every declaration has to start with a keyword (`var`, `const`, `func`, `type`), which makes a file's top level parseable without looking ahead.",
             "requires": [
@@ -503,6 +519,7 @@
             "hint": "One character fewer in the operator.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "count := 1\nif true {\n\tcount := 2\n\t_ = count\n}\nfmt.Println(\"outer count is\", count)",
             "note": "`:=` always creates a *new* variable in the current scope, even when a variable of that name exists in an outer one — and nothing warns you. The compiler only complains when a variable is left unused, which `_ = count` here deliberately prevents.",
             "requires": [
@@ -525,6 +542,7 @@
             "hint": "Go never converts between numeric types for you; a conversion looks like a function call named after the target type.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "var a int = 3\nvar b int64 = 4",
             "note": "Go has no implicit numeric conversions at all — not even `int` to `int64`, which are the same size on a 64-bit machine. The designers' argument: C's silent promotions are a famous source of bugs, and a conversion you must write is a conversion you can see.",
             "requires": [
@@ -545,6 +563,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "In Go, what is the value of `var count int` before you assign anything to it, and how does that differ from `int count;` inside a function in C?",
           "options": [
             {
@@ -571,6 +590,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "Name two zero values deliberately chosen so the zero value is immediately usable, and say what you can do with them without initialising anything.",
           "options": [
             {
@@ -597,6 +617,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "You write `count := 2` inside an `if` block when `count` already exists outside it. What happens to the outer variable, and what is this mistake called?",
           "options": [
             {
@@ -623,6 +644,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "Go refuses to compile `a + b` where `a` is `int` and `b` is `int64`, even on a machine where both are 64 bits wide. Why, and what class of C bug does it prevent?",
           "options": [
             {
@@ -649,6 +671,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "Why can `const huge = (1 << 62) * 4` compile in Go when no Go integer type can hold that value?",
           "options": [
             {
@@ -703,6 +726,7 @@
       "drill": [
         {
           "id": "d1",
+          "tag": null,
           "kind": "predict",
           "code": "xs := []int{1, 2, 3, 4}\nys := xs[:2]\nys = append(ys, 99)\nfmt.Println(xs, ys)",
           "prompt": "What are the two slices after this runs?",
@@ -731,6 +755,7 @@
         },
         {
           "id": "d2",
+          "tag": null,
           "kind": "predict",
           "code": "func grow(s []int) { s = append(s, 4) }\n\nfunc main() {\n\txs := make([]int, 0, 8)\n\txs = append(xs, 1, 2, 3)\n\tgrow(xs)\n\tfmt.Println(xs, len(xs), cap(xs))\n}",
           "prompt": "`grow` appends to the slice it was given, and there is spare capacity for it. What does main print?",
@@ -770,6 +795,7 @@
             "hint": "The built-in that allocates slices, maps and channels takes the type, then a length, then an optional capacity.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": "Pre-sizing with `make([]T, 0, n)` avoids the repeated grow-and-copy that `append` does when it runs out of room; the capacity is a promise about how many appends are free.",
             "requires": [
@@ -791,6 +817,7 @@
             "hint": "`append` returns the slice to use from now on — it can't update your variable for you.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "s := []int{1, 2, 3}",
             "note": "`append` may have to allocate a new, bigger array, so it hands back a new slice header and the caller decides what to do with it. Calling it and discarding the result is a compile error — the language refuses to let the call silently do nothing.",
             "requires": [
@@ -812,6 +839,7 @@
             "hint": "`s[low:high:max]` — the third number caps the capacity.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "full := []int{1, 2, 3, 4, 5}",
             "note": "A plain `full[:2]` has capacity 5, so `append(head, 99)` writes into `full`'s third slot. The third index sets the capacity to `max-low`, so the next append has no room and copies into a fresh array instead.",
             "requires": [
@@ -829,6 +857,7 @@
             "hint": "One idiom appends the bytes onto a nil slice; another allocates exactly 60 and copies into it.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "data := make([]byte, 100)",
             "note": "A sub-slice is a window onto the *same* array, so a 60-byte slice of a 500 MB file keeps all 500 MB alive. Copying is how you let the big one go; Go 1.21 added `slices.Clone` for the same job.",
             "requires": [
@@ -846,6 +875,7 @@
             "hint": "A slice's zero value is already usable with append.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": "A nil slice has length 0, capacity 0 and no array behind it, and `append` on it just works. That is why Go code almost never initialises a slice before appending.",
             "requires": [
@@ -871,6 +901,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "`a := [3]int{1,2,3}; b := a; b[0] = 99`. What is `a[0]` afterwards, and what would have happened if both had been slices instead?",
           "options": [
             {
@@ -897,6 +928,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "What are the three fields of a Go slice header, and which of them does copying a slice copy?",
           "options": [
             {
@@ -923,6 +955,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "Why must you write `s = append(s, x)` in Go rather than just `append(s, x)`?",
           "options": [
             {
@@ -949,6 +982,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "`head := full[:2]` where `full` has five elements. What is `cap(head)`, and what does `append(head, 99)` do to `full`?",
           "options": [
             {
@@ -975,6 +1009,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "You read a 500 MB file into memory and keep a 60-byte slice of it in a cache. How much memory stays reachable, and what is the fix?",
           "options": [
             {
@@ -1029,6 +1064,7 @@
       "drill": [
         {
           "id": "d1",
+          "tag": null,
           "kind": "predict",
           "code": "type Box struct{ n int }\n\nfunc (b Box) Fill()  { b.n = 7 }\nfunc (b *Box) Real() { b.n = 7 }\n\nfunc main() {\n\tvar b Box\n\tb.Fill()\n\tfmt.Print(b.n, \" \")\n\tb.Real()\n\tfmt.Println(b.n)\n}",
           "prompt": "What does this print?",
@@ -1057,6 +1093,7 @@
         },
         {
           "id": "d2",
+          "tag": null,
           "kind": "predict",
           "code": "type Temp float64\n\nfunc (t Temp) String() string { return fmt.Sprintf(\"%.1f degrees\", float64(t)) }\n\nfunc main() {\n\tfmt.Println(Temp(21.5))\n\tfmt.Println([]Temp{1, 2})\n}",
           "prompt": "`Temp` has a `String() string` method. Nothing here calls it. What comes out?",
@@ -1096,6 +1133,7 @@
             "hint": "A method that has to change the value it is called on needs a receiver that points at it.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": "A value receiver gets a *copy* of the struct, so `c.n++` bumps the copy and the caller sees nothing — no error, no warning. Rule of thumb: if any method needs a pointer receiver, give them all one.",
             "requires": [
@@ -1121,6 +1159,7 @@
             "hint": "`fmt.Println` looks for a method with this exact name and signature, and calls it for you.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": "There is no `implements` keyword: a type satisfies `fmt.Stringer` just by having `String() string`. (Converting back with `float64(c)` is the habit that matters — `%v` on a `Celsius` would call `String` again and recurse forever.)",
             "requires": [
@@ -1146,6 +1185,7 @@
             "hint": "An interface is a `type` whose underlying type is the keyword `interface` followed by a list of method signatures.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": "Interfaces are satisfied implicitly, by shape, which is why they are best defined by the code that *uses* them and kept small — the standard library's most useful ones (`io.Reader`, `error`, `fmt.Stringer`) have one method each.",
             "requires": [
@@ -1167,6 +1207,7 @@
             "hint": "A package-level `var` can be declared with the blank identifier as its name.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "type Greeter interface{ Greet() string }\n\ntype English struct{ Name string }\n\nfunc (e English) Greet() string { return \"Hello, \" + e.Name }",
             "note": "Because satisfaction is implicit, nothing tells you when a refactor quietly breaks it — until some far-away assignment fails. This idiom moves the failure to the type's own file. For a pointer-receiver type, the allocation-free spelling is `var _ Greeter = (*Spanish)(nil)`.",
             "requires": [
@@ -1187,6 +1228,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "What is a receiver in Go, and where does it appear in a method declaration?",
           "options": [
             {
@@ -1213,6 +1255,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "A Go method with a value receiver increments a field of its receiver. Why does the caller's value not change, and why is there no warning?",
           "options": [
             {
@@ -1239,6 +1282,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "What does a Go type have to write in order to implement an interface?",
           "options": [
             {
@@ -1265,6 +1309,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "`strings.Builder` never mentions `io.Writer` anywhere, yet `fmt.Fprintf` accepts a pointer to one. Explain how, and say who defines the interface in that arrangement.",
           "options": [
             {
@@ -1291,6 +1336,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "What does the line `var _ Greeter = English{}` accomplish, given that it stores nothing and is never referenced?",
           "options": [
             {
@@ -1345,6 +1391,7 @@
       "drill": [
         {
           "id": "d1",
+          "tag": null,
           "kind": "predict",
           "code": "func main() {\n\tfor i := 0; i < 3; i++ {\n\t\tdefer fmt.Print(i, \" \")\n\t}\n\tfmt.Print(\"end \")\n}",
           "prompt": "What does this print, in order?",
@@ -1373,6 +1420,7 @@
         },
         {
           "id": "d2",
+          "tag": null,
           "kind": "find",
           "code": "var ErrGone = errors.New(\"gone\")\n\nfunc main() {\n\tinner := fmt.Errorf(\"layer1: %w\", ErrGone)\n\te := fmt.Errorf(\"layer2: %v\", inner)\n\tfmt.Println(e)\n\tfmt.Println(errors.Is(e, ErrGone))\n}",
           "prompt": "The inner error is wrapped with `%w`. Why does `errors.Is` still return false?",
@@ -1412,6 +1460,7 @@
             "hint": "Go's error handling is a plain `if` on a plain value.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "func open(name string) error {\n\tf, err := os.Open(name)\n\t// your check\n\tdefer f.Close()\n\treturn nil\n}",
             "note": "No exceptions: an error is an ordinary return value and the check is ordinary control flow. That is verbose on purpose — every place a call can fail is visible in the source, which is the argument the Go team makes against the invisible control flow of `throw`.",
             "requires": [
@@ -1433,6 +1482,7 @@
             "hint": "A keyword in front of a call postpones the call until the function exits.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "f, err := os.Open(\"data.txt\")\nif err != nil {\n\treturn err\n}",
             "note": "`defer` is Go's answer to a C++ destructor: cleanup sits next to the acquisition instead of at the end of the function, so adding an early `return` later can't skip it. The arguments are evaluated at the `defer` line; the call itself runs at exit.",
             "requires": [
@@ -1450,6 +1500,7 @@
             "hint": "Deferred calls run last-in, first-out, like a stack.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": "Deferred calls unwind in reverse order of registration, exactly like destructors of locals in C++ — the thing acquired last is released first. The `defer` lines read backwards from the output, which is the whole trick.",
             "requires": [
@@ -1480,6 +1531,7 @@
             "hint": "`fmt.Errorf` has a format verb that wraps instead of just printing.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "_, err := os.Open(\"/no/such/file\")",
             "note": "`%w` stores `err` inside the new error so `errors.Is` and `errors.As` can walk the chain. `%v` would produce an identical *message* and silently cut the chain — the two look the same in a log and behave differently in code.",
             "requires": [
@@ -1505,6 +1557,7 @@
             "hint": "One function from `errors` walks the whole wrap chain.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "wrapped := fmt.Errorf(\"loading config: %w\", err)",
             "note": "`==` compares only the outermost error, so it is false for any wrapped one. `errors.Is` unwraps repeatedly; its sibling `errors.As` does the same but extracts a value of a given *type* from the chain.",
             "requires": [
@@ -1530,6 +1583,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "What is the `error` type in Go, exactly — what makes a value an error?",
           "options": [
             {
@@ -1556,6 +1610,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "What is the difference between wrapping an error with `%w` and formatting it with `%v`, and what does the difference make possible for a caller?",
           "options": [
             {
@@ -1582,6 +1637,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "When exactly does a deferred call run in Go, and in what order relative to other defers in the same function?",
           "options": [
             {
@@ -1608,6 +1664,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "`i := 1; defer fmt.Println(i); i = 99`. What does the deferred line print when the function returns, and why?",
           "options": [
             {
@@ -1634,6 +1691,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "When is `panic` the right choice in Go rather than returning an error, and where is `recover` legitimately used?",
           "options": [
             {
@@ -1688,6 +1746,7 @@
       "drill": [
         {
           "id": "d1",
+          "tag": null,
           "kind": "predict",
           "code": "var wg sync.WaitGroup\nch := make(chan int, 3)\nfor i := 1; i <= 3; i++ {\n\twg.Add(1)\n\tgo func(n int) { defer wg.Done(); ch <- n * n }(i)\n}\nwg.Wait()\nclose(ch)\nsum := 0\nfor v := range ch {\n\tsum += v\n}\nfmt.Println(sum)",
           "prompt": "What does this print?",
@@ -1716,6 +1775,7 @@
         },
         {
           "id": "d2",
+          "tag": null,
           "kind": "choose",
           "code": null,
           "prompt": "A Go service in production slowly grows in memory. CPU is flat, there are no obvious leaks, and every request completes normally. Which suspect would you check first, given what the runtime can and cannot tell you?",
@@ -1755,6 +1815,7 @@
             "hint": "Both come from the same built-in as slices and maps; the optional second argument is the buffer size.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": "An unbuffered channel is a rendezvous — a send blocks until a receiver is ready, so it synchronises the two goroutines as well as moving data. A buffer decouples them only up to its capacity, after which the sender blocks again.",
             "requires": [
@@ -1776,6 +1837,7 @@
             "hint": "`go` in front of a call runs it concurrently; `done <- v` sends and `<-done` receives. The receive is what keeps `main` from exiting early.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "done := make(chan string)",
             "note": "The receive does double duty: it fetches the value *and* blocks `main` until the worker has produced it. Without it `main` would return and the program would end with the goroutine unfinished — Go does not wait for goroutines on exit.",
             "requires": [
@@ -1800,6 +1862,7 @@
             "hint": "A receive can be used as an expression with two results.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "ch := make(chan int, 3)\nch <- 1",
             "note": "Closing a channel does not discard what is buffered — receivers drain it first. Only once it is empty does a receive return the zero value immediately, with `ok == false`; that second result is how `for v := range ch` knows when to stop. Closing is the *sender's* job, and sending on a closed channel panics.",
             "requires": [
@@ -1828,6 +1891,7 @@
             "hint": "A WaitGroup is a counter — add to it, subtract from it, wait for zero.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "var wg sync.WaitGroup",
             "note": "`Add` must happen in the *parent*, before the `go` statement — if the goroutine called it, `Wait` could run first, see zero and return early. And `defer wg.Done()` guarantees the counter drops even if the goroutine panics or returns early.",
             "requires": [
@@ -1853,6 +1917,7 @@
             "hint": "Acquire, then immediately schedule the release.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": "var mu sync.Mutex\nvar count int\n\nfunc inc() {\n\t// your two lines\n\tcount++\n}",
             "note": "Putting the `defer` straight after the `Lock` means a later `return` or panic can't leak the lock — the same reason C++ has `std::lock_guard`. It costs almost nothing on modern Go (the compiler inlines the open-coded defer), which is why the old \"defer is slow\" advice is out of date.",
             "requires": [
@@ -1872,6 +1937,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "What is a goroutine, and how does it differ from an OS thread in cost and in what schedules it?",
           "options": [
             {
@@ -1898,6 +1964,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "What is the difference between an unbuffered and a buffered Go channel, and what synchronisation does an unbuffered one give you for free?",
           "options": [
             {
@@ -1924,6 +1991,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "In Go, who is supposed to close a channel, and what happens if you send on one that is already closed?",
           "options": [
             {
@@ -1950,6 +2018,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "The Go runtime reports `all goroutines are asleep - deadlock!`. What condition triggers that, and which very common concurrency bug does it fail to catch?",
           "options": [
             {
@@ -1976,6 +2045,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "A Go program with 1000 goroutines each doing `total++` on a shared variable prints a different wrong number every run and never crashes. What is happening, and what finds it?",
           "options": [
             {

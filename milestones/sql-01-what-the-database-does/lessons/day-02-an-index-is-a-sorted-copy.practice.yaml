@@ -40,6 +40,7 @@ setup: |
 write:
   # --- building the right index -------------------------------------------------
   - id: fk-index
+    tag: indexing foreign keys
     prompt: >
       Every page of the app loads a user's orders with `WHERE user_id = $1`, and
       PostgreSQL does not index a foreign key for you. Create the index on `orders`
@@ -58,6 +59,7 @@ write:
       - CREATE INDEX ON orders (user_id, status);
 
   - id: unique-email
+    tag: unique indexes
     prompt: >
       Two accounts must never share an email. Enforce it on `users.email` with an index.
     hint: An index can refuse duplicates as well as find things.
@@ -72,6 +74,7 @@ write:
       - CREATE UNIQUE INDEX ON users (email, country);
 
   - id: unique-any-case
+    tag: expression indexes
     prompt: >
       `Ana@Mail.io` and `ana@mail.io` are the same mailbox. Make it impossible for two
       users to have emails that differ only in letter case.
@@ -87,6 +90,7 @@ write:
       - CREATE INDEX ON users (lower(email));
 
   - id: filter-then-sort
+    tag: composite index order
     prompt: >
       The hottest query is `WHERE user_id = $1 ORDER BY created_at`. Create the one
       two-column index that serves both the filter and the sort, so no sort step is
@@ -107,6 +111,7 @@ write:
       - CREATE INDEX ON orders (user_id);
 
   - id: mixed-directions
+    tag: composite index order
     prompt: >
       A report runs `ORDER BY user_id, created_at DESC`. A plain `(user_id, created_at)`
       index can't produce that order, so Postgres sorts. Create a two-column index that
@@ -129,6 +134,7 @@ write:
       - CREATE INDEX ON orders (created_at DESC, user_id);
 
   - id: pending-only
+    tag: partial indexes
     prompt: >
       Only *pending* orders are ever looked up by `created_at`, and they are a small slice
       of the table. Create an index on `created_at` that contains pending orders and
@@ -147,6 +153,7 @@ write:
       - CREATE INDEX ON orders (created_at) WHERE status <> 'pending';
 
   - id: one-cart
+    tag: partial indexes
     prompt: >
       A user may have any number of paid orders but at most **one** order with status
       `'cart'`. Enforce that with a single index.
@@ -164,6 +171,7 @@ write:
       - CREATE INDEX ON orders (user_id) WHERE status = 'cart';
 
   - id: carry-amount
+    tag: covering indexes
     prompt: >
       `SELECT amount FROM orders WHERE user_id = $1` should be answered from the index
       alone, with no trip to the table. Create one index keyed on `user_id` that also
@@ -181,6 +189,7 @@ write:
       - CREATE INDEX ON orders (amount) INCLUDE (user_id);
 
   - id: pattern-ops
+    tag: prefix searches
     prompt: >
       `WHERE code LIKE 'AB%'` has to use an index whatever the database's collation is,
       and you may not change the column's collation. Create that index on `code`.
@@ -197,6 +206,7 @@ write:
       - CREATE INDEX ON orders (lower(code));
 
   - id: index-a-day
+    tag: expression indexes
     prompt: >
       Reports filter with `WHERE (created_at AT TIME ZONE 'UTC')::date = $1`. Create an
       index on exactly that expression, spelled the same way. (Try `created_at::date`
@@ -214,6 +224,7 @@ write:
       - CREATE INDEX ON orders (created_at);
 
   - id: drop-unused
+    tag: index upkeep
     prompt: >
       `orders_status_idx` has never been used by a single query, and every insert still
       pays to maintain it. Remove it.
@@ -228,6 +239,7 @@ write:
       - ALTER TABLE orders DROP COLUMN status;
 
   - id: list-indexes
+    tag: index upkeep
     prompt: >
       Before adding anything, look at what is already there: return the name and the
       definition of every index on `orders`, by name.
@@ -240,6 +252,7 @@ write:
 
   # --- writing the query so the index can be used -------------------------------
   - id: a-whole-day
+    tag: keeping the column bare
     prompt: >
       Return `id` and `created_at` of the orders placed on 5 March 2026 (UTC), oldest
       first (then by id). `created_at` is indexed, so leave the column bare: no function or cast
@@ -257,6 +270,7 @@ write:
       - SELECT id, created_at FROM orders WHERE created_at BETWEEN '2026-03-05' AND '2026-03-06' ORDER BY created_at, id;
 
   - id: from-a-date
+    tag: keeping the column bare
     prompt: >
       Someone wrote `WHERE to_char(created_at, 'YYYY-MM-DD') >= '2026-03-06'`. Return the
       same orders' `id`s, in id order, with a condition on the bare column instead.
@@ -271,6 +285,7 @@ write:
       - SELECT id FROM orders WHERE created_at >= '2026-03-07' ORDER BY id;
 
   - id: tax-on-the-other-side
+    tag: keeping the column bare
     prompt: >
       `WHERE amount * 1.2 > 124.2` hides `amount` from its index. Return `id` and `amount`
       of the same orders, in id order, with `amount` alone on its side of the comparison.
@@ -285,6 +300,7 @@ write:
       - SELECT id, amount FROM orders WHERE amount > 149.04 ORDER BY id;
 
   - id: prefix-as-range
+    tag: prefix searches
     prompt: >
       `WHERE left(code, 2) = 'BX'` can't use an index on `code`. Return the same `code`s,
       sorted, with a prefix match the planner can turn into a range.
@@ -299,6 +315,7 @@ write:
       - SELECT code FROM orders WHERE code LIKE 'BX' ORDER BY code;
 
   - id: no-cast-key
+    tag: keeping the column bare
     prompt: >
       To silence a type error, someone wrote `WHERE id::text = '17'`. Return that order's
       `id` and `status` with a condition the primary key can actually use.
@@ -313,6 +330,7 @@ write:
       - SELECT id, status FROM orders WHERE id = 71;
 
   - id: no-lower-needed
+    tag: keeping the column bare
     prompt: >
       Emails are stored in lowercase already and only `users.email` itself is indexed.
       Return `id` and `email` of the user with email `dee@mail.io`, without wrapping the
@@ -328,6 +346,7 @@ write:
       - SELECT id, email FROM users WHERE email LIKE 'dee%';
 
   - id: interval-moves-over
+    tag: keeping the column bare
     prompt: >
       `WHERE created_at + interval '2 days' >= '2026-03-06'` puts the column inside an
       expression. Return the same orders' `id`s, in id order, with `created_at` alone.
@@ -343,6 +362,7 @@ write:
 
   # --- query shapes an index makes cheap ----------------------------------------
   - id: latest-three
+    tag: composite index order
     prompt: >
       Return the three most recent orders of user 4: `id` and `created_at`, newest first
       (ties: higher id first).
@@ -355,6 +375,7 @@ write:
       - SELECT id, created_at FROM orders WHERE user_id = 4 LIMIT 3;
 
   - id: keyset-page
+    tag: paging without OFFSET
     prompt: >
       Orders are listed by `(created_at, id)`, five per page. The last row of the
       previous page had `created_at = '2026-03-04 06:00+00'` and `id = 9`. Return the
@@ -375,6 +396,7 @@ write:
 
 drill:
   - id: not-deleted
+    tag: when the planner skips an index
     kind: predict
     code: |
       -- 200,000 rows; 1% have deleted = true. There is an index on (deleted).
@@ -399,6 +421,7 @@ drill:
           to gain from sorting the locations first: every page is needed anyway.
 
   - id: leading-column
+    tag: composite index order
     kind: choose
     code: |
       CREATE INDEX ON t (country, created_at);
@@ -426,6 +449,7 @@ drill:
           entry by entry inside it.
 
   - id: index-only
+    tag: covering indexes
     kind: predict
     code: |
       CREATE INDEX t_name ON t (name);
@@ -450,6 +474,7 @@ drill:
           it; only the extra hop to the table is added.
 
   - id: suffix-like
+    tag: prefix searches
     kind: choose
     code: |
       CREATE INDEX ON t (name);
@@ -474,6 +499,7 @@ drill:
           the C collation or a pattern-ops index.
 
   - id: newest-ten
+    tag: composite index order
     kind: predict
     code: |
       CREATE INDEX t_created ON t (created_at);   -- ascending
@@ -497,6 +523,7 @@ drill:
           doesn't even cost that.
 
   - id: mixed-order-plan
+    tag: composite index order
     kind: predict
     code: |
       CREATE INDEX ON t (user_id, created_at);
@@ -521,6 +548,7 @@ drill:
           the order the index already provides.
 
   - id: cast-hides-column
+    tag: keeping the column bare
     kind: find
     code: |
       CREATE INDEX ON t (created_at);
@@ -546,6 +574,7 @@ drill:
           changed — only where the cast sits.
 
   - id: partial-scope
+    tag: partial indexes
     kind: predict
     code: |
       CREATE INDEX t_pending ON t (created_at) WHERE status = 'pending';
@@ -569,6 +598,7 @@ drill:
           `Index Scan using t_pending`.
 
   - id: two-nulls
+    tag: unique indexes
     kind: predict
     code: |
       CREATE TABLE u (id int, email text);
@@ -596,6 +626,7 @@ drill:
           index is only the first.
 
   - id: explain-analyze-delete
+    tag: reading plans
     kind: predict
     code: |
       -- u has two rows
@@ -621,6 +652,7 @@ drill:
           effects.
 
   - id: stale-statistics
+    tag: when the planner skips an index
     kind: choose
     code: |
       CREATE TABLE b (id int, k int);
@@ -650,6 +682,7 @@ drill:
           cost-based, and the cost was computed from stale numbers.
 
   - id: write-amplification
+    tag: index upkeep
     kind: choose
     code: |
       CREATE TABLE p (id int PRIMARY KEY, a int, b int);

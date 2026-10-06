@@ -1112,13 +1112,47 @@ const materialFor = (context: { week: Week; day: Day }): string => {
 };
 
 /** System prompt for inventing a challenge from one day's material. */
-export function forgePrompt(context: { week: Week; day: Day }): string {
+/** What a challenge written in answer to a miss needs to know about it. */
+export interface ForgeTarget {
+  /** The card they just got wrong, with its answer key and what they chose or typed. */
+  brief: string;
+  /** What has already been asked about this idea this sitting, so none of it is repeated. */
+  avoid: string[];
+  /** The idea, in a phrase. */
+  theme: string;
+}
+
+export function forgePrompt(context: { week: Week; day: Day }, target?: ForgeTarget | null): string {
   const data = forgeData(context.week.track, context.day);
   const dataBlock = data
     ? `DATA — these tables exist, and the app shows exactly this to the reader above your challenge:\n\n\`\`\`sql\n${data}\n\`\`\`\n\n---\n\n`
     : '';
-  return `${forger(context.week.track)}\n\n---\n\n${dataBlock}${materialFor(context)}`;
+  const aim = target ? `${targeted(target)}\n\n---\n\n` : '';
+  return `${forger(context.week.track)}\n\n---\n\n${aim}${dataBlock}${materialFor(context)}`;
 }
+
+/**
+ * The challenge is no longer "something from the lesson" but a second look at one specific
+ * mistake. Asking the same thing again measures memory of the last answer, so the brief
+ * insists on a different angle: what is being tested is the idea behind the miss.
+ */
+const targeted = (t: ForgeTarget) => `THIS CHALLENGE IS A FOLLOW-UP TO A MISTAKE. Ignore the "pick something from the material"
+freedom above: write about the idea behind this miss, theme "${t.theme}".
+
+What they just got wrong:
+
+${t.brief}
+
+Work out the specific misunderstanding the wrong answer shows, then write ONE challenge that
+a person with that misunderstanding would get wrong again, and a person without it would
+get right.
+- Come at it from a DIFFERENT ANGLE than the card above: if that was predict-the-output, ask
+  them to spot the bug, or say what breaks when a line is removed, or choose which of two
+  rewrites is correct. Different data and different names — it must not be answerable by
+  remembering the previous card.
+- Do not just change the numbers. Do not repeat the same trap in the same shape.
+- Do not reveal what they got wrong, and do not mention the earlier card.
+${t.avoid.length ? `- Already asked about this idea this sitting — do not repeat any of these:\n${t.avoid.map((a) => `    • ${a.replace(/\s+/g, ' ').slice(0, 160)}`).join('\n')}` : ''}`;
 
 /**
  * The tables a SQL challenge may be about: the setup the day's own write cards run against.

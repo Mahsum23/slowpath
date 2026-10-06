@@ -769,6 +769,34 @@ First banks: indexes (21 write + 12 drill) and clause order (19 write + 12 drill
 `test-practice.mjs`, the checker (78 SQL cards, 84 bad examples proven wrong), PGlite vs
 PG16 agreement, and Chromium (a landing round, a non-landing round, Today before and after).
 
+## 8.11 A deck that pays attention (2026-10-06)
+
+Two complaints about review: it didn't react to mistakes, and familiar cards were answered by
+shape ("I just remember the answer and don't read the question"). `focus.ts` answers both.
+
+- **Themes.** Items carry an optional `tag` (the one idea tested); the fallback is the day.
+  `heatMap` derives which themes are hot from the stored schedule alone (a card whose last
+  answer was a miss, decaying with a four-day half-life), so nothing new is stored or synced.
+- **Follow-ups.** `pickFollowUps` scores same-theme (+3), a different kind of card from the miss
+  and from the previous pick (+1 each), same day (+1), plus a little noise; cards from other
+  days and graded conversation cards are never picked. The pool is the deck plus practice-bank
+  items no round has dealt, so a miss reaches for questions he has never seen. With the mentor
+  reachable the second follow-up is written by the model about that exact miss
+  (`ForgeTarget`: the miss with its key and his answer, what has been asked this sitting, an
+  explicit "different angle, don't just change the numbers"). A practice-bank item's first
+  sight counts as its first attempt wherever it was dealt.
+- **Reflex.** Options are shown in a fresh random order every time, never the authored one.
+  `isReflex`: faster than 35% of the question's reading time (240 ms/word, 1.2 s floor).
+  `ReviewCard.reflex` counts consecutive right reflexes; at two (`isWorn`) the card is replaced
+  in the deal by a model-written question on the same idea (or a sibling), and the substitute's
+  result is credited to the worn card (right: it advances; wrong: it was not known after all).
+- **Honest about its limits.** Speed is a proxy for not reading, so it can only change the
+  question, never mark an answer wrong; a fast reader will occasionally see a fresh angle early,
+  which costs nothing. Verified: `test-focus.mjs` (heat, cooling, follow-up choice, weighting,
+  reflex thresholds, permutations, schedule counter) and Chromium (a miss pulling in a
+  same-theme card and a forged question carrying the miss; two fast answers retiring a card
+  into a fresh angle; option order differing between sittings).
+
 ## 9. Offline & local storage
 
 - **Content cache:** Cache API / IndexedDB — loaded weeks fully offline.

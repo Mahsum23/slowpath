@@ -47,6 +47,7 @@
             "hint": "Every row carries a system column that says which page and slot it sits in.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -59,6 +60,7 @@
             "hint": "Two statements. The second one is the same system column as before.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -71,6 +73,7 @@
             "hint": "One function measures the relation in bytes, another one prettifies bytes.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -82,6 +85,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "A table has 200 rows packed into 6 pages. A query returns exactly one row, found by scanning. What is the smallest amount of data the engine could have read from disk?",
           "options": [
             {
@@ -108,6 +112,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "You run `UPDATE t SET note = 'x' WHERE id = 1` in PostgreSQL. What happens to the row's physical location, and to the previous version of the row?",
           "options": [
             {
@@ -134,6 +139,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "Your table's file is 4 GB on disk, of which only 500 MB is live rows. You run `VACUUM`. What happens to the size of the file, and why?",
           "options": [
             {
@@ -160,6 +166,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "In PostgreSQL an index entry points at a physical `(page, slot)` address. Given only that, why can updating one *unindexed* column of a row cause writes to five different indexes?",
           "options": [
             {
@@ -186,6 +193,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "What are the hidden `xmin` and `xmax` columns on a PostgreSQL row, and how do they let one transaction read a table while another rewrites it?",
           "options": [
             {
@@ -250,6 +258,7 @@
             "hint": "An index can be built on an expression, not just on a column.",
             "verify": "SELECT count(*) AS indexes_on_lower_name FROM pg_indexes\nWHERE tablename = 's' AND indexdef LIKE '%(lower(name))%';",
             "ordered": null,
+            "tag": "expression indexes",
             "given": null,
             "note": null,
             "requires": [],
@@ -262,6 +271,7 @@
             "hint": "The extra column is stored in the index but is not part of its sort order.",
             "verify": "SELECT regexp_replace(indexdef, '^CREATE INDEX \\S+', 'CREATE INDEX') AS definition\nFROM pg_indexes WHERE tablename = 's' AND indexname <> 's_pkey';",
             "ordered": null,
+            "tag": "covering indexes",
             "given": null,
             "note": null,
             "requires": [],
@@ -274,6 +284,7 @@
             "hint": "A column in an index can carry its own collation.",
             "verify": "SELECT regexp_replace(indexdef, '^CREATE INDEX \\S+', 'CREATE INDEX') AS definition\nFROM pg_indexes WHERE tablename = 's' AND indexname <> 's_pkey';",
             "ordered": null,
+            "tag": "prefix searches",
             "given": null,
             "note": null,
             "requires": [],
@@ -294,6 +305,7 @@
               "hint": "A foreign key constrains the column; it does not make it searchable.",
               "verify": "SELECT regexp_replace(indexdef, 'INDEX \\S+ ON ', 'INDEX ON ') AS definition\nFROM pg_indexes\nWHERE tablename = 'orders' AND indexname NOT IN ('orders_pkey', 'orders_status_idx')\nORDER BY 1;",
               "ordered": null,
+              "tag": "indexing foreign keys",
               "given": null,
               "note": null,
               "requires": [],
@@ -306,6 +318,7 @@
               "hint": "An index can refuse duplicates as well as find things.",
               "verify": "SELECT regexp_replace(indexdef, 'INDEX \\S+ ON ', 'INDEX ON ') AS definition\nFROM pg_indexes WHERE tablename = 'users' AND indexname <> 'users_pkey'\nORDER BY 1;",
               "ordered": null,
+              "tag": "unique indexes",
               "given": null,
               "note": null,
               "requires": [],
@@ -318,6 +331,7 @@
               "hint": "The uniqueness has to be about a value computed from the column.",
               "verify": "SELECT regexp_replace(indexdef, 'INDEX \\S+ ON ', 'INDEX ON ') AS definition\nFROM pg_indexes WHERE tablename = 'users' AND indexname <> 'users_pkey'\nORDER BY 1;",
               "ordered": null,
+              "tag": "expression indexes",
               "given": null,
               "note": null,
               "requires": [],
@@ -330,6 +344,7 @@
               "hint": "The column you test with `=` goes first; within one user, the rows then come out sorted by the second.",
               "verify": "SELECT string_agg(a.attname, ', ' ORDER BY k.ord) AS key_columns\nFROM pg_index i\nJOIN pg_class c ON c.oid = i.indexrelid\nCROSS JOIN LATERAL unnest(i.indkey::int2[]) WITH ORDINALITY AS k(attnum, ord)\nJOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum\nWHERE i.indrelid = 'orders'::regclass AND c.relname NOT IN ('orders_pkey', 'orders_status_idx')\nGROUP BY c.relname;",
               "ordered": null,
+              "tag": "composite index order",
               "given": null,
               "note": null,
               "requires": [],
@@ -342,6 +357,7 @@
               "hint": "Each column of an index has its own direction. Read it forwards or backwards — what order do you need?",
               "verify": "SELECT string_agg(a.attname, ', ' ORDER BY k.ord) AS key_columns,\n       (i.indoption[0] & 1) <> (i.indoption[1] & 1) AS directions_differ\nFROM pg_index i\nJOIN pg_class c ON c.oid = i.indexrelid\nCROSS JOIN LATERAL unnest(i.indkey::int2[]) WITH ORDINALITY AS k(attnum, ord)\nJOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum\nWHERE i.indrelid = 'orders'::regclass AND c.relname NOT IN ('orders_pkey', 'orders_status_idx')\nGROUP BY c.relname, i.indoption;",
               "ordered": null,
+              "tag": "composite index order",
               "given": null,
               "note": null,
               "requires": [],
@@ -354,6 +370,7 @@
               "hint": "An index can carry a WHERE clause of its own.",
               "verify": "SELECT regexp_replace(indexdef, 'INDEX \\S+ ON ', 'INDEX ON ') AS definition\nFROM pg_indexes\nWHERE tablename = 'orders' AND indexname NOT IN ('orders_pkey', 'orders_status_idx')\nORDER BY 1;",
               "ordered": null,
+              "tag": "partial indexes",
               "given": null,
               "note": null,
               "requires": [],
@@ -366,6 +383,7 @@
               "hint": "Unique, but only among some of the rows.",
               "verify": "SELECT regexp_replace(indexdef, 'INDEX \\S+ ON ', 'INDEX ON ') AS definition\nFROM pg_indexes\nWHERE tablename = 'orders' AND indexname NOT IN ('orders_pkey', 'orders_status_idx')\nORDER BY 1;",
               "ordered": null,
+              "tag": "partial indexes",
               "given": null,
               "note": null,
               "requires": [],
@@ -378,6 +396,7 @@
               "hint": "There is a clause for columns that ride along in the leaf pages.",
               "verify": "SELECT regexp_replace(indexdef, 'INDEX \\S+ ON ', 'INDEX ON ') AS definition\nFROM pg_indexes\nWHERE tablename = 'orders' AND indexname NOT IN ('orders_pkey', 'orders_status_idx')\nORDER BY 1;",
               "ordered": null,
+              "tag": "covering indexes",
               "given": null,
               "note": null,
               "requires": [],
@@ -390,6 +409,7 @@
               "hint": "An index column can name an operator class that compares byte by byte.",
               "verify": "SELECT regexp_replace(indexdef, 'INDEX \\S+ ON ', 'INDEX ON ') AS definition\nFROM pg_indexes\nWHERE tablename = 'orders' AND indexname NOT IN ('orders_pkey', 'orders_status_idx')\nORDER BY 1;",
               "ordered": null,
+              "tag": "prefix searches",
               "given": null,
               "note": null,
               "requires": [],
@@ -402,6 +422,7 @@
               "hint": "An index expression must give the same answer whatever the session's time zone is.",
               "verify": "SELECT regexp_replace(indexdef, 'INDEX \\S+ ON ', 'INDEX ON ') AS definition\nFROM pg_indexes\nWHERE tablename = 'orders' AND indexname NOT IN ('orders_pkey', 'orders_status_idx')\nORDER BY 1;",
               "ordered": null,
+              "tag": "expression indexes",
               "given": null,
               "note": null,
               "requires": [],
@@ -414,6 +435,7 @@
               "hint": "Indexes are dropped by name.",
               "verify": "SELECT (SELECT string_agg(indexname, ', ' ORDER BY indexname) FROM pg_indexes WHERE tablename = 'orders') AS indexes,\n       (SELECT count(*) FROM information_schema.columns WHERE table_name = 'orders') AS columns;",
               "ordered": null,
+              "tag": "index upkeep",
               "given": null,
               "note": null,
               "requires": [],
@@ -426,6 +448,7 @@
               "hint": "There is a system view that holds one row per index, with its CREATE statement.",
               "verify": null,
               "ordered": null,
+              "tag": "index upkeep",
               "given": null,
               "note": null,
               "requires": [],
@@ -438,6 +461,7 @@
               "hint": "A day is a half-open range — from its midnight, up to but not including the next one.",
               "verify": null,
               "ordered": null,
+              "tag": "keeping the column bare",
               "given": null,
               "note": null,
               "requires": [],
@@ -455,6 +479,7 @@
               "hint": "Compare the timestamp with a timestamp.",
               "verify": null,
               "ordered": null,
+              "tag": "keeping the column bare",
               "given": null,
               "note": null,
               "requires": [],
@@ -472,6 +497,7 @@
               "hint": "Do the arithmetic once, to the constant.",
               "verify": null,
               "ordered": null,
+              "tag": "keeping the column bare",
               "given": null,
               "note": null,
               "requires": [],
@@ -489,6 +515,7 @@
               "hint": "The pattern-matching operator, with a wildcard only at the end.",
               "verify": null,
               "ordered": null,
+              "tag": "prefix searches",
               "given": null,
               "note": null,
               "requires": [],
@@ -506,6 +533,7 @@
               "hint": "Compare the integer with an integer.",
               "verify": null,
               "ordered": null,
+              "tag": "keeping the column bare",
               "given": null,
               "note": null,
               "requires": [],
@@ -523,6 +551,7 @@
               "hint": "If the data is already normalised, compare it directly.",
               "verify": null,
               "ordered": null,
+              "tag": "keeping the column bare",
               "given": null,
               "note": null,
               "requires": [],
@@ -540,6 +569,7 @@
               "hint": "Move the interval across to the constant side, flipping its sign.",
               "verify": null,
               "ordered": null,
+              "tag": "keeping the column bare",
               "given": null,
               "note": null,
               "requires": [],
@@ -557,6 +587,7 @@
               "hint": "Sort, then cut.",
               "verify": null,
               "ordered": null,
+              "tag": "composite index order",
               "given": null,
               "note": null,
               "requires": [],
@@ -569,6 +600,7 @@
               "hint": "Two columns can be compared as one, left to right — `(a, b) > (x, y)`.",
               "verify": null,
               "ordered": null,
+              "tag": "paging without OFFSET",
               "given": null,
               "note": null,
               "requires": [],
@@ -584,6 +616,7 @@
         "drill": [
           {
             "id": "not-deleted",
+            "tag": "when the planner skips an index",
             "kind": "predict",
             "code": "-- 200,000 rows; 1% have deleted = true. There is an index on (deleted).\nEXPLAIN (COSTS OFF) SELECT * FROM t WHERE deleted = false;",
             "prompt": "Which plan comes back on PostgreSQL 16?",
@@ -607,6 +640,7 @@
           },
           {
             "id": "leading-column",
+            "tag": "composite index order",
             "kind": "choose",
             "code": "CREATE INDEX ON t (country, created_at);",
             "prompt": "Which condition lets PostgreSQL 16 jump straight to the matching entries of this index?",
@@ -630,6 +664,7 @@
           },
           {
             "id": "index-only",
+            "tag": "covering indexes",
             "kind": "predict",
             "code": "CREATE INDEX t_name ON t (name);\nEXPLAIN (COSTS OFF) SELECT name FROM t WHERE name = 'name7';\nEXPLAIN (COSTS OFF) SELECT *    FROM t WHERE name = 'name7';",
             "prompt": "The first plan says `Index Only Scan using t_name`. What does the second say?",
@@ -653,6 +688,7 @@
           },
           {
             "id": "suffix-like",
+            "tag": "prefix searches",
             "kind": "choose",
             "code": "CREATE INDEX ON t (name);\nSELECT * FROM t WHERE name LIKE '%77';",
             "prompt": "Can a B-tree index on `name` help this query?",
@@ -676,6 +712,7 @@
           },
           {
             "id": "newest-ten",
+            "tag": "composite index order",
             "kind": "predict",
             "code": "CREATE INDEX t_created ON t (created_at);   -- ascending\nEXPLAIN (COSTS OFF) SELECT * FROM t ORDER BY created_at DESC LIMIT 10;",
             "prompt": "What does PostgreSQL 16 do about the descending order?",
@@ -699,6 +736,7 @@
           },
           {
             "id": "mixed-order-plan",
+            "tag": "composite index order",
             "kind": "predict",
             "code": "CREATE INDEX ON t (user_id, created_at);\nEXPLAIN (COSTS OFF) SELECT * FROM t ORDER BY user_id, created_at DESC LIMIT 10;",
             "prompt": "What appears above the index scan in the plan?",
@@ -722,6 +760,7 @@
           },
           {
             "id": "cast-hides-column",
+            "tag": "keeping the column bare",
             "kind": "find",
             "code": "CREATE INDEX ON t (created_at);\nSELECT * FROM t WHERE created_at::date = '2026-03-01';\n-- plan: Parallel Seq Scan, Filter: ((created_at)::date = '2026-03-01'::date)",
             "prompt": "Why does the index go unused?",
@@ -745,6 +784,7 @@
           },
           {
             "id": "partial-scope",
+            "tag": "partial indexes",
             "kind": "predict",
             "code": "CREATE INDEX t_pending ON t (created_at) WHERE status = 'pending';\nEXPLAIN (COSTS OFF) SELECT * FROM t WHERE status = 'paid' AND created_at > '2026-04-01';",
             "prompt": "Can `t_pending` be used here?",
@@ -768,6 +808,7 @@
           },
           {
             "id": "two-nulls",
+            "tag": "unique indexes",
             "kind": "predict",
             "code": "CREATE TABLE u (id int, email text);\nCREATE UNIQUE INDEX ON u (email);\nINSERT INTO u VALUES (1, NULL);\nINSERT INTO u VALUES (2, NULL);\nSELECT count(*) FROM u;",
             "prompt": "What happens?",
@@ -791,6 +832,7 @@
           },
           {
             "id": "explain-analyze-delete",
+            "tag": "reading plans",
             "kind": "predict",
             "code": "-- u has two rows\nEXPLAIN ANALYZE DELETE FROM u;\nSELECT count(*) FROM u;",
             "prompt": "What does the count say?",
@@ -814,6 +856,7 @@
           },
           {
             "id": "stale-statistics",
+            "tag": "when the planner skips an index",
             "kind": "choose",
             "code": "CREATE TABLE b (id int, k int);\nCREATE INDEX ON b (k);\nINSERT INTO b SELECT g, 1 FROM generate_series(1, 10) g;\nANALYZE b;\nINSERT INTO b SELECT g, g FROM generate_series(11, 300000) g;\nEXPLAIN (COSTS OFF) SELECT * FROM b WHERE k > 5;\n-- Index Scan using b_k_idx on b   (for almost 300,000 rows)",
             "prompt": "Why an index scan for nearly the whole table, and what fixes it?",
@@ -837,6 +880,7 @@
           },
           {
             "id": "write-amplification",
+            "tag": "index upkeep",
             "kind": "choose",
             "code": "CREATE TABLE p (id int PRIMARY KEY, a int, b int);\nCREATE INDEX ON p (a);\nCREATE INDEX ON p (b);\nINSERT INTO p VALUES (1, 2, 3);",
             "prompt": "How many B-trees does that one INSERT write to, besides the table itself?",
@@ -863,6 +907,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "You add an index to speed up a slow report. Name two distinct costs you have just taken on.",
           "options": [
             {
@@ -889,6 +934,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "A query filters on an indexed column and the plan still shows `Seq Scan`, even though the index exists and the column is right. Give two different reasons that can happen.",
           "options": [
             {
@@ -915,6 +961,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "What does `Index Only Scan` mean in a PostgreSQL plan, what work does it save, and what can still force it to touch the heap anyway?",
           "options": [
             {
@@ -941,6 +988,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "Your table has an index on `email`. Which of `WHERE email = ?`, `WHERE lower(email) = ?` and `WHERE email LIKE 'a%'` can use it, and what decides the last one?",
           "options": [
             {
@@ -967,6 +1015,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "`EXPLAIN` says a query will return 3 rows; `EXPLAIN ANALYZE` shows it actually returned 40,000. What is most likely wrong, and what does the planner do with a bad estimate?",
           "options": [
             {
@@ -1031,6 +1080,7 @@
             "hint": "Ask about the existence of rows, not about the equality of values.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -1043,6 +1093,7 @@
             "hint": "One form of `count` counts rows, the other counts values.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -1055,6 +1106,7 @@
             "hint": "There is a comparison operator that treats unknowns as comparable.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -1067,6 +1119,7 @@
             "hint": "One function returns its first non-NULL argument.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -1078,6 +1131,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "In PostgreSQL, what does `NULL = NULL` evaluate to, and what does `WHERE` do with a row whose condition evaluates to that?",
           "options": [
             {
@@ -1104,6 +1158,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "Walk through why `WHERE x NOT IN (1, 2, NULL)` returns no rows for every possible value of `x`.",
           "options": [
             {
@@ -1130,6 +1185,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "A column `v` holds the values 1, 2 and NULL. What do `count(*)`, `count(v)` and `avg(v)` return, and why can that quietly make a dashboard wrong?",
           "options": [
             {
@@ -1156,6 +1212,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "Name a place where SQL treats two NULLs as equal to each other, and a place where it treats them as not equal.",
           "options": [
             {
@@ -1182,6 +1239,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "A `UNIQUE` column in PostgreSQL already contains a NULL. You insert another NULL. What happens, and how would you make it fail instead?",
           "options": [
             {
@@ -1236,6 +1294,7 @@
       "drill": [
         {
           "id": "d1",
+          "tag": null,
           "kind": "find",
           "code": "SELECT customer, sum(amount) AS total\nFROM orders\nGROUP BY customer\nHAVING total > 150;",
           "prompt": "Does this run on PostgreSQL, and if not, what stops it?",
@@ -1264,6 +1323,7 @@
         },
         {
           "id": "d2",
+          "tag": null,
           "kind": "predict",
           "code": "SELECT count(*) AS n, sum(amount) AS total\nFROM orders\nWHERE amount > 1000;",
           "prompt": "No order is over 1000. What does this return?",
@@ -1292,6 +1352,7 @@
         },
         {
           "id": "d3",
+          "tag": null,
           "kind": "find",
           "code": "SELECT customer, sum(amount) AS total\nFROM orders\nGROUP BY customer\nORDER BY total DESC\nLIMIT 1;",
           "prompt": "This is meant to find the customer who has paid the most. What does it return, and what is wrong with that?",
@@ -1331,6 +1392,7 @@
             "hint": "A condition about one row and a condition about a group go in different clauses.",
             "verify": null,
             "ordered": null,
+            "tag": "WHERE vs HAVING",
             "given": null,
             "note": null,
             "requires": [],
@@ -1343,6 +1405,7 @@
             "hint": "Wrap the query that creates the alias, and filter from outside.",
             "verify": null,
             "ordered": null,
+            "tag": "what a clause can see",
             "given": null,
             "note": null,
             "requires": [],
@@ -1355,6 +1418,7 @@
             "hint": "The sum of no rows is NULL. Something returns its first non-NULL argument.",
             "verify": null,
             "ordered": null,
+            "tag": "aggregates over nothing",
             "given": null,
             "note": null,
             "requires": [],
@@ -1367,6 +1431,7 @@
             "hint": "Two sort keys, the second one only matters on ties.",
             "verify": null,
             "ordered": null,
+            "tag": "ORDER BY and LIMIT",
             "given": null,
             "note": null,
             "requires": [],
@@ -1387,6 +1452,7 @@
               "hint": "One condition is about a row, the other about a group — they belong to different clauses.",
               "verify": null,
               "ordered": null,
+              "tag": "WHERE vs HAVING",
               "given": null,
               "note": null,
               "requires": [],
@@ -1399,6 +1465,7 @@
               "hint": "Filter the orders first, then count what's left per customer.",
               "verify": null,
               "ordered": null,
+              "tag": "WHERE vs HAVING",
               "given": null,
               "note": null,
               "requires": [],
@@ -1411,6 +1478,7 @@
               "hint": "A condition on a count can only be checked once the groups exist.",
               "verify": null,
               "ordered": null,
+              "tag": "WHERE vs HAVING",
               "given": null,
               "note": null,
               "requires": [],
@@ -1423,6 +1491,7 @@
               "hint": "An aggregate can carry its own filter, or count a CASE that is NULL for the rows you don't want.",
               "verify": null,
               "ordered": null,
+              "tag": "aggregate filters",
               "given": null,
               "note": null,
               "requires": [],
@@ -1435,6 +1504,7 @@
               "hint": "The denominator is one number for the whole table — a scalar subquery can supply it.",
               "verify": null,
               "ordered": null,
+              "tag": "aggregate filters",
               "given": null,
               "note": null,
               "requires": [],
@@ -1447,6 +1517,7 @@
               "hint": "Give the expression its name in an inner query; the outer query's WHERE can see it.",
               "verify": null,
               "ordered": null,
+              "tag": "what a clause can see",
               "given": null,
               "note": null,
               "requires": [],
@@ -1464,6 +1535,7 @@
               "hint": "ORDER BY runs after SELECT, so the name exists by then.",
               "verify": null,
               "ordered": null,
+              "tag": "what a clause can see",
               "given": null,
               "note": null,
               "requires": [],
@@ -1476,6 +1548,7 @@
               "hint": "Inside an expression, ORDER BY looks for input columns, not output names.",
               "verify": null,
               "ordered": null,
+              "tag": "what a clause can see",
               "given": null,
               "note": null,
               "requires": [],
@@ -1488,6 +1561,7 @@
               "hint": "If the alias has the same name as a column, GROUP BY picks the column. Avoid the clash.",
               "verify": null,
               "ordered": null,
+              "tag": "what a clause can see",
               "given": null,
               "note": null,
               "requires": [],
@@ -1500,6 +1574,7 @@
               "hint": "Truncate the date to its month, group by that, and cast back to a date.",
               "verify": null,
               "ordered": null,
+              "tag": "GROUP BY rules",
               "given": null,
               "note": null,
               "requires": [],
@@ -1512,6 +1587,7 @@
               "hint": "Grouping by a primary key makes every other column of that table safe to select.",
               "verify": null,
               "ordered": null,
+              "tag": "GROUP BY rules",
               "given": null,
               "note": null,
               "requires": [],
@@ -1529,6 +1605,7 @@
               "hint": "Group, order by the sum, keep one.",
               "verify": null,
               "ordered": null,
+              "tag": "GROUP BY rules",
               "given": null,
               "note": null,
               "requires": [],
@@ -1541,6 +1618,7 @@
               "hint": "After DISTINCT there's no single amount per customer — say which one with an aggregate.",
               "verify": null,
               "ordered": null,
+              "tag": "ORDER BY and LIMIT",
               "given": null,
               "note": null,
               "requires": [],
@@ -1553,6 +1631,7 @@
               "hint": "Count each customer once, not each order.",
               "verify": null,
               "ordered": null,
+              "tag": "counting",
               "given": null,
               "note": null,
               "requires": [],
@@ -1565,6 +1644,7 @@
               "hint": "The sum of no rows is NULL; something returns its first non-NULL argument.",
               "verify": null,
               "ordered": null,
+              "tag": "aggregates over nothing",
               "given": null,
               "note": null,
               "requires": [],
@@ -1577,6 +1657,7 @@
               "hint": "An aggregate with no GROUP BY always returns one row. Adding one makes it return a row per group — here, none.",
               "verify": null,
               "ordered": null,
+              "tag": "aggregates over nothing",
               "given": null,
               "note": null,
               "requires": [],
@@ -1589,6 +1670,7 @@
               "hint": "A comparison is an expression; it can sit in the SELECT list around an aggregate.",
               "verify": null,
               "ordered": null,
+              "tag": "aggregates over nothing",
               "given": null,
               "note": null,
               "requires": [],
@@ -1601,6 +1683,7 @@
               "hint": "LIMIT runs last, after the sort — and it can skip as well as take.",
               "verify": null,
               "ordered": null,
+              "tag": "ORDER BY and LIMIT",
               "given": null,
               "note": null,
               "requires": [],
@@ -1613,6 +1696,7 @@
               "hint": "One aggregate per group, then sort the groups by it.",
               "verify": null,
               "ordered": null,
+              "tag": "ORDER BY and LIMIT",
               "given": null,
               "note": null,
               "requires": [],
@@ -1623,6 +1707,7 @@
         "drill": [
           {
             "id": "alias-in-where",
+            "tag": "what a clause can see",
             "kind": "predict",
             "code": "SELECT id, amount * 2 AS doubled FROM orders WHERE doubled > 100;",
             "prompt": "What does PostgreSQL say?",
@@ -1646,6 +1731,7 @@
           },
           {
             "id": "having-ordered",
+            "tag": "WHERE vs HAVING",
             "kind": "predict",
             "code": "-- statuses: 7 paid, 3 cancelled, 2 pending\nSELECT status, count(*) FROM orders\nGROUP BY status HAVING count(*) > 2 ORDER BY 2 DESC;",
             "prompt": "What comes back?",
@@ -1669,6 +1755,7 @@
           },
           {
             "id": "sum-of-nothing",
+            "tag": "aggregates over nothing",
             "kind": "predict",
             "code": "-- no order has status 'refunded'\nSELECT sum(amount) AS total, count(*) AS n FROM orders WHERE status = 'refunded';",
             "prompt": "What does it return?",
@@ -1692,6 +1779,7 @@
           },
           {
             "id": "grouped-nothing",
+            "tag": "aggregates over nothing",
             "kind": "predict",
             "code": "SELECT status, sum(amount) FROM orders WHERE status = 'refunded' GROUP BY status;",
             "prompt": "And with a GROUP BY?",
@@ -1715,6 +1803,7 @@
           },
           {
             "id": "distinct-order-by",
+            "tag": "ORDER BY and LIMIT",
             "kind": "find",
             "code": "SELECT DISTINCT status FROM orders ORDER BY amount;",
             "prompt": "Why does PostgreSQL reject this?",
@@ -1738,6 +1827,7 @@
           },
           {
             "id": "alias-in-group-by",
+            "tag": "what a clause can see",
             "kind": "predict",
             "code": "SELECT status AS s, count(*) FROM orders GROUP BY s ORDER BY s;",
             "prompt": "Does `GROUP BY s` work?",
@@ -1761,6 +1851,7 @@
           },
           {
             "id": "alias-in-having",
+            "tag": "what a clause can see",
             "kind": "predict",
             "code": "SELECT status AS s, count(*) FROM orders GROUP BY s HAVING s <> 'pending';",
             "prompt": "What does PostgreSQL say?",
@@ -1784,6 +1875,7 @@
           },
           {
             "id": "having-plain-column",
+            "tag": "WHERE vs HAVING",
             "kind": "predict",
             "code": "SELECT status, count(*) FROM orders GROUP BY status HAVING status = 'paid';",
             "prompt": "Is a plain column allowed in HAVING?",
@@ -1807,6 +1899,7 @@
           },
           {
             "id": "nested-aggregate",
+            "tag": "GROUP BY rules",
             "kind": "predict",
             "code": "SELECT customer_id, max(sum(amount)) FROM orders GROUP BY customer_id;",
             "prompt": "What happens?",
@@ -1830,6 +1923,7 @@
           },
           {
             "id": "group-by-name",
+            "tag": "GROUP BY rules",
             "kind": "find",
             "code": "SELECT c.name, c.city, count(*)\nFROM customers c JOIN orders o ON o.customer_id = c.id\nGROUP BY c.name;\n-- ERROR: column \"c.city\" must appear in the GROUP BY clause or be used in an aggregate function",
             "prompt": "`name` is unique in this data. Why is `c.city` still rejected?",
@@ -1853,6 +1947,7 @@
           },
           {
             "id": "alias-shadows-column",
+            "tag": "what a clause can see",
             "kind": "predict",
             "code": "-- tags.label: 'SQL', 'sql', 'Go', 'go', 'go', 'C++'\nSELECT lower(label) AS label, count(*) FROM tags GROUP BY label ORDER BY label, 2;",
             "prompt": "How many rows does it return?",
@@ -1876,6 +1971,7 @@
           },
           {
             "id": "counting-three-ways",
+            "tag": "counting",
             "kind": "predict",
             "code": "-- 12 orders, from 4 customers, in 3 statuses\nSELECT count(*), count(DISTINCT customer_id), count(DISTINCT status) FROM orders;",
             "prompt": "What are the three numbers?",
@@ -1902,6 +1998,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "`SELECT amount * 2 AS doubled FROM orders WHERE doubled > 100` fails with \"column doubled does not exist\", while `… ORDER BY doubled` on the same query works. Why?",
           "options": [
             {
@@ -1928,6 +2025,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "A report should list customers whose **paid** orders total more than 150. Where does `status = 'paid'` go, where does `sum(amount) > 150` go, and what goes wrong if the status condition is left out?",
           "options": [
             {
@@ -1954,6 +2052,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "In an `EXPLAIN` plan for a grouped query with both a `WHERE` and a `HAVING`, where does each filter appear, and why there?",
           "options": [
             {
@@ -1980,6 +2079,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "`SELECT customer, status, sum(amount) FROM orders GROUP BY customer` is rejected, but grouping by a table's primary key lets you select that table's other columns. What principle explains both?",
           "options": [
             {
@@ -2006,6 +2106,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "`SELECT sum(amount) FROM orders WHERE false` and the same query with `GROUP BY customer` added: how many rows does each return, and what is in them?",
           "options": [
             {
@@ -2060,6 +2161,7 @@
       "drill": [
         {
           "id": "d1",
+          "tag": null,
           "kind": "predict",
           "code": "SELECT c.name, o.id\nFROM customers c\nLEFT JOIN orders o\n  ON o.customer_id = c.id AND c.name = 'bo';",
           "prompt": "How many rows does this return?",
@@ -2088,6 +2190,7 @@
         },
         {
           "id": "d2",
+          "tag": null,
           "kind": "find",
           "code": "SELECT p.name, count(*) AS reviews, round(avg(r.stars), 1) AS avg_stars\nFROM products p\nLEFT JOIN reviews r ON r.product_id = p.id\nGROUP BY p.name\nORDER BY p.name;\n\n  name  | reviews | avg_stars\n--------+---------+-----------\n kettle |       2 |       4.5\n mug    |       1 |       3.0\n teapot |       1 |",
           "prompt": "Products and their reviews: kettle has two reviews, mug has one, teapot has none. What is wrong with this result?",
@@ -2116,6 +2219,7 @@
         },
         {
           "id": "d3",
+          "tag": null,
           "kind": "choose",
           "code": "-- A\nSELECT c.name FROM customers c\nLEFT JOIN orders o ON o.customer_id = c.id AND o.status = 'paid'\nWHERE o.id IS NULL;\n\n-- B\nSELECT c.name FROM customers c\nJOIN orders o ON o.customer_id = c.id\nWHERE o.id IS NULL;\n\n-- C\nSELECT c.name FROM customers c\nWHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id);",
           "prompt": "Which of these return exactly the customers who have never placed any order?",
@@ -2155,6 +2259,7 @@
             "hint": "The condition on the right-hand table belongs where the match is decided.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -2167,6 +2272,7 @@
             "hint": "A row the join invented has NULL in every right-hand column.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -2179,6 +2285,7 @@
             "hint": "`count(*)` counts the row the join made up. Count something from the other side.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -2191,6 +2298,7 @@
             "hint": "Filter in `ON`, aggregate, then replace the NULL a missing match produces.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -2202,6 +2310,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "In a `LEFT JOIN`, what is a NULL-extended row, and when does the join produce one?",
           "options": [
             {
@@ -2228,6 +2337,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "`customers LEFT JOIN orders ON o.customer_id = c.id WHERE o.status = 'paid'` loses every customer without a paid order. Why does it lose the customers who have no orders at all, and why does it also lose those who have only refunds?",
           "options": [
             {
@@ -2254,6 +2364,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "To keep customers who have no paid orders, someone changes `WHERE o.status = 'paid'` to `WHERE o.status = 'paid' OR o.status IS NULL`. Why is the result still wrong?",
           "options": [
             {
@@ -2280,6 +2391,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "You wrote a `LEFT JOIN`, and `EXPLAIN` shows a plain `Nested Loop` or `Hash Join` with no `Left` in it. What does that tell you?",
           "options": [
             {
@@ -2306,6 +2418,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "After `customers LEFT JOIN orders … GROUP BY c.name`, why does `count(*)` report 1 for a customer who has never ordered, and what should be counted instead?",
           "options": [
             {
@@ -2360,6 +2473,7 @@
       "drill": [
         {
           "id": "d1",
+          "tag": null,
           "kind": "predict",
           "code": "SELECT o.customer,\n       sum(o.total)  AS revenue,\n       sum(p.amount) AS paid,\n       count(i.sku)  AS lines\nFROM orders o\nJOIN items    i ON i.order_id = o.id\nJOIN payments p ON p.order_id = o.id\nGROUP BY o.customer;",
           "prompt": "Order 3 belongs to `cy`, totals 40.00, has 2 item rows, and was paid in 4 payments of 10.00. What does this report show for `cy`?",
@@ -2388,6 +2502,7 @@
         },
         {
           "id": "d2",
+          "tag": null,
           "kind": "find",
           "code": "SELECT o.id, count(DISTINCT i.sku) AS lines\nFROM orders o\nJOIN items    i ON i.order_id = o.id\nJOIN payments p ON p.order_id = o.id\nGROUP BY o.id;",
           "prompt": "Order 4 has two item rows, both for `mug` (qty 1 and qty 2), and two payments of 15.00. The fan-out was \"fixed\" with `count(DISTINCT i.sku)`. What does it report?",
@@ -2416,6 +2531,7 @@
         },
         {
           "id": "d3",
+          "tag": null,
           "kind": "choose",
           "code": "-- A\nSELECT o.customer, sum(p.amount) FROM orders o\nJOIN items i ON i.order_id = o.id\nJOIN payments p ON p.order_id = o.id\nGROUP BY o.customer;\n\n-- B\nSELECT o.customer, sum(DISTINCT p.amount) FROM orders o\nJOIN payments p ON p.order_id = o.id\nGROUP BY o.customer;\n\n-- C\nSELECT o.customer, sum(p.amount) FROM orders o\nJOIN payments p ON p.order_id = o.id\nGROUP BY o.customer;",
           "prompt": "`ana` has two orders (100.00 paid as 50 + 50, and 60.00 paid once); `bo` has one (80.00, paid once). Order 1 also has 3 items. Which queries report `ana`'s total paid as 160.00?",
@@ -2455,6 +2571,7 @@
             "hint": "Reduce each many-side table to one row per order before it meets anything else.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -2467,6 +2584,7 @@
             "hint": "Compare a plain count with a count of distinct keys over the same join.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -2479,6 +2597,7 @@
             "hint": "Group, then filter the groups.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -2491,6 +2610,7 @@
             "hint": "An aggregate can carry its own filter.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -2502,6 +2622,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "An order totalling 100.00 has three item rows. Why does `SELECT sum(o.total) FROM orders o JOIN items i ON i.order_id = o.id` count it as 300.00?",
           "options": [
             {
@@ -2528,6 +2649,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "One order has 3 items and 2 payments. When both tables are joined to it in one query, how many rows does that order become, and why?",
           "options": [
             {
@@ -2554,6 +2676,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "A report joins orders to both items and payments and shows inflated payment totals. Why is changing `sum(p.amount)` to `sum(DISTINCT p.amount)` not a fix?",
           "options": [
             {
@@ -2580,6 +2703,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "What does \"the grain of a result\" mean, and what rule about grain prevents fan-out?",
           "options": [
             {
@@ -2606,6 +2730,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "How can `EXPLAIN ANALYZE` show you that a join has fanned out?",
           "options": [
             {
@@ -2661,6 +2786,7 @@
       "drill": [
         {
           "id": "d1",
+          "tag": null,
           "kind": "predict",
           "code": "SELECT name, score\nFROM scores\nORDER BY score DESC\nFETCH FIRST 2 ROWS WITH TIES;",
           "prompt": "Scores: ana 90, bo 80, cy 80, dee 80, eli 70. How many rows does this return?",
@@ -2689,6 +2815,7 @@
         },
         {
           "id": "d2",
+          "tag": null,
           "kind": "find",
           "code": "SELECT id FROM feed\nWHERE created_at < '2026-05-01 10:05+00'\nORDER BY created_at DESC, id DESC\nLIMIT 2;",
           "prompt": "Page 1 of this feed ended at the post with `created_at = 10:05` and `id = 7`. The rows: (8, 10:09), (7, 10:05), (6, 10:05), (9, 10:01), (5, 10:00). Page 2 should start with id 6. What does this query return instead?",
@@ -2717,6 +2844,7 @@
         },
         {
           "id": "d3",
+          "tag": null,
           "kind": "choose",
           "code": "-- A\nSELECT name FROM players LIMIT 1;\n\n-- B\nSELECT name FROM players ORDER BY score DESC LIMIT 1;\n\n-- C\nSELECT name FROM players ORDER BY score DESC, id LIMIT 1;",
           "prompt": "`players(id PRIMARY KEY, name, score)`, where two players share the top score. Which queries are guaranteed to return the same row every time?",
@@ -2756,6 +2884,7 @@
             "hint": "The last sort key has to be unique.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -2768,6 +2897,7 @@
             "hint": "FETCH FIRST … ROWS …",
             "verify": null,
             "ordered": false,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -2780,6 +2910,7 @@
             "hint": "A row comparison — two columns in parentheses on each side of `<`.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -2791,6 +2922,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "A query without `ORDER BY` has returned rows in insertion order for months. Name two things that can change that order without the query changing.",
           "options": [
             {
@@ -2817,6 +2949,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "`ORDER BY score DESC LIMIT 1` on a table where two players share the top score: which one is returned, and how do you make the answer stable?",
           "options": [
             {
@@ -2843,6 +2976,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "A feed pages with `LIMIT 20 OFFSET 20` for page 2, and a new post is published while the reader is still on page 1. What does the reader see on page 2, and why?",
           "options": [
             {
@@ -2869,6 +3003,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "Why does `LIMIT 10 OFFSET 90000` stay slow even with an index that matches the `ORDER BY` exactly?",
           "options": [
             {
@@ -2895,6 +3030,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "Why must keyset pagination write `(created_at, id) < (x, y)` rather than `created_at < x AND id < y`?",
           "options": [
             {
@@ -2949,6 +3085,7 @@
       "drill": [
         {
           "id": "d1",
+          "tag": null,
           "kind": "predict",
           "code": "SELECT id, amount,\n       sum(amount) OVER (ORDER BY day) AS running\nFROM t\nORDER BY id;",
           "prompt": "Rows: (1, Apr 1, 10), (2, Apr 1, 20), (3, Apr 2, 5). What is the `running` column?",
@@ -2977,6 +3114,7 @@
         },
         {
           "id": "d2",
+          "tag": null,
           "kind": "find",
           "code": "SELECT region, id, amount\nFROM (\n  SELECT region, id, amount,\n         row_number() OVER (PARTITION BY region ORDER BY amount DESC) AS rn\n  FROM sales\n) s\nWHERE rn = 1;",
           "prompt": "This is meant to list each region's top sale. It returns one row per region. What is wrong with it?",
@@ -3005,6 +3143,7 @@
         },
         {
           "id": "d3",
+          "tag": null,
           "kind": "choose",
           "code": "-- A\nSELECT id, round(100.0 * amount / sum(amount) OVER (), 1) AS pct\nFROM sales WHERE region = 'north';\n\n-- B\nSELECT id, pct FROM (\n  SELECT id, region, round(100.0 * amount / sum(amount) OVER (), 1) AS pct\n  FROM sales\n) s\nWHERE region = 'north';\n\n-- C\nSELECT id, round(100.0 * amount / (SELECT sum(amount) FROM sales), 1) AS pct\nFROM sales WHERE region = 'north';",
           "prompt": "List only `north`'s sales, each with its percentage of the **whole table's** total (660). Which queries do that?",
@@ -3044,6 +3183,7 @@
             "hint": "A window over each region keeps the rows; `100.0` avoids integer division.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -3056,6 +3196,7 @@
             "hint": "Rank in a subquery, filter the rank outside it.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -3068,6 +3209,7 @@
             "hint": "Count rows, not peers — and give the frame explicitly.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -3080,6 +3222,7 @@
             "hint": "One window function reads a value from the previous row.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -3092,6 +3235,7 @@
             "hint": "DISTINCT with an ON list, and an ORDER BY that starts with the same column.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -3103,6 +3247,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "What is the difference between what `GROUP BY` and a window function do to the rows of a query?",
           "options": [
             {
@@ -3129,6 +3274,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "Why is `WHERE rank() OVER (…) = 1` rejected, and what is the standard way to filter on a window function in PostgreSQL?",
           "options": [
             {
@@ -3155,6 +3301,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "Two sales share the same day. Why does `sum(amount) OVER (ORDER BY day)` give both of them the same running total, and how do you get a true row-by-row running total?",
           "options": [
             {
@@ -3181,6 +3328,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "Two rows tie for first place in a partition. What do `row_number`, `rank` and `dense_rank` assign to them, and to the row after them?",
           "options": [
             {
@@ -3207,6 +3355,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "Why does `last_value(x) OVER (ORDER BY t)` return the current row's own value?",
           "options": [
             {
@@ -3261,6 +3410,7 @@
       "drill": [
         {
           "id": "d1",
+          "tag": null,
           "kind": "predict",
           "code": "SELECT sum(score) / count(*) AS average\nFROM ratings;",
           "prompt": "`ratings.score` is an `int` column holding 4, 5 and 5. What does this return?",
@@ -3289,6 +3439,7 @@
         },
         {
           "id": "d2",
+          "tag": null,
           "kind": "find",
           "code": "-- the check, typed into psql\nSELECT 0.1 + 0.2 = 0.3;\n\n-- production: readings.v is float8, holding 0.1::float8 + 0.2::float8\nSELECT * FROM readings WHERE v = 0.3;",
           "prompt": "To check a float tolerance bug, someone runs the first query in psql and it returns `t`, so they close the ticket. The second query, against the real `float8` column, still returns no rows. Why did the check prove nothing?",
@@ -3317,6 +3468,7 @@
         },
         {
           "id": "d3",
+          "tag": null,
           "kind": "choose",
           "code": null,
           "prompt": "Pick types for three columns: an order total in euros, a temperature reading from a sensor, and the primary key of an events table that gains millions of rows a day.",
@@ -3356,6 +3508,7 @@
             "hint": "Start the arithmetic with a number that is not an integer.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -3368,6 +3521,7 @@
             "hint": "The absolute difference, against a small number.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -3380,6 +3534,7 @@
             "hint": "Cast the 0.1 to the exact decimal type before summing.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -3392,6 +3547,7 @@
             "hint": "Cast one side to the 8-byte integer type.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -3403,6 +3559,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "Why does `count(*) FILTER (WHERE converted) / count(*) * 100` return 0 for a 12.5% conversion rate in PostgreSQL, and how do you fix it?",
           "options": [
             {
@@ -3429,6 +3586,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "Why is `0.1::float8 + 0.2::float8 = 0.3` false in PostgreSQL while `0.1 + 0.2 = 0.3` is true?",
           "options": [
             {
@@ -3455,6 +3613,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "You insert 19.999 into a `numeric(10,2)` column. What is stored, and does anything warn you?",
           "options": [
             {
@@ -3481,6 +3640,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "What do `round(2.5)` and `round(2.5::float8)` return in PostgreSQL, and why do they differ?",
           "options": [
             {
@@ -3507,6 +3667,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "Which type would you use for an amount of money in PostgreSQL, and why not `float8` or `money`?",
           "options": [
             {
@@ -3561,6 +3722,7 @@
       "drill": [
         {
           "id": "d1",
+          "tag": null,
           "kind": "predict",
           "code": "SELECT date '2026-01-31'\n       + interval '1 month'\n       + interval '1 month' AS renewal;",
           "prompt": "What does this return?",
@@ -3589,6 +3751,7 @@
         },
         {
           "id": "d2",
+          "tag": null,
           "kind": "find",
           "code": "-- week 1\nSELECT count(*) FROM events\nWHERE at BETWEEN '2026-06-01' AND '2026-06-08';\n\n-- week 2\nSELECT count(*) FROM events\nWHERE at BETWEEN '2026-06-08' AND '2026-06-15';",
           "prompt": "Two consecutive weekly reports are run, and their totals add up to more than the events that actually happened. Which events are counted twice?",
@@ -3617,6 +3780,7 @@
         },
         {
           "id": "d3",
+          "tag": null,
           "kind": "choose",
           "code": null,
           "prompt": "Pick a representation for three things: when a payment happened, a shop's daily opening time (09:00 in every branch), and a webinar next year at 10:00 in a named city.",
@@ -3656,6 +3820,7 @@
             "hint": "Inclusive start, exclusive end — the end is the start of the next day.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -3668,6 +3833,7 @@
             "hint": "One operator converts an instant to the wall-clock time in a named zone.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -3680,6 +3846,7 @@
             "hint": "`date_trunc` takes an optional third argument.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -3692,6 +3859,7 @@
             "hint": "Add an interval, then cast the result back down.",
             "verify": null,
             "ordered": null,
+            "tag": null,
             "given": null,
             "note": null,
             "requires": [],
@@ -3703,6 +3871,7 @@
       "quiz": [
         {
           "id": "q1",
+          "tag": null,
           "prompt": "What does a `timestamptz` value actually store, and what does the session's `TimeZone` setting change about it?",
           "options": [
             {
@@ -3729,6 +3898,7 @@
         },
         {
           "id": "q2",
+          "tag": null,
           "prompt": "The text `'2026-03-29 12:00:00'`, with no offset, is inserted into a `timestamptz` column from two sessions, one with `TimeZone` set to UTC and one set to `America/New_York`. Are the stored values the same?",
           "options": [
             {
@@ -3755,6 +3925,7 @@
         },
         {
           "id": "q3",
+          "tag": null,
           "prompt": "Why does `WHERE at BETWEEN '2026-06-01' AND '2026-06-07'` miss most of June 7th on a timestamp column, and what should be written instead?",
           "options": [
             {
@@ -3781,6 +3952,7 @@
         },
         {
           "id": "q4",
+          "tag": null,
           "prompt": "On the day Berlin moves its clocks forward an hour, what is the difference between adding `interval '1 day'` and adding `interval '24 hours'` to 01:00 that morning (with the session in Berlin time)?",
           "options": [
             {
@@ -3807,6 +3979,7 @@
         },
         {
           "id": "q5",
+          "tag": null,
           "prompt": "Why can a daily revenue report built on `date_trunc('day', created_at)` give different totals when run from different servers?",
           "options": [
             {

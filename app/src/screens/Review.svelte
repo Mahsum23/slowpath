@@ -26,7 +26,8 @@
   import CodeArea from '../components/CodeArea.svelte';
   import { asCodeBlock, hasFence, shapeOf } from '../lib/compose';
   import MentorSheet from '../components/MentorSheet.svelte';
-  import { codeBlocksFor, isDue, pickNext, type CardRef } from '../lib/review';
+  import { codeBlocksFor, isDue, isWorn, pickNext, type CardRef } from '../lib/review';
+  import { cardBrief, isReflex, itemOf, permutation, pickFollowUps, themeLabel, weightOf } from '../lib/focus';
   import { buildRound, LAND_AT, MIN_ROUND, practiceStatus } from '../lib/practice';
   import { sql } from '../lib/sqlrun.svelte';
   import { judge, type ShapeReport } from '../lib/shapecheck';
@@ -35,11 +36,31 @@
   import ResultGrid from '../components/ResultGrid.svelte';
   import { today } from '../lib/date';
   import {
-    collect, forgeData, forgePrompt, looksComplete, parseVerdict, reviewGraderPrompt, streamReply, stripMarkers,
+    collect, forgeData, forgePrompt, looksComplete, type ForgeTarget, parseVerdict, reviewGraderPrompt, streamReply, stripMarkers,
     MAX_REVIEW_MESSAGES, ModelGoneError, withStanding, type ChatMessage, type MentorFocus,
   } from '../lib/mentor';
   import { TRACKS, type Day, type DrillStep, type QuizQuestion, type Track, type Week, type WriteChallenge, type WriteSet } from '../lib/types';
   import { inlineHtml } from '../lib/inline';
+
+  /**
+   * What a miss pulls in next (focus.ts): the cards queued behind it, the idea they are
+   * about, and how many follow-ups have been dealt this sitting. Never stored — the
+   * schedule remembers the miss; this is just "and while we're here".
+   */
+  let pending = $state<CardRef[]>([]);
+  let justMissed = $state<string | null>(null);
+  let followsDealt = $state(0);
+  /** What has been asked this sitting, per day, so a generated follow-up does not repeat it. */
+  let askedBy = $state<Record<string, string[]>>({});
+  const MAX_FOLLOWS = 9;
+
+  /**
+   * How this showing of a quiz or drill card orders its options (display slot -> authored
+   * index), and when it appeared. A fresh order each time, so the position of the right
+   * answer cannot be remembered; the time, to tell reading from reflex (focus.ts).
+   */
+  let order = $state<number[]>([]);
+  let shownAt = 0;
 
   /** Cards dealt this sitting, so the same one can't come round twice in a row. */
   let seen = $state<Set<string>>(new Set());
@@ -310,6 +331,8 @@
     revealed = false;
     writeGraded = false;
     shapeTries = [];
+    justMissed = null;
+    order = [];
   }
 
   async function deal() {
@@ -317,19 +340,70 @@
     reset();
     if (roundCards) {
       const next = roundCards[roundAt] ?? null;
-      card = next;
+      present(next);
       if (!next) return void endRound();
       if (next.kind === 'write') await setupWrite(next);
+      return;
+    }
+    // Behind a miss: the follow-ups it earned come before anything else.
+    const queued = pending[0];
+    if (queued) {
+      pending = pending.slice(1);
+      followsDealt++;
+      present(queued);
+      noteAsked(queued);
+      if (queued.kind === 'forge') await forge();
+      if (queued.kind === 'write') await setupWrite(queued);
       return;
     }
     // In practice mode nothing is "due", so every card is fair game; `seen` still
     // stops the same one coming round twice in a sitting.
     const on = practice ? '9999-12-31' : today();
-    const next = pickNext(answerable, app.progress.review, on, Math.random, seen, previous);
-    card = next;
+    let next = pickNext(answerable, app.progress.review, on, Math.random, seen, previous, (c) =>
+      weightOf(c, app.heats, app.dayById),
+    );
+    // A card answered on reflex twice running no longer measures anything: deal the same
+    // idea from another angle instead, and credit the result to the card it stands in for.
+    if (next && isWorn(app.progress.review.cards[next.id])) next = substituteFor(next) ?? next;
+    present(next);
+    if (next) noteAsked(next);
     if (next?.kind === 'forge') await forge();
     if (next?.kind === 'parsons') setupParsons(next);
     if (next?.kind === 'write') await setupWrite(next);
+  }
+
+  /** Put a card on screen: a fresh option order, and the clock started. */
+  function present(next: CardRef | null) {
+    card = next;
+    shownAt = performance.now();
+    const day = next ? app.dayById(next.dayId) : null;
+    const q =
+      next && day
+        ? next.kind === 'quiz'
+          ? day.quiz?.find((x) => x.id === next.questionId)
+          : next.kind === 'drill'
+            ? (day.drill?.find((x) => x.id === next.questionId) ?? day.practice?.drill.find((x) => x.id === next.questionId))
+            : null
+        : null;
+    order = q ? permutation(q.options.length) : [];
+  }
+
+  /**
+   * What to deal in place of a worn card. Preferably a question the model writes about the
+   * same idea; failing that, a real card from the same theme that you haven't been seeing.
+   * Null when there is nothing better, and then the card itself is dealt after all.
+   */
+  function substituteFor(worn: CardRef): CardRef | null {
+    const day = app.dayById(worn.dayId);
+    if (!day) return null;
+    const label = themeLabel(day, worn);
+    const base = { label, about: worn.id, credit: worn.id, reason: 'reflex' as const };
+    const brief = cardBrief(day, worn);
+    if (app.mentorReady && brief && (day.theoryMarkdown ?? '').length > 0) {
+      return { id: `forge:${day.id}`, kind: 'forge', dayId: day.id, followUp: { ...base, brief } };
+    }
+    const alt = pickFollowUps(worn, app.followPool, app.dayById, seen, 1)[0];
+    return alt ? { ...alt.card, followUp: base } : null;
   }
 
   /**
@@ -556,6 +630,13 @@
   }
 
   /** Ask the model for a challenge it has just invented from the day's material. */
+  /** For a follow-up forged about a miss: what to aim at and what not to repeat. */
+  function forgeTarget(ref: CardRef | null): ForgeTarget | null {
+    const f = ref?.followUp;
+    if (!ref || !f?.brief) return null;
+    return { brief: f.brief, theme: f.label, avoid: (askedBy[ref.dayId] ?? []).slice(-8) };
+  }
+
   async function forge() {
     const key = app.mentorKey;
     if (!key || !context) return;
@@ -573,7 +654,7 @@
             key,
             model: app.progress.settings.mentorModel,
             alternates: app.fallbackModels,
-            system: forgePrompt(context),
+            system: forgePrompt(context, forgeTarget(card)),
             messages: [{ role: 'user', content: 'Write the challenge.' }],
           }),
         );
@@ -665,20 +746,77 @@
   async function choose(index: number) {
     if (picked !== null || !question) return;
     picked = index;
-    await settle(question.options[index]?.correct ? 'good' : 'again');
+    const right = Boolean(question.options[index]?.correct);
+    // Answered faster than the question can have been read? That is recognition, and two of
+    // them in a row retire the card (see substituteFor).
+    const reflex = right && isReflex(performance.now() - shownAt, `${question.prompt} ${listing ?? ''}`);
+    await settle(right ? 'good' : 'again', reflex);
   }
 
-  async function settle(result: 'good' | 'again') {
+  async function settle(result: 'good' | 'again', reflex = false) {
     if (!card) return;
     // "Early" is a property of the card, not of the mode: a practice run can still
     // turn up something that was genuinely due, and that one counts in full.
     const early = !isDue(app.progress.review.cards[card.id], today());
     seen = new Set([...seen, card.id]);
-    await app.gradeCard(card.id, result, early);
-    if (roundCards && roundCtx && card.dayId === roundCtx.day.id) {
-      if (result === 'good') roundRight++;
-      await app.recordPractice(roundCtx.day, roundCtx.week.id, card, result === 'good');
+    // A question the model wrote about a miss is a one-off: it has no schedule of its own,
+    // and the miss it is about has already been scheduled.
+    if (!(card.kind === 'forge' && card.followUp)) await app.gradeCard(card.id, result, early, reflex);
+    // Standing in for a worn card: its schedule hears how this one went. Right means the
+    // idea holds up from another angle (so the worn card advances); wrong means it did not.
+    if (card.followUp?.credit) await app.gradeCard(card.followUp.credit, result, false, false);
+    if (roundCards && result === 'good' && roundCtx && card.dayId === roundCtx.day.id) roundRight++;
+    // Any first sight of a practice-bank item counts as its first attempt, wherever it
+    // was dealt: in a round, from the deck, or as a follow-up to something you missed.
+    const day = context?.day;
+    if (day && context && day.practice && (card.kind === 'write' || card.kind === 'drill')) {
+      const inBank =
+        day.practice.write?.challenges.some((c) => c.id === card!.questionId) || day.practice.drill.some((s) => s.id === card!.questionId);
+      if (inBank) await app.recordPractice(day, context.week.id, card, result === 'good');
     }
+    if (result === 'again' && !roundCards) queueFollowUps(card);
+  }
+
+  /** Remember what was asked, so a generated follow-up can be told not to repeat it. */
+  function noteAsked(ref: CardRef) {
+    const day = app.dayById(ref.dayId);
+    const prompt = day ? itemOf(day, ref)?.prompt : null;
+    if (prompt) askedBy = { ...askedBy, [ref.dayId]: [...(askedBy[ref.dayId] ?? []), prompt] };
+  }
+
+  /**
+   * You missed one: line up a few more on the same idea, from other angles.
+   *
+   * The first are real cards from the same theme (the deck's, or practice-bank items you
+   * have never seen), of different kinds from each other. If the mentor is reachable, the
+   * second is a fresh question the model writes about this exact miss, so there is always
+   * a different one even when the bank has run dry. Capped per sitting, so a bad day
+   * cannot turn the whole deck into one topic.
+   */
+  function queueFollowUps(missed: CardRef) {
+    if (followsDealt >= MAX_FOLLOWS) return;
+    const day = app.dayById(missed.dayId);
+    if (!day) return;
+    const label = themeLabel(day, missed);
+    const picks: CardRef[] = pickFollowUps(missed, app.followPool, app.dayById, seen).map((p) => ({
+      ...p.card,
+      followUp: { label, about: missed.id },
+    }));
+    if (app.mentorReady && (day.theoryMarkdown ?? '').length > 0) {
+      const brief = focus?.brief ?? missBrief(missed);
+      const forged: CardRef = { id: `forge:${day.id}`, kind: 'forge', dayId: day.id, followUp: { label, about: missed.id, brief } };
+      picks.splice(Math.min(1, picks.length), 0, forged);
+    }
+    pending = picks.slice(0, 3);
+    justMissed = pending.length ? label : null;
+  }
+
+  /** What to tell the model about a miss, when the answered-card summary isn't there yet. */
+  function missBrief(ref: CardRef): string {
+    const day = app.dayById(ref.dayId);
+    const info = day ? itemOf(day, ref) : null;
+    const typed = shapeTries.at(-1)?.code ?? attempts.at(-1)?.sql ?? '';
+    return [info?.prompt ?? '', wc ? `Reference answer:\n${wc.solution}` : '', typed ? `What they wrote:\n${typed}` : ''].filter(Boolean).join('\n\n');
   }
 
   /** Start a round of the given day's bank. */
@@ -730,7 +868,7 @@
   answerKeys(() => ({
     count: () => question?.options.length ?? 0,
     canChoose: () => (card?.kind === 'quiz' || card?.kind === 'drill') && Boolean(question) && picked === null && !loading,
-    choose: (i) => void choose(i),
+    choose: (i) => void choose(order[i] ?? i),
     canAdvance: () => answered && !streaming && !running,
     advance: () => void advance(),
   }));
@@ -856,6 +994,17 @@
       </div>
     </div>
   {:else}
+    {#if card.followUp}
+      <p class="focusnote">
+        {#if card.followUp.reason === 'reflex'}
+          <strong>Fresh angle: {card.followUp.label}</strong>
+          <span>you'd started answering the original on reflex — same idea, a question you can't pattern-match</span>
+        {:else}
+          <strong>Focus: {card.followUp.label}</strong>
+          <span>{card.kind === 'forge' ? 'a new question about what you just missed' : 'another angle on what you just missed'}</span>
+        {/if}
+      </p>
+    {/if}
     <p class="from">
       {#if context}Day {context.day.day} — {context.day.title}{/if}
       <span class="kind">
@@ -884,7 +1033,8 @@
           <pre class="ref listing"><code>{@html highlight(listing, wLangOfDay)}</code></pre>
         {/if}
         <div class="options">
-          {#each question.options as option, i}
+          {#each (order.length === question.options.length ? order : question.options.map((_, k) => k)) as i}
+            {@const option = question.options[i]}
             <button
               class="option"
               class:right={answered && option.correct}
@@ -1123,6 +1273,12 @@
         <p>{error}</p>
         <button class="link" onclick={() => (card?.kind === 'write' ? void setAside(card) : void skip())}>Skip this card</button>
       </div>
+    {/if}
+
+    {#if answered && justMissed && pending.length}
+      <p class="missnote">
+        Noted. {pending.length === 1 ? 'One more' : `${pending.length} more`} on <strong>{justMissed}</strong>, from a different angle, before moving on.
+      </p>
     {/if}
 
     <div class="actions">
@@ -1617,6 +1773,31 @@
     letter-spacing: 0.075em;
     text-transform: uppercase;
     color: var(--text-faint);
+  }
+
+  .focusnote {
+    margin: 0 0 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    align-items: baseline;
+    font-size: 12.5px;
+    color: var(--text-faint);
+  }
+
+  .focusnote strong {
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .missnote {
+    margin: 4px 0 10px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    font-size: 13.5px;
+    line-height: 1.5;
   }
 
   .listing {

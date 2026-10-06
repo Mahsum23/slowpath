@@ -236,6 +236,16 @@ function placeOptions(questions, dayId) {
   return questions;
 }
 
+/**
+ * A card's theme: a short human phrase ("partial indexes") naming the one idea it tests,
+ * finer than the day. When a card is missed, the deck follows up with others that share
+ * its theme, and shows the phrase as "Focus: …" — so write it as a reader would say it.
+ */
+function tagOf(raw) {
+  const t = raw === undefined || raw === null ? '' : String(raw).trim();
+  return t || null;
+}
+
 function loadQuiz(path, dayId) {
   if (!existsSync(path)) return null;
   const doc = parseYaml(readFileSync(path, 'utf8'));
@@ -258,6 +268,7 @@ function loadQuiz(path, dayId) {
     }
     return {
       id: q.id ?? `q${qi + 1}`,
+      tag: tagOf(q.tag),
       prompt: String(q.prompt ?? '').trim(),
       options: options.map((o) => ({
         text: String(o.text ?? '').trim(),
@@ -312,6 +323,7 @@ function parseDrill(steps, path, dayId, { max, salt }) {
     }
     return {
       id: q.id ?? `d${qi + 1}`,
+      tag: tagOf(q.tag),
       kind: DRILL_KINDS.has(q.kind) ? q.kind : 'choose',
       code: q.code ? String(q.code).replace(/\n+$/, '') : null,
       prompt: String(q.prompt ?? '').trim(),
@@ -403,6 +415,7 @@ function parseWrite(doc, path, dayId) {
       verify: c.verify ? String(c.verify).trim() : null,
       // null means "decide from the solution": ordered when it sorts at the top level.
       ordered: typeof c.ordered === 'boolean' ? c.ordered : null,
+      tag: tagOf(c.tag),
       given: c.given ? String(c.given).trimEnd() : null,
       note: c.note ? String(c.note).trim() : null,
       requires,

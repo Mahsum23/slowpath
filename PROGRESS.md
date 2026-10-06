@@ -604,3 +604,13 @@ mode in the deck stops instead of cycling. Banks written for **indexes** (33 ite
 proven wrong — which forced twelve data fixes. Next: banks for the other eight SQL days
 (nulls and LEFT JOIN first), then Go, then C++.
 
+**A deck that pays attention (2026-10-06).** He wanted review to be smarter: a mistake should
+put that idea in focus with more *diverse* questions on it, and he pointed out that repeated
+cards get answered by shape without reading ("overlearning, mechanical and useless"). Built:
+every bank item has a theme tag; a miss queues three follow-ups (same theme, different kinds,
+unseen bank items first, and a model-written question about that exact miss); hot themes are
+dealt more and Today says what it is leaning on; options reshuffle on every showing; and two
+right answers faster than the question can be read retire the card into a fresh angle on the
+same idea, credited back to the original. Honest limit: reading speed is a proxy. Next:
+tag the remaining days' items as their banks are written.
+
