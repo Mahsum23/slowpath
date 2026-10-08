@@ -11,6 +11,7 @@
  * records no longer contain — see mergeStreak.
  */
 import { mergePractice } from './practice';
+import { mergeActivity } from './motivation';
 import {
   emptyDayProgress, emptyReview,
   type DayProgress, type Progress, type ReviewCard, type ReviewState, type StreakState, type TaskReview, type TaskState, type QuizState,
@@ -171,5 +172,6 @@ export function mergeProgress(local: Progress, remote: Progress): Progress {
     // remote's list would convince a fresh install it already has the content, and
     // the app would then never download it.
     loadedWeeks: local.loadedWeeks,
+    ...(local.activity || remote.activity ? { activity: mergeActivity(local.activity, remote.activity) } : {}),
   };
 }

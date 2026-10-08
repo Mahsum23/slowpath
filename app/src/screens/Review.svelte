@@ -764,7 +764,7 @@
     if (!(card.kind === 'forge' && card.followUp)) await app.gradeCard(card.id, result, early, reflex);
     // Standing in for a worn card: its schedule hears how this one went. Right means the
     // idea holds up from another angle (so the worn card advances); wrong means it did not.
-    if (card.followUp?.credit) await app.gradeCard(card.followUp.credit, result, false, false);
+    if (card.followUp?.credit) await app.gradeCard(card.followUp.credit, result, false, false, false);
     if (roundCards && result === 'good' && roundCtx && card.dayId === roundCtx.day.id) roundRight++;
     // Any first sight of a practice-bank item counts as its first attempt, wherever it
     // was dealt: in a round, from the deck, or as a follow-up to something you missed.

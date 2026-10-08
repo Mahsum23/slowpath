@@ -614,3 +614,11 @@ right answers faster than the question can be read retire the card into a fresh 
 same idea, credited back to the original. Honest limit: reading speed is a proxy. Next:
 tag the remaining days' items as their banks are written.
 
+**Seeing the progress (2026-10-08).** He asked for motivation and good visuals, tired of
+grinding. Researched first (progress principle, self-determination theory, broken-streak
+studies, fresh-start effect, the rewards-undermine-interest meta-analysis) and built only what
+those support: a headline of how many questions he'd get right now, with its growth line; a
+knowledge map of every concept reached by strength; an activity calendar that counts showing
+up and never says "broken"; weekly right-first-time; a fresh-start greeting after a gap; and
+the day's wins named on Done. No new points.
+

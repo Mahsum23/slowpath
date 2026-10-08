@@ -8,6 +8,8 @@
 
   import MoreLessons from '../components/MoreLessons.svelte';
   import { LAND_AT, practiceStatus, ROUND_SIZE } from '../lib/practice';
+  import { freshStart, knownNow, lastActiveBefore } from '../lib/motivation';
+  import { today } from '../lib/date';
 
   const current = $derived(app.current);
   // One path per track. Track-scoped, so a subject that hasn't loaded yet never shows
@@ -31,6 +33,18 @@
   const pst = $derived(
     practising ? practiceStatus(practising.day, app.progress.days[practising.day.id]?.practice) : null,
   );
+
+  /**
+   * A fresh start, named: after a few days away, or on a new week or month, and only before
+   * anything has been done today. It leads with what is still known — never with what was
+   * lost — because a broken run framed as broken is what makes people stop.
+   */
+  const fresh = $derived.by(() => {
+    if (!app.ready || (app.scores.get(today()) ?? 0) > 0) return null;
+    return freshStart(lastActiveBefore(app.scores));
+  });
+  const stillKnown = $derived(knownNow(app.progress.review));
+  const wins = $derived(app.winsToday);
 
   function start() {
     if (!current) return;
@@ -83,6 +97,20 @@
     </div>
   {/if}
 
+  {#if fresh}
+    <div class="fresh">
+      {#if fresh.kind === 'return'}
+        <strong>Welcome back.</strong>
+        {fresh.gap} day{fresh.gap === 1 ? '' : 's'} off, and you'd still get about {stillKnown} questions right.
+        Nothing is owed for the gap — today is a fresh start.
+      {:else if fresh.kind === 'week'}
+        <strong>A new week.</strong> A clean page — and {stillKnown} questions you'd get right, carried over.
+      {:else}
+        <strong>A new month.</strong> A good day to start something — {stillKnown} questions you'd get right, carried over.
+      {/if}
+    </div>
+  {/if}
+
   {#if !app.ready}
     <div class="card skeleton" aria-busy="true"></div>
   {:else if !week}
@@ -100,6 +128,14 @@
         <svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7" /></svg>
       </div>
       <h2>Done today</h2>
+      {#if wins.answered || wins.landed.length || wins.lessons.length}
+        <ul class="wins">
+          {#if wins.lessons.length}<li>Learned: <strong>{wins.lessons.join(', ')}</strong></li>{/if}
+          {#if wins.landed.length}<li>Landed: <strong>{wins.landed.join(', ')}</strong></li>{/if}
+          {#if wins.answered}<li>{wins.answered} answered, {wins.right} right</li>{/if}
+          {#if wins.stronger.length}<li>Stronger on {wins.stronger.slice(0, 4).join(', ')}{wins.stronger.length > 4 ? ` and ${wins.stronger.length - 4} more` : ''}</li>{/if}
+        </ul>
+      {/if}
       {#if practising}
         <p class="meta">
           See you tomorrow, for another round on {practising.day.title}. The next lesson opens when it lands.
@@ -606,6 +642,33 @@
   .strip em b {
     font-weight: 700;
     color: var(--text);
+  }
+
+  .fresh {
+    margin: 0 0 14px;
+    padding: 12px 15px;
+    border-radius: 14px;
+    background: var(--accent-soft);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+
+  .wins {
+    list-style: none;
+    margin: 4px 0 10px;
+    padding: 0;
+    display: grid;
+    gap: 3px;
+    font-size: 13.5px;
+    color: var(--text-dim);
+    text-align: left;
+  }
+
+  .wins li::before {
+    content: '+ ';
+    color: var(--ok);
+    font-weight: 700;
   }
 
   .nextup {

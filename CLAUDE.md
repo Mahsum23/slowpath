@@ -538,6 +538,36 @@ survive the next person who edits the deck:
 - **Follow-up and fresh-angle cards say why** ("Fresh angle: … you'd started answering the
   original on reflex"). Nothing silent.
 
+## Motivation comes from seeing progress, not from points
+
+He said he sometimes needs motivation, wants to track progress with good visuals, and gets
+tired of grinding the same material. Everything for that lives in `motivation.ts` (pure,
+tested in `test-motivation.mjs`), and each piece rests on a finding, so keep them that way:
+
+- **Visible progress, in the material's terms** (Amabile & Kramer's work-diary study: making
+  progress, even small, is the biggest daily lift). The Stats headline is how many questions
+  he would get right *if asked now* — expected recall from the review schedule (FSRS-style
+  curve, 90% at a card's interval) — with its history as a line. It rises with learning and
+  falls with neglect, so it is honest both ways; say "the forgetting curve at work", never
+  scold.
+- **Competence made visible** (self-determination theory): the knowledge map shows each
+  concept reached by strength, coverage and "to revisit", tap-to-practise. A concept is
+  *shaky* only when misses are a quarter or more of what was met; one slip is "1 to revisit".
+  Never the error red for it.
+- **Consistency, not chains.** A framed-as-broken streak lowers the chance of doing it again
+  (Silverman & Barasch, JCR 2023). The calendar counts days shown up; empty days are blank,
+  never red, and nothing says "broken". Starts at the week he began.
+- **Fresh starts** (Dai, Milkman & Riis 2014): after 2+ empty days, or on a new week or month,
+  and only before anything is done that day, Today greets him with what he still knows.
+- **Small wins named** on "Done today": learned, landed, answered/right, themes made stronger.
+- **No new points or rewards.** Expected tangible rewards for doing an activity reduce
+  interest in it (Deci, Koestner & Ryan's 1999 meta-analysis); feedback about competence does
+  not. Add information about the material, not currency.
+- Charts follow the dataviz rules: one hue, sequential steps mixed from each mode's own
+  tokens; text in text colours; hover/tap read-outs and aria labels on every chart.
+- The answer log (`progress.activity`) merges by **max per field, never sum** — a summed
+  tally once doubled on every sync.
+
 A task needs a machine, and not having one is the most common reason a day stalls
 half-finished — which is how the habit dies. So every day carries a **drill** as well as a
 task: two to four exercises in `day-NN-<slug>.drill.yaml`, same answer-key shape as the
