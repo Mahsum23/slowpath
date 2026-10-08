@@ -797,6 +797,27 @@ shape ("I just remember the answer and don't read the question"). `focus.ts` ans
   same-theme card and a forged question carrying the miss; two fast answers retiring a card
   into a fresh angle; option order differing between sittings).
 
+## 8.12 Seeing the progress (2026-10-08)
+
+Asked for motivation and visuals. Built from research, not from points (`motivation.ts`):
+
+- **"You'd get right, if asked now"**: Σ recall over answered cards, recall = (1 + t/9S)^-1 with
+  S = the card's interval (FSRS's curve; 90% at the interval). Logged at each answer into
+  `progress.activity[date].known` and drawn as a line ending at the live value; a week-on-week
+  delta is worded as learning (up) or forgetting (down), never as failure. Progress principle.
+- **Knowledge map**: one tile per concept reached, strength as a five-step single-hue swatch
+  (mixed from `--accent` and `--surface-2`, so both modes have their own ramp), status in
+  words, coverage meter, "to revisit"; tap opens a practice round or the lesson. Competence.
+- **Showing up**: a GitHub-style calendar from the week activity began (8–16 weeks), plus
+  "active N of the last 30 days". No red, no "broken". Silverman & Barasch 2023.
+- **Getting sharper**: right-first-time per week as columns with an 80% reference line.
+- **Today**: fresh-start greeting after a gap / new week / new month (Dai, Milkman & Riis
+  2014); "Done today" lists the day's wins.
+- **Data**: `activity` = {n, right, known} per local date, merged by max per field (idempotent
+  across syncs). History before the log is backfilled from dated events (lessons, rounds,
+  each card's last answer). Verified: `test-motivation.mjs`; Chromium in light and dark with a
+  seeded month (Stats, a return after three days, a done day).
+
 ## 9. Offline & local storage
 
 - **Content cache:** Cache API / IndexedDB — loaded weeks fully offline.

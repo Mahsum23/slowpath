@@ -29,7 +29,10 @@ import { evaluate as evaluateBadges } from './badges';
 import { deriveXp, XP_CLEAN_SWEEP, XP_SESSION } from './xp';
 import { localDateOf, today } from './date';
 import { bankCards, emptyPractice, finishRound, needsPractice, recordFirst } from './practice';
-import { heatMap, type Heat } from './focus';
+import { heatMap, themeLabel, type Heat } from './focus';
+import {
+  activityScores, conceptStrength, knownNow, logAnswer, type ConceptStrength,
+} from './motivation';
 
 export type DayState = 'done' | 'current' | 'unlocked' | 'locked' | 'upcoming';
 
@@ -117,6 +120,52 @@ class AppStore {
     return [...this.deck, ...extra];
   }
 
+  /** Every card a day can ever deal: its own quiz, drill and write cards, and its bank. */
+  cardIdsOf(day: Day): string[] {
+    const ids = [
+      ...(day.quiz ?? []).map((q) => `quiz:${day.id}:${q.id}`),
+      ...(day.drill ?? []).map((s) => `drill:${day.id}:${s.id}`),
+      ...(day.write?.challenges ?? []).map((c) => `write:${day.id}:${c.id}`),
+      ...bankCards(day).map((c) => c.id),
+    ];
+    return [...new Set(ids)];
+  }
+
+  /** How well each written day of this track is held, in path order. */
+  get knowledge(): { day: Day; s: ConceptStrength; landed: boolean }[] {
+    return this.availableDays.map(({ day }) => ({
+      day,
+      s: conceptStrength(this.cardIdsOf(day), this.progress.review),
+      landed: Boolean(this.progress.days[day.id]?.practice?.landedAt),
+    }));
+  }
+
+  /** How much happened on each date, from the log and everything else that is dated. */
+  get scores(): Map<string, number> {
+    return activityScores(this.progress, this.progress.activity);
+  }
+
+  /** What today added up to: the small wins, named. */
+  get winsToday(): { answered: number; right: number; stronger: string[]; landed: string[]; lessons: string[] } {
+    const t = today();
+    const a = this.progress.activity?.[t];
+    const stronger = new Set<string>();
+    for (const [id, rc] of Object.entries(this.progress.review.cards)) {
+      if (!rc.lastAt || localDateOf(rc.lastAt) !== t || rc.streak === 0) continue;
+      const [kind, dayId, qid] = id.split(':');
+      const day = this.dayById(dayId);
+      if (day && qid && (kind === 'quiz' || kind === 'drill' || kind === 'write')) stronger.add(themeLabel(day, { kind, questionId: qid }));
+    }
+    const landed: string[] = [];
+    const lessons: string[] = [];
+    for (const { day } of this.availableDays) {
+      const p = this.progress.days[day.id];
+      if (p?.practice?.landedAt && localDateOf(p.practice.landedAt) === t) landed.push(day.title);
+      if (p?.completedAt && localDateOf(p.completedAt) === t) lessons.push(day.title);
+    }
+    return { answered: a?.n ?? 0, right: a?.right ?? 0, stronger: [...stronger], landed, lessons };
+  }
+
   /** The themes with something to worry about right now, hottest first. */
   get heats(): Heat[] {
     return heatMap(this.deck, this.progress.review, this.dayById);
@@ -161,10 +210,15 @@ class AppStore {
   /**
    * @param early Answered outside its schedule, in a practice run you asked for.
    */
-  async gradeCard(id: string, result: Grade, early = false, reflex = false) {
+  async gradeCard(id: string, result: Grade, early = false, reflex = false, log = true) {
     const review = this.progress.review;
     const card = review.cards[id] ?? newCard();
     review.cards[id] = grade(card, result, new Date(), Math.random, { early, reflex });
+    // Every answer goes into the day's log, with what is known after it: the Stats line.
+    // A credit to a worn card is not a second answer, so it is not logged twice.
+    if (log) {
+      this.progress.activity = logAnswer($state.snapshot(this.progress.activity), result === 'good', knownNow($state.snapshot(review)));
+    }
     await this.persist();
   }
 

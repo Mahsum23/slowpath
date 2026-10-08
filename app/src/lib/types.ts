@@ -381,6 +381,11 @@ export interface Progress {
   settings: Settings;
   review: ReviewState;
   loadedWeeks: Record<string, { contentHash: string; loadedAt: string }>;
+  /**
+   * Answers per local date, and what was known at the end of the day (motivation.ts).
+   * Optional: records from before it existed, and devices that haven't updated, lack it.
+   */
+  activity?: Record<string, { n: number; right: number; known?: number }>;
 }
 
 export function emptyReview(): ReviewState {
