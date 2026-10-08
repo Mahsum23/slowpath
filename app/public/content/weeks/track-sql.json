@@ -1733,23 +1733,28 @@
             "id": "having-ordered",
             "tag": "WHERE vs HAVING",
             "kind": "predict",
-            "code": "-- statuses: 7 paid, 3 cancelled, 2 pending\nSELECT status, count(*) FROM orders\nGROUP BY status HAVING count(*) > 2 ORDER BY 2 DESC;",
+            "code": "WITH orders(status) AS (VALUES\n  ('paid'), ('paid'), ('paid'), ('paid'),\n  ('cancelled'), ('cancelled'), ('cancelled'),\n  ('pending'), ('pending'))\nSELECT status, count(*) FROM orders\nGROUP BY status HAVING count(*) > 2 ORDER BY 2 DESC;",
             "prompt": "What comes back?",
             "options": [
               {
-                "text": "`paid 7`, `cancelled 3`, `pending 2`",
+                "text": "`cancelled 3`, then `paid 4`",
+                "correct": false,
+                "why": "Descending by the count puts the bigger group first. Sorted by status alphabetically that would be the order — but that isn't what `ORDER BY 2` asks for."
+              },
+              {
+                "text": "`paid 4`, `cancelled 3`, `pending 2`",
                 "correct": false,
                 "why": "`> 2` is strict. The pending group has exactly 2 and is removed."
               },
               {
-                "text": "`paid 7`, then `cancelled 3`",
+                "text": "`paid 4`, then `cancelled 3`",
                 "correct": true,
                 "why": "HAVING drops the pending group (2 is not > 2), and `ORDER BY 2` means \"the second output column\", the count, descending."
               },
               {
-                "text": "Sorted by status, because `2` is a constant",
+                "text": "An error: a bare integer in ORDER BY is not allowed",
                 "correct": false,
-                "why": "A bare integer in ORDER BY (and GROUP BY) is a column position, not a constant. It's a SQL-92 convention that every major engine still honours."
+                "why": "A bare integer in ORDER BY (and GROUP BY) is a column position. It's a SQL-92 convention that every major engine still honours."
               }
             ]
           },
@@ -1829,16 +1834,16 @@
             "id": "alias-in-group-by",
             "tag": "what a clause can see",
             "kind": "predict",
-            "code": "SELECT status AS s, count(*) FROM orders GROUP BY s ORDER BY s;",
+            "code": "WITH orders(status) AS (VALUES ('paid'), ('paid'), ('cancelled'))\nSELECT status AS s, count(*) FROM orders GROUP BY s ORDER BY s;",
             "prompt": "Does `GROUP BY s` work?",
             "options": [
               {
-                "text": "It runs but groups everything into one row",
+                "text": "It runs but puts everything into one group",
                 "correct": false,
                 "why": "`s` resolves to the status expression, so it groups by status exactly as `GROUP BY status` would."
               },
               {
-                "text": "Yes — three rows: cancelled 3, paid 7, pending 2",
+                "text": "Yes — one row per status",
                 "correct": true,
                 "why": "PostgreSQL lets GROUP BY use an output alias as an extension to the standard, as long as it doesn't clash with an input column's name."
               },
@@ -1877,16 +1882,16 @@
             "id": "having-plain-column",
             "tag": "WHERE vs HAVING",
             "kind": "predict",
-            "code": "SELECT status, count(*) FROM orders GROUP BY status HAVING status = 'paid';",
-            "prompt": "Is a plain column allowed in HAVING?",
+            "code": "WITH orders(status) AS (VALUES ('paid'), ('paid'), ('paid'), ('cancelled'))\nSELECT status, count(*) FROM orders GROUP BY status HAVING status = 'paid';",
+            "prompt": "Is a plain column allowed in HAVING, and what does this return?",
             "options": [
               {
-                "text": "Yes, but it counts every order, so: paid 12",
+                "text": "Yes, but it counts every order, so: `paid 4`",
                 "correct": false,
-                "why": "The groups were formed first; HAVING only chooses which to keep. The paid group still holds its 7 orders."
+                "why": "The groups were formed first; HAVING only chooses which to keep. The paid group still holds its 3 orders — the cancelled one is a different group."
               },
               {
-                "text": "Yes, because it's grouped — one row: paid 7",
+                "text": "Yes, because it's grouped — one row: `paid 3`",
                 "correct": true,
                 "why": "A grouped column has one value per group, so HAVING can test it. It gives the same answer as `WHERE status = 'paid'`, but filters *after* grouping everything, where WHERE would have thrown the rows away first."
               },
@@ -1970,26 +1975,31 @@
             ]
           },
           {
-            "id": "counting-three-ways",
+            "id": "counting-four-ways",
             "tag": "counting",
             "kind": "predict",
-            "code": "-- 12 orders, from 4 customers, in 3 statuses\nSELECT count(*), count(DISTINCT customer_id), count(DISTINCT status) FROM orders;",
-            "prompt": "What are the three numbers?",
+            "code": "WITH orders(id, customer_id, status) AS (VALUES\n  (1, 1, 'paid'), (2, 1, 'paid'), (3, 2, 'cancelled'),\n  (4, NULL, 'paid'), (5, 3, 'paid'), (6, 3, NULL))\nSELECT count(*),\n       count(customer_id),\n       count(DISTINCT status),\n       count(DISTINCT customer_id)\nFROM orders;",
+            "prompt": "What are the four numbers?",
             "options": [
               {
-                "text": "12, 5, 3 — there are five customers",
+                "text": "6, 6, 3, 4",
                 "correct": false,
-                "why": "Five customers exist, but customer 5 has no orders, and this counts only what's in `orders`."
+                "why": "That counts NULL as if it were a value in every column. Only `count(*)` counts rows regardless of what is in them."
               },
               {
-                "text": "12, 12, 12",
+                "text": "6, 4, 2, 3",
                 "correct": false,
-                "why": "That would be `count(customer_id)` and `count(status)` — non-NULL values, with repeats. DISTINCT removes the repeats."
+                "why": "`count(customer_id)` skips NULLs, not repeats. Customer 1 appears twice and both rows count: 1, 1, 2, 3, 3 is five non-NULL values."
               },
               {
-                "text": "12, 4, 3",
+                "text": "6, 5, 2, 3",
                 "correct": true,
-                "why": "`count(*)` counts rows; `count(DISTINCT x)` counts different non-NULL values of x."
+                "why": "`count(*)` counts rows (6). `count(x)` counts rows where x is not NULL (5: one customer_id is NULL). `count(DISTINCT x)` counts different non-NULL values — statuses paid and cancelled (2), customers 1, 2 and 3 (3). NULL is never counted as a value, distinct or not."
+              },
+              {
+                "text": "6, 5, 3, 3",
+                "correct": false,
+                "why": "Right about the customers, but `count(DISTINCT status)` skips the NULL status too: there are only two different non-NULL statuses."
               }
             ]
           }

@@ -495,6 +495,15 @@ What makes a bank good, as opposed to big:
 - **Drill outputs are real.** Run every plan, error and result on the version named, and
   re-run them if the setup changes. Write every item to stand alone, cold — cards are
   shuffled, so never "the next card shows".
+- **A predict item is self-contained, and nothing in it states the result.** He cannot see
+  the lesson's tables when a card comes round weeks later, so a query that depends on data
+  carries that data in the question itself (`WITH orders(...) AS (VALUES ...)`), small enough
+  to read. And a comment must never describe the *output*: "-- 12 orders, from 4 customers,
+  in 3 statuses" above a query whose answer is 12, 4, 3 is the answer, and the card then
+  measures reading. `build-content.mjs` warns when the correct option's numbers all appear in
+  the code's comments. Prefer data with a NULL or a duplicate in it, since that is where the
+  idea usually bites; and keep option text free of figures that can only be known from data the
+  card does not show.
 
 
 
