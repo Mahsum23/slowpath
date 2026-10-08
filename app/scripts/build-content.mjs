@@ -318,6 +318,17 @@ function parseDrill(steps, path, dayId, { max, salt }) {
     for (const o of options) {
       if (!o.why?.trim()) warn(`${dayId} drill ${qi + 1}: option "${o.text}" has no "why"`);
     }
+    // A question whose code comment already states the answer measures reading, not thinking:
+    // "-- 12 orders, from 4 customers, in 3 statuses" above a query whose answer is 12, 4, 3.
+    // Show the data (a VALUES list) and let the reader work out what it produces.
+    {
+      const comments = String(q.code ?? '').split('\n').map((l) => /(?:--|\/\/)(.*)$/.exec(l)?.[1] ?? '').join(' ');
+      const right = options.find((o) => o.correct);
+      const nums = new Set(String(right?.text ?? '').replace(/`/g, '').match(/\d+/g) ?? []);
+      if (nums.size >= 2 && [...nums].every((n) => new RegExp(`\\b${n}\\b`).test(comments))) {
+        warn(`${dayId} drill ${q.id ?? qi + 1}: a comment in the code already states the answer (${[...nums].join(', ')}) — show the data instead of describing the result`);
+      }
+    }
     if (q.kind && !DRILL_KINDS.has(q.kind)) {
       warn(`${dayId} drill ${qi + 1}: unknown kind "${q.kind}" — expected ${[...DRILL_KINDS].join(', ')}`);
     }
