@@ -1,6 +1,6 @@
 # The LEFT JOIN that became an INNER JOIN
 
-## Theory
+## Part 1: What a LEFT JOIN promises
 
 `LEFT JOIN` is the join people reach for when they want to keep everybody: every customer,
 whether or not they ordered. And there is a one-line change that quietly takes that promise
@@ -72,7 +72,15 @@ ORDER BY c.name, o.id;
  dee  |    |
 ```
 
-### The bug
+### Check yourself
+
+1. In a `LEFT JOIN`, what is a NULL-extended row, and when does the join produce one?
+2. `customers JOIN orders ON o.customer_id = c.id`: what happens to a customer with no orders, and what does `LEFT` change about that?
+
+## Part 2: The WHERE that undoes it
+
+Starting a new psql session? Run `SET search_path = day05;` first — the tables
+are still there, but the setting lasts only for the session.
 
 The report someone asks for: *every customer, with their paid orders*. The natural thing
 to write is the left join plus a filter:
@@ -130,6 +138,19 @@ can never be true on a NULL-extended row, a property called being *strict*, so i
 your outer join into an inner join and planned it that way. It does this to make the query
 faster, not to warn you. But it is a warning, and a free one. **If you wrote `LEFT JOIN`
 and the plan says plain `Join` or `Nested Loop`, your left join is not a left join.**
+
+### Check yourself
+
+1. `customers LEFT JOIN orders ON o.customer_id = c.id WHERE o.status = 'paid'` loses
+   every customer without a paid order. Why does it lose the customers who have no
+   orders at all, and why does it also lose the customers who have only refunds?
+2. You wrote a `LEFT JOIN`, and `EXPLAIN` shows a plain `Nested Loop` with no `Left` in
+   it. What does that tell you?
+
+## Part 3: Where the condition belongs
+
+Starting a new psql session? Run `SET search_path = day05;` first — the tables
+are still there, but the setting lasts only for the session.
 
 ### The fix: the condition belongs in ON
 
@@ -228,7 +249,16 @@ Everyone is still here, with only `ana` allowed to match. So, for a `LEFT JOIN`:
 | the **right** table (which matches count) | `ON` | `WHERE` would delete the NULL-extended rows |
 | the **left** table (which rows to report) | `WHERE` | `ON` cannot remove left rows |
 
-### count(*) lies after an outer join
+### Check yourself
+
+1. Why does adding `OR o.status IS NULL` to that `WHERE` still give a wrong answer?
+2. In a `LEFT JOIN`, what does a condition on the *left* table, such as `AND c.name = 'ana'`
+   inside `ON`, do to the result?
+
+## Part 4: Counting after an outer join
+
+Starting a new psql session? Run `SET search_path = day05;` first — the tables
+are still there, but the setting lasts only for the session.
 
 One more consequence of the NULL-extended row. It is a real row, so `count(*)` counts it:
 
@@ -310,6 +340,18 @@ WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id);
 whichever side is smaller, even for an anti-join. Of the two spellings, `NOT EXISTS` is the
 one that says what you mean, and it cannot be broken by testing the wrong column.
 
+### Check yourself
+
+1. After `customers LEFT JOIN orders … GROUP BY c.name`, why does `count(*)` report 1 for
+   a customer who has never ordered, and what should be counted instead?
+2. To find customers who never ordered with a `LEFT JOIN`, which column do you test for
+   `IS NULL`, and why that one?
+
+## Part 5: Joins the planner rewrites, and one to avoid
+
+Starting a new psql session? Run `SET search_path = day05;` first — the tables
+are still there, but the setting lasts only for the session.
+
 ### Worth knowing: Postgres will delete a join you wrote
 
 Add a one-to-one table and join to it without using any of its columns:
@@ -380,17 +422,12 @@ the join columns out with `ON`, every time.
   `coalesce(sum(…), 0)`.
 - For "has no X", `NOT EXISTS` says exactly what you mean.
 
-## Quiz
+### Check yourself
 
-1. In a `LEFT JOIN`, what is a NULL-extended row, and when does the join produce one?
-2. `customers LEFT JOIN orders ON o.customer_id = c.id WHERE o.status = 'paid'` loses
-   every customer without a paid order. Why does it lose the customers who have no
-   orders at all, and why does it also lose the customers who have only refunds?
-3. Why does adding `OR o.status IS NULL` to that `WHERE` still give a wrong answer?
-4. You wrote a `LEFT JOIN`, and `EXPLAIN` shows a plain `Nested Loop` with no `Left` in
-   it. What does that tell you?
-5. After `customers LEFT JOIN orders … GROUP BY c.name`, why does `count(*)` report 1 for
-   a customer who has never ordered, and what should be counted instead?
+1. A `LEFT JOIN` to `profiles` disappears from the plan entirely. What two things had to
+   be true for PostgreSQL to remove it?
+2. A query using `NATURAL JOIN` suddenly returns no rows after a migration that did not
+   touch it. What is the likely cause?
 
 ## Drill
 

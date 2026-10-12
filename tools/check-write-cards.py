@@ -123,6 +123,33 @@ def forbidden(sql, forbids):
     return None
 
 
+# A prompt has to say what the target table is sorted by, in words: the learner aims at that
+# table, and "by label" reads as "per label" as easily as "sorted by label".
+ORDER_WORDS = re.compile(
+    r'\b(?:sort(?:ed)?\s+by|order(?:ed)?\s+by|in\s+(?:\w+\s+){0,2}order|ascending|descending|alphabetical(?:ly)?|'
+    r'(?:highest|lowest|largest|smallest|biggest|newest|oldest|earliest|latest|most|fewest|longest|shortest|cheapest|dearest)\s+(?:\w+\s+)?first)\b', re.I)
+
+# Names Postgres makes up for an unnamed column; a prompt cannot be expected to use them.
+AUTO_NAMES = {'?column?', 'count', 'sum', 'avg', 'min', 'max'}
+
+
+def prompt_problems(c, cols, rows, ordered):
+    """What a stranger reading the prompt could not know about the target."""
+    out = []
+    prompt = re.sub(r'\s+', ' ', c['prompt'].replace('`', ''))
+    if ordered and len(rows) > 1 and not ORDER_WORDS.search(prompt):
+        out.append('the answer is sorted, but the prompt never says by what ("sorted by …", "newest first")')
+    # One column is just "the answer"; with several, each must be named so the learner knows
+    # which is which. A plural ("their names" for `name`) counts.
+    if not c.get('verify') and len(cols) > 1:
+        for col in cols:
+            if col.lower() in AUTO_NAMES:
+                continue
+            if not re.search(r'(?<![\w])' + re.escape(col) + r's?(?![\w])', prompt, re.I):
+                out.append(f'the answer has a column `{col}` the prompt never names')
+    return out
+
+
 def main():
     dump = sys.argv[sys.argv.index('--dump') + 1] if '--dump' in sys.argv else None
     files = sorted(glob.glob(os.path.join(ROOT, 'app/public/content/weeks/*.json')))
@@ -165,6 +192,13 @@ def main():
                         problems += 1
                         print(f'  FAIL  {label}: the reference answer trips its own forbid: {hit}')
                         continue
+                    ordered = c.get('ordered')
+                    if ordered is None:
+                        ordered = top_level_order_by(c['verify'] or c['solution'])
+                    said = prompt_problems(c, cols, rows, ordered)
+                    for why in said:
+                        problems += 1
+                        print(f'  FAIL  {label}: {why}')
                     answers[f"{day['id']}:{c['id']}"] = {'columns': cols, 'rows': rows}
                     shown = ' | '.join(','.join('NULL' if v is None else v for v in r) for r in rows[:3])
                     print(f"  ok    {label}: {len(rows)} row(s)  {shown[:90]}")
@@ -176,9 +210,6 @@ def main():
                         berr, bcols, brows = answer(b)
                         if berr:
                             continue
-                        ordered = c.get('ordered')
-                        if ordered is None:
-                            ordered = top_level_order_by(c['verify'] or c['solution'])
                         same = (bcols is not None and len(bcols) == len(cols)) and (
                             brows == rows if ordered else sorted(map(str, brows)) == sorted(map(str, rows)))
                         if same:

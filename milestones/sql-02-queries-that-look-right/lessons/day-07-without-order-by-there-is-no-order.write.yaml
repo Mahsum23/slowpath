@@ -11,6 +11,7 @@ setup: |
 
 challenges:
   - id: stable-top
+    part: 2
     prompt: >
       The three best players: `name` and `score`, highest score first. Two players tie
       at the top, so make the answer the same every time by breaking ties on `id`.
@@ -19,6 +20,7 @@ challenges:
       SELECT name, score FROM players ORDER BY score DESC, id LIMIT 3;
 
   - id: with-ties
+    part: 2
     prompt: >
       The top three by score, but let ties share their place instead of cutting among
       them: return `name` and `score`, highest first. Use the standard clause for it,
@@ -30,6 +32,7 @@ challenges:
       SELECT name, score FROM players ORDER BY score DESC FETCH FIRST 3 ROWS WITH TIES;
 
   - id: keyset
+    part: 4
     prompt: >
       Page 1 of the feed (newest first, ties on `id` descending) ended at the post with
       `created_at = '2026-05-01 10:05+00'` and `id = 3`. Return the next two posts, as

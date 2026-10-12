@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { Day } from '../../lib/types';
+  import type { Day, DayPart } from '../../lib/types';
+  import { partDone, partQuestions, partsOf } from '../../lib/parts';
   import { app } from '../../lib/app.svelte';
   import Markdown from '../../components/Markdown.svelte';
   import Button from '../../components/Button.svelte';
@@ -11,9 +12,16 @@
     day: Day;
     weekId: string;
     hasQuiz: boolean;
+    /** On a day read in parts, the part on screen; `onpart` switches to another. */
+    part?: DayPart | null;
+    onpart?: (n: number) => void;
     onnext: () => void;
   }
-  let { day, weekId, hasQuiz, onnext }: Props = $props();
+  let { day, weekId, hasQuiz, part = null, onpart, onnext }: Props = $props();
+
+  const parts = $derived(partsOf(day));
+  const progress = $derived(app.dayProgress(day.id, weekId));
+  const checks = $derived(part ? partQuestions(day, part.n).length : 0);
 
   let asking = $state(false);
   let ask = $state<string | null>(null);
@@ -46,21 +54,47 @@
     ` true, and what it would look like in practice:\n\n> ${text.replace(/\n/g, '\n> ')}`;
 
   function next() {
-    void app.markTheoryDone(day, weekId);
+    // A part is finished by its questions (Session), not by scrolling past it.
+    if (!part) void app.markTheoryDone(day, weekId);
     onnext();
   }
 </script>
 
-<p class="eyebrow">Theory</p>
-<h1>{day.title}</h1>
+{#if part}
+  <!-- Every part of the day, so it is plain how much is left and any part is one tap
+       away — re-reading part 2 before part 4's questions should not mean walking back. -->
+  <nav class="parts" aria-label="Parts of this day">
+    {#each parts as p}
+      <button
+        class:on={p.n === part.n}
+        class:done={partDone(day, progress, p.n)}
+        aria-current={p.n === part.n ? 'step' : undefined}
+        aria-label="Part {p.n}: {p.title}{partDone(day, progress, p.n) ? ', read' : ''}"
+        onclick={() => onpart?.(p.n)}
+      >
+        <span>{p.n}</span>
+      </button>
+    {/each}
+  </nav>
+  <p class="eyebrow">Part {part.n} of {parts.length} · ~{part.minutes} min{part.added ? ' · new' : ''}</p>
+  <h1>{part.title}</h1>
+  <p class="of">{day.title}</p>
+{:else}
+  <p class="eyebrow">Theory</p>
+  <h1>{day.title}</h1>
+{/if}
 
 <SelectionAsk onask={(text) => { ask = explainPrompt(text); asking = true; }}>
-  <Markdown source={day.theoryMarkdown} />
+  <Markdown source={part ? part.markdown : day.theoryMarkdown} />
 </SelectionAsk>
 
 <div class="cta">
   <Button full onclick={next}>
-    {hasQuiz ? 'Take the quiz' : 'On to the task'}
+    {#if part}
+      {checks ? `Check yourself — ${checks} question${checks === 1 ? '' : 's'}` : 'Finish the part'}
+    {:else}
+      {hasQuiz ? 'Take the quiz' : 'On to the task'}
+    {/if}
     <svg viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
   </Button>
 </div>
@@ -77,6 +111,42 @@
 {/if}
 
 <style>
+  .parts {
+    display: flex;
+    gap: 6px;
+    margin: 0 0 16px;
+    flex-wrap: wrap;
+  }
+
+  .parts button {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--text-faint);
+    background: var(--surface-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .parts button.done {
+    color: var(--ok);
+    background: var(--ok-soft);
+  }
+
+  .parts button.on {
+    color: #fff;
+    background: var(--accent);
+  }
+
+  .of {
+    margin: -14px 0 20px;
+    font-size: 13.5px;
+    color: var(--text-faint);
+  }
+
   h1 {
     font-size: 26px;
     letter-spacing: -0.025em;

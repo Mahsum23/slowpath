@@ -8,6 +8,7 @@ setup: |
 
 challenges:
   - id: honest-report
+    part: 3
     prompt: >
       One row per customer, with `customer`, `revenue` (the order total), `paid` (the
       sum of their payments) and `lines` (their item rows) — every number correct, not
@@ -21,6 +22,7 @@ challenges:
       ORDER BY o.customer;
 
   - id: fan-out-detector
+    part: 4
     prompt: >
       Join `orders` to both `items` and `payments`, and return two numbers in one row:
       how many rows the join produced, and how many distinct orders are in it.
@@ -32,6 +34,7 @@ challenges:
       JOIN payments p ON p.order_id = o.id;
 
   - id: duplicate-payments
+    part: 4
     prompt: >
       Which orders have more than one payment? Return `order_id` and the number of
       payments.
@@ -44,8 +47,8 @@ challenges:
 
   - id: conditional-count
     prompt: >
-      From `items`, return in one row how many lines have `qty` above 1 and how many
-      lines there are in total — without joining or using a subquery.
+      From `items`, return in one row `multi`, how many lines have `qty` above 1, and
+      `all_lines`, how many lines there are in total — without joining or using a subquery.
     hint: An aggregate can carry its own filter.
     solution: |
       SELECT count(*) FILTER (WHERE qty > 1) AS multi, count(*) AS all_lines FROM items;

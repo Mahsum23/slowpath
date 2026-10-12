@@ -1,6 +1,6 @@
 # Joins multiply
 
-## Theory
+## Part 1: One side repeats once per match
 
 Yesterday a join quietly *lost* rows. Today it quietly makes extra ones, which is worse,
 because extra rows go straight into sums, and inflated sums look like good news. Nobody
@@ -109,7 +109,18 @@ for order 1. Revenue counted the order once per row (×6). Payments were counted
 item (×3). Items were counted once per payment (×2). Three different wrong numbers, each
 off by a different factor.
 
-### See the multiplication in the plan
+### Check yourself
+
+1. An order totalling 100.00 has three item rows. Why does
+   `SELECT sum(o.total) FROM orders o JOIN items i ON i.order_id = o.id` count it as
+   300.00?
+2. One order has 3 items and 2 payments. When both tables are joined to it in one query,
+   how many rows does that order become, and why?
+
+## Part 2: Seeing it, and naming it
+
+Starting a new psql session? Run `SET search_path = day06;` first — the tables
+are still there, but the setting lasts only for the session.
 
 `EXPLAIN ANALYZE` runs the query and reports how many rows each node actually produced,
 which makes fan-out visible without guessing:
@@ -160,7 +171,15 @@ counts it once per pair.
 
 So the rule: **bring each table to the grain of the report before you join it.**
 
-### The fix: aggregate first, join second
+### Check yourself
+
+1. How can `EXPLAIN ANALYZE` show you that a join has fanned out?
+2. What does "the grain of a result" mean, and what rule about grain prevents fan-out?
+
+## Part 3: Aggregate first, join second
+
+Starting a new psql session? Run `SET search_path = day06;` first — the tables
+are still there, but the setting lasts only for the session.
 
 Collapse `items` and `payments` to one row per order each. Now every join is one-to-one,
 and nothing can multiply:
@@ -236,6 +255,17 @@ collapses the same way. Even `count(DISTINCT i.sku)` would break the day someone
 the same SKU on two lines. `DISTINCT` removes equal *values*. What you needed to remove was
 duplicated *rows*, and rows are identified by keys, not by what they happen to contain.
 
+### Check yourself
+
+1. Why is `sum(DISTINCT p.amount)` not a fix for an inflated payment total?
+2. Why does collapsing `items` and `payments` to one row per order *before* joining make
+   every total right?
+
+## Part 4: A famous bug, and a one-line detector
+
+Starting a new psql session? Run `SET search_path = day06;` first — the tables
+are still there, but the setting lasts only for the session.
+
 ### This is a famous bug, not a beginner's one
 
 This exact problem is common enough that tools ship features against it:
@@ -300,16 +330,12 @@ and then it would be safe to rely on.
 - If a join's row count exceeds the distinct count of the keys you are reporting on, stop
   and look.
 
-## Quiz
+### Check yourself
 
-1. An order totalling 100.00 has three item rows. Why does
-   `SELECT sum(o.total) FROM orders o JOIN items i ON i.order_id = o.id` count it as
-   300.00?
-2. One order has 3 items and 2 payments. When both tables are joined to it in one query,
-   how many rows does that order become, and why?
-3. Why is `sum(DISTINCT p.amount)` not a fix for an inflated payment total?
-4. What does "the grain of a result" mean, and what rule about grain prevents fan-out?
-5. How can `EXPLAIN ANALYZE` show you that a join has fanned out?
+1. Before aggregating over a join, which two counts do you compare to see whether it fanned
+   out?
+2. "Each order has exactly one payment." How do you check that claim, and how do you make
+   the database guarantee it?
 
 ## Drill
 

@@ -22,7 +22,12 @@ days:
   - id: sql-day-04
     day: 4
     title: SQL does not run in the order you write it
-    estMinutes: 25
+    estMinutes: 45
+    # Parts written after the day was first published: someone who had already read the
+    # day is offered these rather than credited with them (app/src/lib/parts.ts).
+    added:
+      6: 2026-10-12
+      7: 2026-10-12
     teaser: The alias that exists in ORDER BY and doesn't exist in WHERE, one line apart
     teachBack: >
       Using the order the clauses are evaluated in, explain why `WHERE total > 100` fails

@@ -9,7 +9,7 @@ challenges:
   - id: ctid
     prompt: >
       Show where rows 1, 2 and 82 of `t` physically live: return the hidden location
-      column and `id`, in `id` order.
+      column (`ctid`) and `id`, in `id` order.
     hint: Every row carries a system column that says which page and slot it sits in.
     solution: |
       SELECT ctid, id FROM t WHERE id IN (1, 2, 82) ORDER BY id;

@@ -818,6 +818,43 @@ Asked for motivation and visuals. Built from research, not from points (`motivat
   each card's last answer). Verified: `test-motivation.mjs`; Chromium in light and dark with a
   seeded month (Stats, a return after three days, a done day).
 
+## 8.13 A day read in parts, and cards that ask only what was taught (2026-10-12)
+
+He found a practice card whose prompt never asked for an order (the target was sorted) and
+one that needed `date_trunc(…)::date`, which no lesson had shown; and asked for smaller,
+more digestible lessons with a quiz and review after each, and one big task after several.
+
+- **Parts** (`parts.ts`): a day's `.md` may have `## Part N: Title` sections in place of
+  `## Theory`. The build emits `day.parts` ({n, title, markdown, minutes, added}), keeps
+  `theoryMarkdown` as the whole text, and checks numbering, 2–4 questions per part, and the
+  `### Check yourself` lists against the key. Questions, write cards and bank items take
+  `part: N`.
+- **Progress**: `DayProgress.parts` = part → finished-at, merged by earliest. A part is done
+  if recorded, or if the day was read before parts existed (`theoryDone`) and the part has no
+  `added` date. The last part sets `theoryDone` and, with every question answered, closes the
+  quiz. Part dates count for the streak and the activity calendar.
+- **Gating**: `unlocked(day, progress, part)` is the one rule. `cardsFor` deals a part's write
+  cards and reorder blocks once that part is read; `bankCards(day, read)` holds back bank items
+  whose part is unread, in rounds and in miss follow-ups alike.
+- **Session**: `/session/<week>/<day>/<step>/<part>`. Steps 0 and 1 are the part's reading and
+  its questions; a "part done" screen says what it added to the deck and offers the next part
+  or stopping, as equals. The chips are "Part n · Practice · Explain"; the reading screen has a
+  strip of numbered parts to jump between.
+- **Today**: an added part on a finished day comes first ("New part"), then a practice round,
+  then the current day's next part, with a bar of the day's parts. "Done today" offers to keep
+  going.
+- **Content**: SQL days 4–10 split into 4–7 parts each (26 + 2 new), with 32 new questions so
+  every part has two or three; day 4 gained two parts (computed values: `::`, `date_trunc`,
+  `extract`, `round`, integer division, `WITH … VALUES`; and `FILTER` vs `CASE`), with write
+  cards for each.
+- **Guards**: `check-write-cards.py` now fails a sorted target whose prompt never says how it is
+  sorted, and a multi-column target whose columns the prompt does not name.
+  `tools/check-syllabus.py` fails any SQL item (solution, drill code, quiz code) that uses a
+  function, cast or watched keyword not shown in the lessons' code up to that day and part —
+  it found 14, all fixed by teaching or by gating.
+- Verified: `test-parts.mjs`; all SQL checkers on PG16; PGlite vs PG16; Chromium (a reader who
+  finished day 4 before parts, offered part 6; a fresh reader moving part to part).
+
 ## 9. Offline & local storage
 
 - **Content cache:** Cache API / IndexedDB — loaded weeks fully offline.

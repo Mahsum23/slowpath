@@ -246,6 +246,63 @@ function tagOf(raw) {
   return t || null;
 }
 
+/** `part: N` on a question, card or bank item: it needs part N of its day read first. */
+function partOf(raw) {
+  const n = Number(raw);
+  return raw === undefined || raw === null || !Number.isInteger(n) || n < 1 ? null : n;
+}
+
+/**
+ * A day read in sittings. Its `.md` has `## Part N: Title` sections in place of one
+ * `## Theory`; each may end with a `### Check yourself` list (question text only, as
+ * `## Quiz` is), and the questions themselves carry `part: N` in the .quiz.yaml.
+ *
+ * `added` (from topic.yaml) marks parts written after the day was published, so that
+ * someone who had already read it is offered the new part rather than credited with it.
+ */
+function parseParts(md, dayId, mdName, added) {
+  const parts = [];
+  let cur = null;
+  let fence = false;
+  for (const line of md.split('\n')) {
+    if (/^[ \t]*```/.test(line)) fence = !fence;
+    const h2 = !fence && /^##\s+(.+?)\s*$/.exec(line);
+    if (h2) {
+      if (cur) parts.push(cur);
+      const m = /^Part\s+(\d+)\s*[:.—-]\s*(.+)$/i.exec(h2[1]);
+      cur = m ? { n: Number(m[1]), title: m[2].trim(), lines: [] } : null;
+      continue;
+    }
+    if (cur) cur.lines.push(line);
+  }
+  if (cur) parts.push(cur);
+  parts.forEach((p, i) => {
+    if (p.n !== i + 1) fail(`${dayId}: ${mdName} has "Part ${p.n}" where Part ${i + 1} was expected — parts are numbered 1, 2, 3 … in order`);
+  });
+  for (const k of Object.keys(added ?? {})) {
+    if (!parts.some((p) => p.n === Number(k))) warn(`${dayId}: topic.yaml marks part ${k} as added, but ${mdName} has no such part`);
+  }
+  return parts.map((p) => {
+    // The questions are the quiz file's; the list in the .md is for a reader of the file.
+    const text = p.lines.join('\n');
+    const check = /\n###\s+Check yourself\s*\n([\s\S]*)$/i.exec(text);
+    const body = (check ? text.slice(0, check.index) : text).trim();
+    // Prose at about 150 words a minute (technical reading, with a terminal open); code and
+    // output at a third of that rate per word, since it is read slowly or typed.
+    const code = (body.match(/```[\s\S]*?```/g) ?? []).join(' ').split(/\s+/).length;
+    const words = body.replace(/```[\s\S]*?```/g, ' ').split(/\s+/).length + code / 3;
+    const at = added?.[p.n] ?? added?.[String(p.n)];
+    return {
+      n: p.n,
+      title: p.title,
+      markdown: body,
+      minutes: Math.max(3, Math.round(words / 150)),
+      added: at ? String(at instanceof Date ? at.toISOString().slice(0, 10) : at) : null,
+      listed: countMdQuizQuestions(check?.[1]),
+    };
+  });
+}
+
 function loadQuiz(path, dayId) {
   if (!existsSync(path)) return null;
   const doc = parseYaml(readFileSync(path, 'utf8'));
@@ -269,6 +326,7 @@ function loadQuiz(path, dayId) {
     return {
       id: q.id ?? `q${qi + 1}`,
       tag: tagOf(q.tag),
+      part: partOf(q.part),
       prompt: String(q.prompt ?? '').trim(),
       options: options.map((o) => ({
         text: String(o.text ?? '').trim(),
@@ -335,6 +393,7 @@ function parseDrill(steps, path, dayId, { max, salt }) {
     return {
       id: q.id ?? `d${qi + 1}`,
       tag: tagOf(q.tag),
+      part: partOf(q.part),
       kind: DRILL_KINDS.has(q.kind) ? q.kind : 'choose',
       code: q.code ? String(q.code).replace(/\n+$/, '') : null,
       prompt: String(q.prompt ?? '').trim(),
@@ -427,6 +486,7 @@ function parseWrite(doc, path, dayId) {
       // null means "decide from the solution": ordered when it sorts at the top level.
       ordered: typeof c.ordered === 'boolean' ? c.ordered : null,
       tag: tagOf(c.tag),
+      part: partOf(c.part),
       given: c.given ? String(c.given).trimEnd() : null,
       note: c.note ? String(c.note).trim() : null,
       requires,
@@ -508,20 +568,43 @@ function buildTopic(milestone) {
     }
     if (!drill) warn(`${d.id}: no .drill.yaml — this day can only be done at a machine`);
 
-    if (!sections.theory) warn(`${d.id}: ${mdName} has no "## Theory" section`);
-    checkOrderMarkers(d.id, mdName, sections.theory, warn);
+    const raw = readFileSync(join(lessonsDir, mdName), 'utf8');
+    const parts = parseParts(raw, d.id, mdName, d.added);
+    if (parts.length && sections.theory) warn(`${d.id}: ${mdName} has both "## Theory" and "## Part" sections — a day is read one way or the other`);
+    if (!parts.length && !sections.theory) warn(`${d.id}: ${mdName} has no "## Theory" section`);
+    for (const p of parts.length ? parts : [{ markdown: sections.theory }]) checkOrderMarkers(d.id, mdName, p.markdown, warn);
     if (!quiz) warn(`${d.id}: no .quiz.yaml — the day will skip straight to the task`);
 
-    const mdCount = countMdQuizQuestions(sections.quiz);
-    if (quiz && mdCount && mdCount !== quiz.length) {
-      warn(`${d.id}: ${mdName} lists ${mdCount} quiz questions, .quiz.yaml has ${quiz.length}`);
+    if (parts.length) {
+      // Every question checks one part, and every part is checked: two or three questions
+      // each, so a part is closed by a short check rather than left as reading alone.
+      for (const q of quiz ?? []) {
+        if (!q.part) warn(`${d.id} ${q.id}: the day is in parts, so the question needs "part: N"`);
+        else if (q.part > parts.length) warn(`${d.id} ${q.id}: part ${q.part}, but the day has ${parts.length}`);
+      }
+      for (const p of parts) {
+        const n = (quiz ?? []).filter((q) => q.part === p.n).length;
+        p.minutes += Math.ceil(n * 0.75);
+        if (n < 2 || n > 4) warn(`${d.id}: part ${p.n} has ${n} question(s) — two or three check a part`);
+        if (p.listed !== n) warn(`${d.id}: ${mdName} part ${p.n} lists ${p.listed} question(s) under "Check yourself", .quiz.yaml has ${n}`);
+      }
+      const items = [...(write?.challenges ?? []), ...(practice?.write?.challenges ?? []), ...(practice?.drill ?? [])];
+      for (const it of items) if (it.part && it.part > parts.length) warn(`${d.id} ${it.id}: part ${it.part}, but the day has ${parts.length}`);
+    } else {
+      const mdCount = countMdQuizQuestions(sections.quiz);
+      if (quiz && mdCount && mdCount !== quiz.length) {
+        warn(`${d.id}: ${mdName} lists ${mdCount} quiz questions, .quiz.yaml has ${quiz.length}`);
+      }
     }
 
     return {
       ...base,
       slug,
       status: 'available',
-      theoryMarkdown: sections.theory ?? null,
+      // A day in parts keeps the whole text here too, for the mentor and anything else
+      // that wants the day at once.
+      theoryMarkdown: parts.length ? parts.map((p) => `## ${p.title}\n\n${p.markdown}`).join('\n\n') : sections.theory ?? null,
+      ...(parts.length ? { parts: parts.map(({ listed, ...p }) => p) } : {}),
       drill,
       write,
       practice,

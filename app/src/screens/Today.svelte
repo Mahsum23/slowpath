@@ -10,6 +10,7 @@
   import { LAND_AT, practiceStatus, ROUND_SIZE } from '../lib/practice';
   import { freshStart, knownNow, lastActiveBefore } from '../lib/motivation';
   import { today } from '../lib/date';
+  import { partDone, partQuestions } from '../lib/parts';
 
   const current = $derived(app.current);
   // One path per track. Track-scoped, so a subject that hasn't loaded yet never shows
@@ -31,7 +32,7 @@
   /** A concept that has not landed yet: today is a practice round, not a new lesson. */
   const practising = $derived(app.practising);
   const pst = $derived(
-    practising ? practiceStatus(practising.day, app.progress.days[practising.day.id]?.practice) : null,
+    practising ? practiceStatus(practising.day, app.progress.days[practising.day.id]?.practice, app.progress.days[practising.day.id]) : null,
   );
 
   /**
@@ -46,8 +47,21 @@
   const stillKnown = $derived(knownNow(app.progress.review));
   const wins = $derived(app.winsToday);
 
+  /** The next part to read: one added to a finished day, or the current day's next. */
+  const reading = $derived(app.reading);
+  const partCount = $derived(reading?.day.parts?.length ?? 0);
+  const partSegs = $derived(
+    reading ? (reading.day.parts ?? []).map((p) => partDone(reading.day, app.progress.days[reading.day.id], p.n)) : [],
+  );
+  const checks = $derived(reading ? partQuestions(reading.day, reading.part.n).length : 0);
+
+  function read() {
+    if (reading) router.go(sessionPath(reading.week.id, reading.day.id, 0, reading.part.n));
+  }
+
   function start() {
     if (!current) return;
+    if (reading && reading.day.id === current.day.id) return read();
     router.go(sessionPath(current.week.id, current.day.id, resumeStep));
   }
 </script>
@@ -101,12 +115,12 @@
     <div class="fresh">
       {#if fresh.kind === 'return'}
         <strong>Welcome back.</strong>
-        {fresh.gap} day{fresh.gap === 1 ? '' : 's'} off, and you'd still get about {stillKnown} questions right.
+        {fresh.gap} day{fresh.gap === 1 ? '' : 's'} off{stillKnown ? `, and you'd still get about ${stillKnown} questions right` : ''}.
         Nothing is owed for the gap — today is a fresh start.
       {:else if fresh.kind === 'week'}
-        <strong>A new week.</strong> A clean page — and {stillKnown} questions you'd get right, carried over.
+        <strong>A new week.</strong> A clean page{stillKnown ? ` — and ${stillKnown} questions you'd get right, carried over` : ''}.
       {:else}
-        <strong>A new month.</strong> A good day to start something — {stillKnown} questions you'd get right, carried over.
+        <strong>A new month.</strong> A good day to start something{stillKnown ? ` — ${stillKnown} questions you'd get right, carried over` : ''}.
       {/if}
     </div>
   {/if}
@@ -136,7 +150,15 @@
           {#if wins.stronger.length}<li>Stronger on {wins.stronger.slice(0, 4).join(', ')}{wins.stronger.length > 4 ? ` and ${wins.stronger.length - 4} more` : ''}</li>{/if}
         </ul>
       {/if}
-      {#if practising}
+      {#if reading && (reading.added || reading.day.id === current?.day.id)}
+        <p class="meta">
+          {reading.added ? 'A new part is waiting' : `Next is part ${reading.part.n} of ${partCount}`}:
+          {reading.part.title}. Tomorrow is soon enough — or keep going while it's fresh.
+        </p>
+        <div class="soft">
+          <Button variant="secondary" size="sm" onclick={read}>Keep going: Part {reading.part.n}</Button>
+        </div>
+      {:else if practising}
         <p class="meta">
           See you tomorrow, for another round on {practising.day.title}. The next lesson opens when it lands.
         </p>
@@ -160,6 +182,25 @@
     {#if current && app.runway <= RUNWAY_WARN}
       <MoreLessons compact />
     {/if}
+  {:else if reading?.added}
+    <p class="context">{week.title} · {app.topicTitle(reading.day) ?? `Day ${reading.day.day}`}</p>
+    <article class="card hero">
+      <div class="top">
+        <div>
+          <p class="eyebrow">New part · Day {reading.day.day}, part {reading.part.n} of {partCount}</p>
+          <h2>{reading.part.title}</h2>
+          <p class="meta">~{reading.part.minutes} min · read · {checks} question{checks === 1 ? '' : 's'}</p>
+        </div>
+      </div>
+      <p class="teaser">
+        Added to <em>{reading.day.title}</em> after you finished it. It fills a gap the practice
+        questions on that day lean on, so it comes before anything else.
+      </p>
+      <Button full onclick={read}>
+        Read it
+        <svg class="arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
+      </Button>
+    </article>
   {:else if practising && pst}
     <p class="context">{week.title} · practice</p>
     <article class="card hero">
@@ -196,16 +237,35 @@
     <article class="card hero">
       <div class="top">
         <div>
-          <p class="eyebrow">Day {current.day.day}</p>
-          <h2>{current.day.title}</h2>
-          <p class="meta">
-            ~{current.day.estMinutes} min · theory · quiz · {current.day.drill?.length ? 'drill' : 'task'}
-          </p>
+          {#if reading && reading.day.id === current.day.id}
+            <p class="eyebrow">Day {current.day.day} · part {reading.part.n} of {partCount}</p>
+            <h2>{reading.part.title}</h2>
+            <p class="meta">~{reading.part.minutes} min · read · {checks} question{checks === 1 ? '' : 's'}</p>
+          {:else}
+            <p class="eyebrow">Day {current.day.day}</p>
+            <h2>{current.day.title}</h2>
+            <p class="meta">
+              {#if current.day.parts?.length}
+                Every part read · {current.day.drill?.length ? 'drill' : 'task'}{current.day.teachBack ? ' · explain it back' : ''}
+              {:else}
+                ~{current.day.estMinutes} min · theory · quiz · {current.day.drill?.length ? 'drill' : 'task'}
+              {/if}
+            </p>
+          {/if}
         </div>
         <ProgressRing segments={segs} />
       </div>
 
-      {#if current.day.teaser && !started}
+      {#if reading && reading.day.id === current.day.id}
+        <!-- The day's parts as a row of steps: how much of the day this sitting is. -->
+        <div class="partbar" role="img" aria-label="{partSegs.filter(Boolean).length} of {partCount} parts of {current.day.title} read">
+          {#each partSegs as done, i}<span class:done class:now={i + 1 === reading.part.n}></span>{/each}
+        </div>
+        <p class="teaser">
+          {#if !started && current.day.teaser}{current.day.teaser}<br />{/if}
+          <span class="of">Part of <em>{current.day.title}</em>. One part is a whole sitting; the day's practice comes after the last.</span>
+        </p>
+      {:else if current.day.teaser && !started}
         <p class="teaser">{current.day.teaser}</p>
       {/if}
 
@@ -484,6 +544,32 @@
 
   .hero {
     padding: 20px;
+  }
+
+  .partbar {
+    display: flex;
+    gap: 4px;
+    margin: -4px 0 14px;
+  }
+
+  .partbar span {
+    flex: 1;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--surface-2);
+  }
+
+  .partbar span.done {
+    background: var(--accent);
+  }
+
+  .partbar span.now {
+    background: color-mix(in oklab, var(--accent) 35%, var(--surface-2));
+  }
+
+  .teaser .of {
+    font-size: 13.5px;
+    color: var(--text-faint);
   }
 
   .top {

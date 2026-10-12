@@ -1,6 +1,6 @@
 # Numbers that round, truncate and overflow
 
-## Theory
+## Part 1: Integer division throws the remainder away
 
 Numbers feel like the one part of SQL that cannot surprise you. The surprise is that
 PostgreSQL has several kinds of number, each with its own rules for division, rounding and
@@ -73,7 +73,17 @@ FROM visits;
  100.5000000000000000 | numeric  | 20100 | bigint
 ```
 
-### Floating point: exact in binary, inexact in decimal
+### Check yourself
+
+1. Why does `count(*) FILTER (WHERE converted) / count(*) * 100` return 0 for a 12.5%
+   conversion rate, and how do you fix it?
+2. What is `-7/2` in PostgreSQL, and why does the same expression ported from Python give a
+   different answer?
+
+## Part 2: Floating point
+
+Starting a new psql session? Run `SET search_path = day09;` first — the tables
+are still there, but the setting lasts only for the session.
 
 ```sql
 SELECT 0.1::float8 + 0.2::float8 AS float8_sum,
@@ -173,7 +183,17 @@ hours of continuous operation the chopped bits had added up to about 0.34 second
 drift. A Scud covers more than half a kilometre in that time, enough to put it outside
 the window the system was looking in.
 
-### numeric: exact, but it has rules too
+### Check yourself
+
+1. Why is `0.1::float8 + 0.2::float8 = 0.3` false in PostgreSQL while `0.1 + 0.2 = 0.3`
+   is true?
+2. You type `SELECT 0.1 + 0.2 = 0.3` into psql to check whether a `float8` column will
+   compare cleanly, and it says true. Why is that check misleading?
+
+## Part 3: numeric, and rounding
+
+Starting a new psql session? Run `SET search_path = day09;` first — the tables
+are still there, but the setting lasts only for the session.
 
 `numeric` is decimal and arbitrary-precision, and for money it is the right type in
 Postgres. It is exact for values you can write in decimal. It cannot write 1/3 any more
@@ -260,7 +280,17 @@ underneath had been rising. Recomputed with the lost fractions restored, it came
 1098.9. Each error was smaller than a thousandth of a point. There were simply millions
 of them, and they all pointed the same way.
 
-### Overflow is an error, which is a gift
+### Check yourself
+
+1. You insert 19.999 into a `numeric(10,2)` column. What is stored, and does anything
+   warn you?
+2. What do `round(2.5)` and `round(2.5::float8)` return in PostgreSQL, and why do they
+   differ?
+
+## Part 4: Overflow, money, and NaN
+
+Starting a new psql session? Run `SET search_path = day09;` first — the tables
+are still there, but the setting lasts only for the session.
 
 ```sql
 SELECT 2147483647 + 1;
@@ -342,18 +372,12 @@ small, documented departure from a standard, made so that indexes keep working.
   on `float8` it is half to even.
 - Primary keys are `bigint`.
 
-## Quiz
+### Check yourself
 
-1. Why does `count(*) FILTER (WHERE converted) / count(*) * 100` return 0 for a 12.5%
-   conversion rate, and how do you fix it?
-2. Why is `0.1::float8 + 0.2::float8 = 0.3` false in PostgreSQL while `0.1 + 0.2 = 0.3`
-   is true?
-3. You insert 19.999 into a `numeric(10,2)` column. What is stored, and does anything
-   warn you?
-4. What do `round(2.5)` and `round(2.5::float8)` return in PostgreSQL, and why do they
-   differ?
-5. Which type would you use for an amount of money in PostgreSQL, and why not `float8` or
+1. Which type would you use for an amount of money in PostgreSQL, and why not `float8` or
    `money`?
+2. A table's `int` primary key reaches 2,147,483,647. What happens on the next insert,
+   and what should the column have been?
 
 ## Drill
 

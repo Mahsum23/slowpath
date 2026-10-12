@@ -56,7 +56,7 @@
 
 <main>
   {#if route.name === 'session'}
-    <Session weekId={route.weekId} dayId={route.dayId} step={route.step} />
+    <Session weekId={route.weekId} dayId={route.dayId} step={route.step} part={route.part} />
   {:else if route.name === 'map'}
     <WeekMap />
   {:else if route.name === 'stats'}

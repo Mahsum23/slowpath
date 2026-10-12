@@ -15,6 +15,7 @@ setup: |
 
 challenges:
   - id: keep-everyone
+    part: 3
     prompt: >
       List **every** customer with their paid orders: return the customer's `name` and
       the order's `id`. A customer with no paid order still appears, with a NULL id.
@@ -27,6 +28,7 @@ challenges:
       ORDER BY c.name, o.id;
 
   - id: anti-join
+    part: 4
     prompt: >
       Return the names of the customers who have never placed an order, using a
       `LEFT JOIN` and a test on the right-hand side.
@@ -38,6 +40,7 @@ challenges:
       WHERE o.id IS NULL;
 
   - id: count-right
+    part: 4
     prompt: >
       Return each customer's `name` and how many orders they have — `0` for the one
       with none. Ordered by name.
@@ -50,6 +53,7 @@ challenges:
       ORDER BY c.name;
 
   - id: paid-total
+    part: 4
     prompt: >
       Return each customer's `name` and the total of their **paid** orders, showing `0`
       for customers who have none. Ordered by name.

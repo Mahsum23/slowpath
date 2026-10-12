@@ -205,24 +205,6 @@ write:
       - CREATE INDEX ON orders (code);
       - CREATE INDEX ON orders (lower(code));
 
-  - id: index-a-day
-    tag: expression indexes
-    prompt: >
-      Reports filter with `WHERE (created_at AT TIME ZONE 'UTC')::date = $1`. Create an
-      index on exactly that expression, spelled the same way. (Try `created_at::date`
-      first if you like — and read the error.)
-    hint: An index expression must give the same answer whatever the session's time zone is.
-    solution: |
-      CREATE INDEX ON orders (((created_at AT TIME ZONE 'UTC')::date));
-    verify: |
-      SELECT regexp_replace(indexdef, 'INDEX \S+ ON ', 'INDEX ON ') AS definition
-      FROM pg_indexes
-      WHERE tablename = 'orders' AND indexname NOT IN ('orders_pkey', 'orders_status_idx')
-      ORDER BY 1;
-    bad:
-      - CREATE INDEX ON orders ((created_at::date));
-      - CREATE INDEX ON orders (created_at);
-
   - id: drop-unused
     tag: index upkeep
     prompt: >
@@ -241,8 +223,8 @@ write:
   - id: list-indexes
     tag: index upkeep
     prompt: >
-      Before adding anything, look at what is already there: return the name and the
-      definition of every index on `orders`, by name.
+      Before adding anything, look at what is already there: return `indexname` and
+      `indexdef` (its definition) for every index on `orders`, sorted by `indexname`.
     hint: There is a system view that holds one row per index, with its CREATE statement.
     solution: |
       SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'orders' ORDER BY indexname;
@@ -303,7 +285,7 @@ write:
     tag: prefix searches
     prompt: >
       `WHERE left(code, 2) = 'BX'` can't use an index on `code`. Return the same `code`s,
-      sorted, with a prefix match the planner can turn into a range.
+      sorted by code, with a prefix match the planner can turn into a range.
     hint: The pattern-matching operator, with a wildcard only at the end.
     solution: |
       SELECT code FROM orders WHERE code LIKE 'BX%' ORDER BY code;
@@ -345,21 +327,6 @@ write:
       - SELECT id, email FROM users WHERE lower(email) = 'dee@mail.io';
       - SELECT id, email FROM users WHERE email LIKE 'dee%';
 
-  - id: interval-moves-over
-    tag: keeping the column bare
-    prompt: >
-      `WHERE created_at + interval '2 days' >= '2026-03-06'` puts the column inside an
-      expression. Return the same orders' `id`s, in id order, with `created_at` alone.
-    hint: Move the interval across to the constant side, flipping its sign.
-    solution: |
-      SELECT id FROM orders WHERE created_at >= timestamptz '2026-03-06' - interval '2 days' ORDER BY id;
-    forbids:
-      - say: arithmetic on created_at
-        match: 'created_at\s*[+-]'
-    bad:
-      - SELECT id FROM orders WHERE created_at >= timestamptz '2026-03-06' + interval '2 days' ORDER BY id;
-      - SELECT id FROM orders WHERE created_at + interval '2 days' >= '2026-03-06' ORDER BY id;
-
   # --- query shapes an index makes cheap ----------------------------------------
   - id: latest-three
     tag: composite index order
@@ -379,8 +346,8 @@ write:
     prompt: >
       Orders are listed by `(created_at, id)`, five per page. The last row of the
       previous page had `created_at = '2026-03-04 06:00+00'` and `id = 9`. Return the
-      next page — `id`, `created_at` — without `OFFSET`, which reads and throws away every
-      earlier row.
+      next page — `id`, `created_at`, sorted by created_at then id — without `OFFSET`, which reads
+      and throws away every earlier row.
     hint: Two columns can be compared as one, left to right — `(a, b) > (x, y)`.
     solution: |
       SELECT id, created_at FROM orders
@@ -551,27 +518,30 @@ drill:
     tag: keeping the column bare
     kind: find
     code: |
-      CREATE INDEX ON t (created_at);
-      SELECT * FROM t WHERE created_at::date = '2026-03-01';
-      -- plan: Parallel Seq Scan, Filter: ((created_at)::date = '2026-03-01'::date)
+      -- 200,000 rows; codes are stored upper case, like 'BX000003'
+      CREATE INDEX t_code ON t (code);
+      EXPLAIN SELECT * FROM t WHERE lower(code) = 'bx000003';
+      -- Parallel Seq Scan on t
+      --   Filter: (lower(code) = 'bx000003'::text)
     prompt: Why does the index go unused?
     options:
-      - text: "The cast makes the condition about a different value, which the index is not sorted by"
+      - text: "The condition is about `lower(code)`, a value the index does not hold and is not sorted by"
         correct: true
         why: >
-          The index holds created_at, not created_at::date. Rewrite it as
-          `created_at >= '2026-03-01' AND created_at < '2026-03-02'` and PG16 plans
-          `Index Scan using t_created`.
-      - text: "Comparing a timestamp with a date is not allowed by the index"
+          The index is a sorted copy of `code`. To use it the planner needs a condition
+          on `code` itself. `WHERE code = 'BX000003'` plans `Index Scan using t_code` on
+          PostgreSQL 16; if case really varies, index the expression:
+          `CREATE INDEX ON t (lower(code))`.
+      - text: "Functions are not allowed on an indexed column, so PostgreSQL ignores the index"
         correct: false
         why: >
-          Mixed types are fine when the *constant* is converted. The trouble is converting
-          the *column*, for every row.
-      - text: "The planner thinks a whole day is too many rows"
+          Functions are allowed anywhere; the query runs and is correct. It is just that
+          only an index built on that same expression can answer it.
+      - text: "The planner expects too many matching rows for an index to pay off"
         correct: false
         why: >
-          The same day written as a range uses the index. Nothing about the row count
-          changed — only where the cast sits.
+          The same lookup written as `code = 'BX000003'` uses the index for one row.
+          Nothing about the data changed, only what the condition is about.
 
   - id: partial-scope
     tag: partial indexes

@@ -4,6 +4,7 @@
 # deterministically, so authoring the correct one first is safe.
 questions:
   - id: q1
+    part: 1
     prompt: >
       What does a `timestamptz` value actually store, and what does the session's
       `TimeZone` setting change about it?
@@ -35,6 +36,7 @@ questions:
           and how new offset-less text is read.
 
   - id: q2
+    part: 1
     prompt: >
       The text `'2026-03-29 12:00:00'`, with no offset, is inserted into a `timestamptz`
       column from two sessions, one with `TimeZone` set to UTC and one set to
@@ -63,6 +65,7 @@ questions:
           themselves differ, so they display differently in every session.
 
   - id: q3
+    part: 4
     prompt: >
       Why does `WHERE at BETWEEN '2026-06-01' AND '2026-06-07'` miss most of June 7th on
       a timestamp column, and what should be written instead?
@@ -93,6 +96,7 @@ questions:
           upper bound leaves a sliver. A half-open range never does.
 
   - id: q4
+    part: 3
     prompt: >
       On the day Berlin moves its clocks forward an hour, what is the difference between
       adding `interval '1 day'` and adding `interval '24 hours'` to 01:00 that morning
@@ -123,6 +127,7 @@ questions:
           02:00.
 
   - id: q5
+    part: 4
     prompt: >
       Why can a daily revenue report built on `date_trunc('day', created_at)` give
       different totals when run from different servers?
@@ -151,3 +156,99 @@ questions:
         why: >
           Version is irrelevant. Two connections to the same server with different
           TimeZone settings disagree too.
+
+  - id: q6
+    part: 2
+    tag: AT TIME ZONE
+    prompt: >
+      What does `timestamptz '2026-03-29 12:00+00' AT TIME ZONE 'Asia/Tashkent'` return?
+    options:
+      - text: >
+          A plain `timestamp`, `2026-03-29 17:00:00` — what a wall clock in Tashkent showed
+          at that instant
+        correct: true
+        why: >
+          Applied to a `timestamptz`, `AT TIME ZONE` answers "what did the clock say there?"
+          and drops the zone. Applied to a plain `timestamp` it goes the other way and
+          returns a `timestamptz`.
+      - text: A `timestamptz` that now carries the Tashkent zone inside it
+        correct: false
+        why: >
+          A `timestamptz` never stores a zone — it is one 64-bit instant. The result is a
+          plain `timestamp`.
+      - text: The same instant, displayed as 07:00, because Tashkent is five hours behind
+        correct: false
+        why: >
+          Tashkent is five hours *ahead* of UTC (`+05`), so noon UTC is 17:00 there.
+
+  - id: q7
+    part: 2
+    tag: time zone names
+    prompt: >
+      Which is the earlier instant: `timestamptz '2026-06-01 12:00 UTC+5'` or
+      `timestamptz '2026-06-01 12:00+05'`?
+    options:
+      - text: "`12:00+05` — it is 07:00 UTC, while `12:00 UTC+5` is 17:00 UTC"
+        correct: true
+        why: >
+          `+05` is an ISO 8601 offset, positive east of Greenwich. `UTC+5` is read as a POSIX
+          zone string, where positive means *west*. Same digits, ten hours apart. Use zone
+          names or ISO offsets.
+      - text: They are the same instant, written two ways
+        correct: false
+        why: >
+          They look alike, which is the trap. PostgreSQL reads the two forms with opposite
+          sign conventions.
+      - text: "`12:00 UTC+5` — it is 07:00 UTC"
+        correct: false
+        why: >
+          That would be right if `UTC+5` meant five hours east. As a POSIX string it means
+          five hours *behind* UTC, so 12:00 there is 17:00 UTC.
+
+  - id: q8
+    part: 3
+    tag: calendar arithmetic
+    prompt: >
+      A subscription that started on 31 January renews by adding `interval '1 month'` to the
+      *previous* renewal date. What goes wrong?
+    options:
+      - text: >
+          31 January + 1 month is 28 February, and every renewal after that lands on the
+          28th — it should be computed from the original start date
+        correct: true
+        why: >
+          PostgreSQL clamps to the last day of a shorter month, which is sensible once, but
+          the clamped date becomes the base for the next one. `start + n * interval '1 month'`
+          keeps returning to the 31st where a month has one.
+      - text: The second renewal fails, because 28 February + 1 month does not exist
+        correct: false
+        why: >
+          28 March exists. The problem is that it is 28 March rather than 31 March, and it
+          stays wrong for good.
+      - text: It renews every 30 days, so it drifts a day or two each month
+        correct: false
+        why: >
+          `interval '1 month'` is calendar-aware, not 30 days. The drift comes from clamping
+          once and building on the clamped date.
+
+  - id: q9
+    part: 4
+    tag: now() in a transaction
+    prompt: >
+      A transaction runs for a minute, inserting rows that each set `created_at = now()`.
+      What times do the rows get?
+    options:
+      - text: All the same time — when the transaction began
+        correct: true
+        why: >
+          `now()` is the transaction's start time and does not move until it ends, so one unit
+          of work has one logical moment. `clock_timestamp()` is the one that keeps ticking.
+      - text: Each row gets the moment it was inserted, a minute apart from first to last
+        correct: false
+        why: >
+          That is `clock_timestamp()`. `now()` is frozen for the whole transaction.
+      - text: The time the transaction commits, written back to every row
+        correct: false
+        why: >
+          Rows are not rewritten at commit. Each got `now()` when inserted, and `now()` was
+          the start time throughout.
