@@ -8,7 +8,9 @@
  * new screen gets them for free instead of writing its own `keydown`.
  */
 import { router } from './router.svelte';
-import { readKey, type GoTarget } from './shortcuts';
+import { isTypingTarget, readKey, type GoTarget } from './shortcuts';
+import { konamiStep } from './eggs';
+import { app } from './app.svelte';
 
 /** A screen's way of opening the mentor, mirroring its visible Ask button. */
 export interface MentorHandle {
@@ -53,6 +55,8 @@ class Shortcuts {
   private mentors = new Set<MentorHandle>();
   private answers: AnswerHandle | null = null;
   private chord = false;
+  /** How far into the Konami code the last keys got. */
+  private konami = 0;
   private chordTimer: ReturnType<typeof setTimeout> | undefined;
 
   registerMentor(handle: MentorHandle): () => void {
@@ -76,6 +80,13 @@ class Shortcuts {
     const pending = this.chord;
     this.chord = false;
     clearTimeout(this.chordTimer);
+
+    // The Konami code, pressed anywhere outside a text box: a secret mode (eggs.ts).
+    if (!e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !isTypingTarget(e.target)) {
+      const k = konamiStep(this.konami, e.code);
+      this.konami = k.at;
+      if (k.done) void app.toggleSecret('phosphor');
+    }
 
     const act = readKey(e, pending);
     if (!act) return;

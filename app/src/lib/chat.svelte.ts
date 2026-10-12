@@ -2,6 +2,7 @@ import { app } from './app.svelte';
 import * as store from './storage';
 import { examinerPrompt, ModelGoneError, streamReply, systemPrompt, withFocus, type ChatMessage, type MentorFocus } from './mentor';
 import type { Day, Week } from './types';
+import { mentorEgg } from './eggs';
 
 /** One thread per day, plus a general one for questions that aren't about a lesson. */
 export const GENERAL = 'general';
@@ -23,7 +24,12 @@ class ChatStore {
    */
   context: DayContext = null;
 
-  constructor(private readonly buildSystem: (ctx: DayContext) => string) {}
+  /**
+   * @param magic Whether a few magic words are answered here without asking the model
+   *   (eggs.ts). The mentor, yes; the examiner, never — an answer under examination is
+   *   an answer, whatever it says.
+   */
+  constructor(private readonly buildSystem: (ctx: DayContext) => string, private readonly magic = false) {}
 
   messages = $state<ChatMessage[]>([]);
   streaming = $state(false);
@@ -112,6 +118,15 @@ class ChatStore {
     // replace it with what was on disk a moment ago.
     this.generation += 1;
     this.messages.push({ role: 'user', content });
+    const magic = this.magic ? mentorEgg(content) : null;
+    if (magic) {
+      // Answered on the spot, key or no key. The thread keeps it like any other reply.
+      this.messages.push({ role: 'assistant', content: magic.reply });
+      app.findEgg(magic.egg);
+      await this.persist();
+      await app.persistNow();
+      return;
+    }
     await this.persist();
     await this.run();
   }
@@ -171,7 +186,7 @@ class ChatStore {
 }
 
 /** The Mentor tab: answers questions, won't write the milestone. */
-export const chat = new ChatStore(systemPrompt);
+export const chat = new ChatStore(systemPrompt, true);
 
 /**
  * The teach-back step: makes him explain it, and won't explain it for him. A separate

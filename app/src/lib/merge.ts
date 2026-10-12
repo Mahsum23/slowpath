@@ -12,6 +12,7 @@
  */
 import { mergePractice } from './practice';
 import { mergeParts } from './parts';
+import { mergeEggs } from './eggs';
 import { mergeActivity } from './motivation';
 import {
   emptyDayProgress, emptyReview,
@@ -175,5 +176,6 @@ export function mergeProgress(local: Progress, remote: Progress): Progress {
     // the app would then never download it.
     loadedWeeks: local.loadedWeeks,
     ...(local.activity || remote.activity ? { activity: mergeActivity(local.activity, remote.activity) } : {}),
+    ...(local.eggs || remote.eggs ? { eggs: mergeEggs(local.eggs, remote.eggs) } : {}),
   };
 }

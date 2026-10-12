@@ -557,3 +557,57 @@ html.mentor-docked .screen {
     transform: translateY(-4px);
   }
 }
+
+/* --- Phosphor mode: a secret (eggs.ts). Green on black, the way terminals glowed. -------
+   Last in the file so it wins over both themes at the same specificity. */
+:root.phosphor {
+  --bg: #030703;
+  --bg-elev: #061006;
+  --surface: #071107;
+  --surface-2: #0c1a0c;
+  --border: #12331a;
+  --border-strong: #1d5a2b;
+  --text: #8dff9f;
+  --text-dim: #5fd477;
+  --text-faint: #3c9a50;
+  --accent: #39ff6a;
+  --accent-ink: #021003;
+  --accent-soft: #0d2a13;
+  --flame: #ffd23f;
+  --ok: #39ff6a;
+  --ok-soft: #0d2a13;
+  --bad: #ff5f56;
+  --bad-soft: #2a0d0b;
+  --font-ui: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --shadow: 0 0 0 1px rgb(57 255 106 / 8%), 0 0 22px -8px rgb(57 255 106 / 25%);
+  --shadow-lift: 0 0 0 1px rgb(57 255 106 / 14%), 0 0 30px -8px rgb(57 255 106 / 35%);
+  color-scheme: dark;
+}
+
+:root.phosphor body {
+  text-shadow: 0 0 6px rgb(57 255 106 / 35%);
+}
+
+/* Scanlines, and a faint flicker for anyone who has not asked for less motion. */
+:root.phosphor body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgb(0 0 0 / 0%) 0 2px, rgb(0 0 0 / 22%) 2px 3px);
+  mix-blend-mode: multiply;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root.phosphor body::after {
+    animation: phosphor-flicker 6s steps(1) infinite;
+  }
+}
+
+@keyframes phosphor-flicker {
+  0%, 96%, 100% { opacity: 1; }
+  97% { opacity: 0.86; }
+  98% { opacity: 1; }
+  99% { opacity: 0.92; }
+}

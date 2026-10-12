@@ -3,6 +3,16 @@
   import { router, sessionPath } from '../lib/router.svelte';
   import type { Day } from '../lib/types';
   import { partDone } from '../lib/parts';
+  import { knock } from '../lib/eggs';
+
+  /** Knock three times on the edge of the map (eggs.ts). */
+  let taps: number[] = [];
+  function knockEdge() {
+    const k = knock(taps, Date.now(), 3, 1500);
+    taps = k.taps;
+    if (k.done) void app.toggleSecret('dragons');
+  }
+  const dragons = $derived(app.modes.dragons);
 
   /**
    * One path per track. Topics are dividers on it, never a unit that ends: there is no
@@ -53,6 +63,8 @@
             <span class="dot" aria-hidden="true">
               {#if state === 'done'}
                 <svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7" /></svg>
+              {:else if dragons && (state === 'upcoming' || state === 'locked')}
+                <span class="dragon">🐉</span>
               {:else if state === 'upcoming' || state === 'locked'}
                 <svg viewBox="0 0 24 24"
                   ><rect x="5" y="11" width="14" height="9" rx="2" /><path
@@ -88,8 +100,11 @@
 
     <!-- What comes next on this track, in plain words, when a plan exists. -->
     {#if path.next?.length}
-      <section class="ahead">
-        <h2>Coming up</h2>
+      <section class="ahead" class:dragons>
+        <!-- Not a button, on purpose: nothing here says it can be knocked on. -->
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+        <h2 onclick={knockEdge}>{dragons ? 'Here be dragons' : 'Coming up'}</h2>
+        {#if dragons}<p class="latin">HC SVNT DRACONES — beyond this point the map is unwritten</p>{/if}
         <ul>
           {#each path.next as item}<li>{item}</li>{/each}
         </ul>
@@ -292,6 +307,35 @@
   .ahead h2 {
     font-size: 16px;
     margin: 0 0 8px;
+  }
+
+  /* The edge of the map, marked the old way. */
+  .ahead.dragons {
+    border: 1px solid #c8a865;
+    background: #efe3c2;
+  }
+
+  .ahead.dragons h2,
+  .ahead.dragons .latin,
+  .ahead.dragons ul {
+    font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+    color: #3b2f1a;
+  }
+
+  .ahead.dragons h2 {
+    font-style: italic;
+    font-size: 19px;
+  }
+
+  .latin {
+    margin: -4px 0 10px;
+    font-size: 11.5px;
+    letter-spacing: 0.12em;
+  }
+
+  .dragon {
+    font-size: 15px;
+    line-height: 1;
   }
 
   .ahead ul {

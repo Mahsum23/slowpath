@@ -599,6 +599,33 @@ tested in `test-motivation.mjs`), and each piece rests on a finding, so keep the
 - The answer log (`progress.activity`) merges by **max per field, never sum** — a summed
   tally once doubled on every sync.
 
+## Surprises: novelty, without turning it into points
+
+He asked to be surprised: "the novelty is the key to the dopamine", something positive and
+unexpected while learning, and *not* to be told in advance what it would be. What he likes,
+from asking obliquely: true stories that rearrange what he knew, beautiful details, being
+noticed, jokes that are absurd, nerdy or dark (not dry); worlds of myth and of the hacker
+underground; old code comments with a story, secret modes, messages left behind.
+
+All of it lives in `app/src/lib/eggs.ts` (pure, tested in `test-eggs.mjs`). Rules that keep it
+honest and keep it surprising:
+
+- **Unexpected, never announced, never farmed.** Deci, Koestner & Ryan (1999) found *expected*
+  rewards lower interest and *unexpected* ones do not; novelty itself drives the dopamine
+  system (Bunzeck & Düzel 2006). So: no list of what can be found, no "N of M", no hints in
+  release notes or app copy beyond the in-world rumours. A surprise is found once; rare ones are
+  rate-limited (a fact or old source at most once a day).
+- **Every story told as true is true, and checked by search before it ships**; drop the
+  detail you cannot confirm (the famous "45-minute build" behind Go was dropped). Jokes are
+  plainly jokes. Same standard as the lessons.
+- **Mostly about the subject.** Old source, strange facts and the bestiary teach something; the
+  bestiary records misconceptions *he came back from* (a miss, then three right in a row on that
+  theme), which is competence feedback, not currency.
+- **Never in the way.** A surprise never changes a grade, never blocks a step, never fires in the
+  examiner's chat, and waits to be dismissed rather than timing out.
+- **Don't spoil them.** When describing this work to him (PRs, PROGRESS.md, chat), say that
+  there are surprises and where the code is, not what they are. Add new ones the same way.
+
 A task needs a machine, and not having one is the most common reason a day stalls
 half-finished — which is how the habit dies. So every day carries a **drill** as well as a
 task: two to four exercises in `day-NN-<slug>.drill.yaml`, same answer-key shape as the

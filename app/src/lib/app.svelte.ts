@@ -17,7 +17,7 @@ import {
   type Track,
 } from './types';
 import {
-  cardsFor, clearedOn, dueCards, grade, newCard, shouldAmbush, type CardRef, type Grade,
+  cardsFor, clearedOn, dueCards, grade, newCard, parseCardId, shouldAmbush, type CardRef, type Grade,
 } from './review';
 import * as store from './storage';
 import * as cloud from './cloud';
@@ -31,10 +31,18 @@ import { localDateOf, today } from './date';
 import { bankCards, emptyPractice, finishRound, needsPractice, recordFirst } from './practice';
 import { allPartsDone, nextPart, partDone, partsOf } from './parts';
 import type { DayPart } from './types';
-import { heatMap, themeLabel, type Heat } from './focus';
+import { heatMap, themeKey, themeLabel, type Heat } from './focus';
 import {
-  activityScores, conceptStrength, knownNow, logAnswer, type ConceptStrength,
+  activityScores, conceptStrength, freshStart, knownNow, lastActiveBefore, logAnswer, type ConceptStrength,
 } from './motivation';
+import {
+  answerEgg, beastFor, calendarEgg, clockEgg, emptyEggs, FACT_CHANCE, LETTERS, milestoneCrossed, pickFact,
+  pickSource, SECRETS, SOURCE_CHANCE, stepHunt, type Egg, type EggState,
+} from './eggs';
+
+/** The two secret modes. Device-local, like the theme: they are about this screen. */
+export type SecretMode = keyof typeof SECRETS;
+const SECRET_KEY = 'slowpath.secrets';
 
 export type DayState = 'done' | 'current' | 'unlocked' | 'locked' | 'upcoming';
 
@@ -70,6 +78,10 @@ class AppStore {
   cloud = $state<CloudState>({ status: 'off', lastSyncAt: null, lastDevice: null, error: null });
   /** Badge ids earned by the most recent action, for the celebration sheet. */
   justEarned = $state<string[]>([]);
+  /** Surprises waiting to be shown, oldest first (EggToast). Never persisted. */
+  eggQueue = $state<Egg[]>([]);
+  /** Which secret modes are on, on this device. */
+  modes = $state<Record<SecretMode, boolean>>({ phosphor: false, dragons: false });
   lastXpGain = $state(0);
   installable = $state(false);
 
@@ -221,13 +233,116 @@ class AppStore {
   async gradeCard(id: string, result: Grade, early = false, reflex = false, log = true) {
     const review = this.progress.review;
     const card = review.cards[id] ?? newCard();
+    const answeredBefore = log ? this.answeredTotal : 0;
+    const returning = log ? this.returningAfterAWeek() : false;
     review.cards[id] = grade(card, result, new Date(), Math.random, { early, reflex });
     // Every answer goes into the day's log, with what is known after it: the Stats line.
     // A credit to a worn card is not a second answer, so it is not logged twice.
     if (log) {
       this.progress.activity = logAnswer($state.snapshot(this.progress.activity), result === 'good', knownNow($state.snapshot(review)));
+      this.afterAnswer(id, result === 'good', answeredBefore, returning);
     }
     await this.persist();
+  }
+
+  // --- surprises (eggs.ts) ------------------------------------------------
+
+  get eggs(): EggState {
+    return this.progress.eggs ?? emptyEggs();
+  }
+
+  /** Every answer ever given: the sum of the times each card has been seen. */
+  get answeredTotal(): number {
+    let n = 0;
+    for (const c of Object.values(this.progress.review.cards)) n += c.seen;
+    return n;
+  }
+
+  /** Coming back today after seven or more days with nothing done, and nothing done yet. */
+  private returningAfterAWeek(): boolean {
+    if ((this.scores.get(today()) ?? 0) > 0) return false;
+    const fs = freshStart(lastActiveBefore(this.scores));
+    return fs?.kind === 'return' && fs.gap >= 7;
+  }
+
+  private eggState(): EggState {
+    this.progress.eggs ??= emptyEggs();
+    return this.progress.eggs;
+  }
+
+  /**
+   * Show a surprise, once. Recorded with its text, so the cabinet can show it again even
+   * if the content changes. Returns false if it had been found before. Not persisted
+   * here: every caller persists right after.
+   */
+  findEgg(egg: Egg | null): boolean {
+    if (!egg) return false;
+    const st = this.eggState();
+    if (st.found[egg.id]) return false;
+    st.found[egg.id] = { at: new Date().toISOString(), kind: egg.kind, glyph: egg.glyph, title: egg.title, body: egg.body };
+    this.eggQueue = [...this.eggQueue, egg];
+    return true;
+  }
+
+  dismissEgg() {
+    this.eggQueue = this.eggQueue.slice(1);
+  }
+
+  /** The clock and the calendar: checked on anything that counts as doing something. */
+  private noticeTime() {
+    const now = new Date();
+    this.findEgg(clockEgg(now));
+    this.findEgg(calendarEgg(now));
+  }
+
+  /** After an answer: the hunt, round numbers, the occasional strange fact. */
+  private afterAnswer(id: string, right: boolean, before: number, returning: boolean) {
+    if (returning) this.findEgg(LETTERS.comeback);
+    this.noticeTime();
+    const crossed = milestoneCrossed(before, before + 1);
+    this.findEgg(crossed);
+    if (crossed?.id === 'milestone:1024') this.findEgg(LETTERS.kibi);
+
+    const ref = parseCardId(id);
+    const day = ref ? this.dayById(ref.dayId) : undefined;
+    if (ref && day && ref.questionId && (ref.kind === 'quiz' || ref.kind === 'drill' || ref.kind === 'write')) {
+      const key = themeKey(day, ref);
+      const st = this.eggState();
+      const step = stepHunt($state.snapshot(st.hunts), key, right);
+      st.hunts = step.hunts;
+      if (step.slain) this.findEgg(beastFor(key, themeLabel(day, ref)));
+    }
+
+    const t = today();
+    const st = this.eggState();
+    if (right && st.lastFact !== t && Math.random() < FACT_CHANCE) {
+      if (this.findEgg(pickFact(this.track, st.found, Math.random))) st.lastFact = t;
+    }
+  }
+
+  /** Something typed into a write card. */
+  async noticeAnswer(text: string, lang: string) {
+    if (this.findEgg(answerEgg(text, lang))) await this.persist();
+  }
+
+  /** A secret mode switched on or off. The first time is the find. */
+  async toggleSecret(mode: SecretMode) {
+    this.modes = { ...this.modes, [mode]: !this.modes[mode] };
+    try { localStorage.setItem(SECRET_KEY, JSON.stringify(this.modes)); } catch { /* private mode: it lasts the session */ }
+    this.applySecrets();
+    if (this.modes[mode] && this.findEgg(SECRETS[mode])) await this.persist();
+  }
+
+  private loadSecrets() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(SECRET_KEY) ?? '{}');
+      this.modes = { phosphor: raw.phosphor === true, dragons: raw.dragons === true };
+    } catch { /* nothing stored, or no storage */ }
+    this.applySecrets();
+  }
+
+  private applySecrets() {
+    document.documentElement.classList.toggle('phosphor', this.modes.phosphor);
   }
 
   // --- tracks -------------------------------------------------------------
@@ -348,7 +463,10 @@ class AppStore {
   /** Close a practice round: it counts for the streak, and may land the concept. */
   async finishPracticeRound(day: Day, weekId: string, asked: number, right: number) {
     const p = this.mutable(day.id, weekId);
+    const wasLanded = Boolean(p.practice?.landedAt);
     p.practice = finishRound($state.snapshot(p.practice) ?? emptyPractice(), asked, right);
+    // Landed only after a fight: that deserves a word.
+    if (!wasLanded && p.practice.landedAt && p.practice.rounds.length >= 3) this.findEgg(LETTERS.stubborn);
     this.progress.streak = deriveStreak(
       Object.values($state.snapshot(this.progress).days),
       $state.snapshot(this.progress.streak),
@@ -511,6 +629,7 @@ class AppStore {
     this.secrets = await store.loadSecrets();
     this.weeks = await store.loadAllWeeks();
     this.applyTheme();
+    this.loadSecrets();
     // Seeded, not fetched: the real list costs a round trip and is only ever looked
     // at on the Settings screen, which asks for it when it opens.
     this.mentorModels = PROVIDERS[this.mentorProvider].models;
@@ -609,6 +728,11 @@ class AppStore {
     return out;
   }
 
+  /** Save progress now — for a find made outside the app's own actions (a mentor reply). */
+  async persistNow() {
+    await this.persist();
+  }
+
   private async persist() {
     await store.saveProgress($state.snapshot(this.progress));
     this.schedulePush();
@@ -633,7 +757,15 @@ class AppStore {
    */
   async markPartDone(day: Day, weekId: string, n: number) {
     const p = this.mutable(day.id, weekId);
+    const returning = !p.parts?.[String(n)] && this.returningAfterAWeek();
     if (!p.parts?.[String(n)]) p.parts = { ...(p.parts ?? {}), [String(n)]: new Date().toISOString() };
+    // A part read is the moment for a piece of old source: at most one a day, about half the time.
+    if (returning) this.findEgg(LETTERS.comeback);
+    this.noticeTime();
+    const st = this.eggState();
+    if (st.lastSource !== today() && Math.random() < SOURCE_CHANCE) {
+      if (this.findEgg(pickSource(st.found, Math.random))) st.lastSource = today();
+    }
     if (allPartsDone(day, p)) p.theoryDone = true;
     const qs = day.quiz ?? [];
     if (p.theoryDone && !p.quiz.completedAt && qs.every((q) => q.id in p.quiz.answers)) {
@@ -813,6 +945,9 @@ class AppStore {
 
     p.completedAt = new Date().toISOString();
     p.theoryDone = true;
+    this.noticeTime();
+    // The last written day of the track: the edge of the map.
+    if (this.runway === 0) this.findEgg(LETTERS.end);
     // `p.task = 'done'` used to live here, which was a lie the moment the day could be
     // finished from a phone. Finishing a day says you did the day's practice; whether
     // the lab half happened is a separate fact, and labQueue is where it is tracked.

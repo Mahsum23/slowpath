@@ -11,6 +11,14 @@
   import { freshStart, knownNow, lastActiveBefore } from '../lib/motivation';
   import { today } from '../lib/date';
   import { partDone, partQuestions } from '../lib/parts';
+  import { knock } from '../lib/eggs';
+
+  let knocks: number[] = [];
+  function knockTitle() {
+    const k = knock(knocks, Date.now(), 7, 2500);
+    knocks = k.taps;
+    if (k.done) void app.toggleSecret('phosphor');
+  }
 
   const current = $derived(app.current);
   // One path per track. Track-scoped, so a subject that hasn't loaded yet never shows
@@ -71,7 +79,9 @@
     <button class="streak" onclick={() => router.go('/stats')} aria-label="Streak: {app.streakCount} days">
       <Flame count={app.streakCount} atRisk={app.streakAtRisk} />
     </button>
-    <h1>slowpath</h1>
+    <!-- Knock seven times (eggs.ts). Nothing here says so. -->
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+    <h1 onclick={knockTitle}>slowpath</h1>
     <button class="gear" onclick={() => router.go('/settings')} aria-label="Settings">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" /><path
           d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H1.7a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 3.3 7.5a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3 1.6 1.6 0 0 0 1-1.5V1.7a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8v.1a1.6 1.6 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"
