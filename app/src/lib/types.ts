@@ -25,6 +25,8 @@ export interface QuizQuestion {
   id: string;
   /** The one idea this tests, in a phrase ("partial indexes"); see focus.ts. Optional. */
   tag?: string | null;
+  /** On a day split into parts, the part this question checks (parts.ts). */
+  part?: number | null;
   prompt: string;
   options: QuizOption[];
 }
@@ -38,6 +40,26 @@ export interface DayTask {
 
 export type DayStatus = 'available' | 'upcoming';
 
+/**
+ * One sitting's worth of a day: a few minutes of reading and the two or three questions
+ * that check it. A day split into parts is read part by part, each closed by its own
+ * questions and each feeding the review deck as soon as it is done; the drill, the task
+ * and the teach-back come once, after the last part (parts.ts).
+ */
+export interface DayPart {
+  /** 1-based, in reading order. */
+  n: number;
+  title: string;
+  markdown: string;
+  /** Reading plus the part's questions, in minutes. */
+  minutes: number;
+  /**
+   * Set on a part written after the day was published (YYYY-MM-DD). Someone who had
+   * already read the day has not read this part, so it is not counted done for them.
+   */
+  added: string | null;
+}
+
 export interface Day {
   id: string;
   day: number;
@@ -48,6 +70,8 @@ export interface Day {
   status: DayStatus;
   slug?: string;
   theoryMarkdown: string | null;
+  /** The day's theory in sittings; absent on a day that is read in one go. */
+  parts?: DayPart[] | null;
   quiz: QuizQuestion[] | null;
   /**
    * The half of the day's work you can do with thumbs.
@@ -80,6 +104,8 @@ export interface Day {
 export interface WriteChallenge {
   id: string;
   tag?: string | null;
+  /** Needs this part of the day read first (parts.ts); absent means the whole theory. */
+  part?: number | null;
   prompt: string;
   solution: string;
   hint: string | null;
@@ -276,6 +302,8 @@ export interface DayProgress {
   completedAt: string | null;
   /** Absent until the first practice round; older records and devices never have it. */
   practice?: PracticeState;
+  /** Part number -> when it was finished. Absent on days read before parts existed. */
+  parts?: Record<string, string>;
 }
 
 /**

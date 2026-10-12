@@ -11,6 +11,7 @@
  * records no longer contain — see mergeStreak.
  */
 import { mergePractice } from './practice';
+import { mergeParts } from './parts';
 import { mergeActivity } from './motivation';
 import {
   emptyDayProgress, emptyReview,
@@ -87,6 +88,7 @@ function mergeDay(local: DayProgress, remote: DayProgress): DayProgress {
     teachBackDone: local.teachBackDone || remote.teachBackDone,
     completedAt: earliest(local.completedAt, remote.completedAt),
     ...(local.practice || remote.practice ? { practice: mergePractice(local.practice, remote.practice) } : {}),
+    ...(local.parts || remote.parts ? { parts: mergeParts(local.parts, remote.parts) } : {}),
   };
 }
 

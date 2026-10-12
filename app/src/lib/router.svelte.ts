@@ -8,7 +8,7 @@ export type Route =
   | { name: 'mentor' }
   | { name: 'review'; practice: boolean; round: string | null }
   | { name: 'settings' }
-  | { name: 'session'; weekId: string; dayId: string; step: number };
+  | { name: 'session'; weekId: string; dayId: string; step: number; part: number | null };
 
 function parse(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
@@ -25,7 +25,14 @@ function parse(hash: string): Route {
       return { name: 'settings' };
     case 'session':
       if (parts[1] && parts[2]) {
-        return { name: 'session', weekId: parts[1], dayId: parts[2], step: Number(parts[3] ?? 0) || 0 };
+        return {
+          name: 'session',
+          weekId: parts[1],
+          dayId: parts[2],
+          step: Number(parts[3] ?? 0) || 0,
+          // On a day read in parts, which part the reading and its questions are about.
+          part: Number(parts[4]) > 0 ? Number(parts[4]) : null,
+        };
       }
       return { name: 'today' };
     default:
@@ -62,5 +69,5 @@ class Router {
 }
 
 export const router = new Router();
-export const sessionPath = (weekId: string, dayId: string, step = 0) =>
-  `/session/${weekId}/${dayId}/${step}`;
+export const sessionPath = (weekId: string, dayId: string, step = 0, part?: number | null) =>
+  `/session/${weekId}/${dayId}/${step}${part ? `/${part}` : ''}`;

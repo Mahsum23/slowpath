@@ -1,6 +1,6 @@
 # Window functions: aggregates that keep the rows
 
-## Theory
+## Part 1: GROUP BY collapses, OVER keeps
 
 `GROUP BY` answers "what is the total per region" and, in the process, destroys the rows it
 summarised. A whole family of everyday questions needs the total *and* the rows: what
@@ -77,7 +77,16 @@ function(...) OVER (
 (`100.0 *` and not `100 *` is deliberate: `amount` is an integer, and integer division
 would turn every share into 0. That is day 9's whole subject.)
 
-### Ranking: three functions that disagree only on ties
+### Check yourself
+
+1. What is the difference between what `GROUP BY` and a window function do to the rows of
+   a query?
+2. What does `sum(amount) OVER (PARTITION BY region)` put next to each sale?
+
+## Part 2: Ranking, and the top of each group
+
+Starting a new psql session? Run `SET search_path = day08;` first — the tables
+are still there, but the setting lasts only for the session.
 
 ```sql
 SELECT region, id, amount,
@@ -171,7 +180,17 @@ are making by choosing the function. Use `rank` when a tie for first is genuinel
 winners. Use `row_number` with a tiebreaker (`ORDER BY amount DESC, id`) when you need
 exactly one.
 
-### The running total that jumps two rows at once
+### Check yourself
+
+1. Two rows tie for first place in a partition. What do `row_number`, `rank` and
+   `dense_rank` assign to them, and to the row after them?
+2. Why is `WHERE rank() OVER (…) = 1` rejected, and what is the standard way to filter on
+   a window function in PostgreSQL?
+
+## Part 3: Frames: the running total that jumps
+
+Starting a new psql session? Run `SET search_path = day08;` first — the tables
+are still there, but the setting lasts only for the session.
 
 Add `ORDER BY` inside the window and `sum` becomes a running total:
 
@@ -227,53 +246,6 @@ is no "first" between them, and `RANGE` refuses to invent one. It is just almost
 what someone writing a running total meant, and it fails only on data with ties. Test
 data rarely has ties.
 
-### lag and lead: comparing a row with its neighbour
-
-"How did each day compare with the day before?" used to need a self-join on `day - 1`.
-`lag` reads a value from the previous row of the window:
-
-```sql
-SELECT day, total, total - lag(total) OVER (ORDER BY day) AS change
-FROM (SELECT day, sum(amount) AS total FROM sales GROUP BY day) d
-ORDER BY day;
-```
-
-```text
-    day     | total | change
-------------+-------+--------
- 2026-03-01 |   300 |
- 2026-03-02 |   320 |     20
- 2026-03-03 |    40 |   -280
-```
-
-The first day has no previous row, so `lag` returns NULL and so does the subtraction. The
-inner query is a `GROUP BY` and the outer one is a window: aggregate to the grain you want
-(day 6), *then* compare across rows.
-
-### Windows see only what WHERE left behind
-
-One more consequence of running in the `SELECT` step:
-
-```sql
-SELECT id, amount, sum(amount) OVER () AS total
-FROM sales
-WHERE region = 'north'
-ORDER BY id;
-```
-
-```text
- id | amount | total
-----+--------+-------
-  1 |    100 |   250
-  2 |     50 |   250
-  3 |     70 |   250
-  4 |     30 |   250
-```
-
-`OVER ()` is a window of "all rows", but only the rows that survived `WHERE`. So the total
-is north's 250, not the table's 660. If you need "share of the whole table" while showing
-only some rows, compute the window in a subquery first and filter outside it.
-
 ### Worth knowing: last_value() returns the current row
 
 Given the default frame, predict `last_value`:
@@ -324,6 +296,62 @@ ORDER BY region, amount DESC, id;
 which must begin with the same columns. It is not standard SQL, it is very readable, and
 the `id` at the end of the `ORDER BY` is what decides the tie between the two 200s.
 
+### Check yourself
+
+1. Two sales share the same day. Why does `sum(amount) OVER (ORDER BY day)` give both of
+   them the same running total, and how do you get a true row-by-row running total?
+2. Why does `last_value(x) OVER (ORDER BY t)` return the current row's own value?
+
+## Part 4: Neighbours, and what a window can see
+
+Starting a new psql session? Run `SET search_path = day08;` first — the tables
+are still there, but the setting lasts only for the session.
+
+"How did each day compare with the day before?" used to need a self-join on `day - 1`.
+`lag` reads a value from the previous row of the window:
+
+```sql
+SELECT day, total, total - lag(total) OVER (ORDER BY day) AS change
+FROM (SELECT day, sum(amount) AS total FROM sales GROUP BY day) d
+ORDER BY day;
+```
+
+```text
+    day     | total | change
+------------+-------+--------
+ 2026-03-01 |   300 |
+ 2026-03-02 |   320 |     20
+ 2026-03-03 |    40 |   -280
+```
+
+The first day has no previous row, so `lag` returns NULL and so does the subtraction. The
+inner query is a `GROUP BY` and the outer one is a window: aggregate to the grain you want
+(day 6), *then* compare across rows.
+
+### Windows see only what WHERE left behind
+
+One more consequence of running in the `SELECT` step:
+
+```sql
+SELECT id, amount, sum(amount) OVER () AS total
+FROM sales
+WHERE region = 'north'
+ORDER BY id;
+```
+
+```text
+ id | amount | total
+----+--------+-------
+  1 |    100 |   250
+  2 |     50 |   250
+  3 |     70 |   250
+  4 |     30 |   250
+```
+
+`OVER ()` is a window of "all rows", but only the rows that survived `WHERE`. So the total
+is north's 250, not the table's 660. If you need "share of the whole table" while showing
+only some rows, compute the window in a subquery first and filter outside it.
+
 ### Carry this
 
 - `GROUP BY` collapses rows; `OVER` computes over a window of related rows and keeps
@@ -336,17 +364,11 @@ the `id` at the end of the `ORDER BY` is what decides the tie between the two 20
   includes peers. For running totals write `ROWS` and a unique final sort key.
 - `last_value` needs `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`.
 
-## Quiz
+### Check yourself
 
-1. What is the difference between what `GROUP BY` and a window function do to the rows of
-   a query?
-2. Why is `WHERE rank() OVER (…) = 1` rejected, and what is the standard way to filter on
-   a window function in PostgreSQL?
-3. Two sales share the same day. Why does `sum(amount) OVER (ORDER BY day)` give both of
-   them the same running total, and how do you get a true row-by-row running total?
-4. Two rows tie for first place in a partition. What do `row_number`, `rank` and
-   `dense_rank` assign to them, and to the row after them?
-5. Why does `last_value(x) OVER (ORDER BY t)` return the current row's own value?
+1. `total - lag(total) OVER (ORDER BY day)` is NULL on the first day. Why?
+2. `sum(amount) OVER ()` in a query with `WHERE region = 'north'`: is that the total of the
+   whole table, or of north, and why?
 
 ## Drill
 

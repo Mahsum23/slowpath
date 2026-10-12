@@ -17,8 +17,12 @@
  *
  * Pure on purpose: everything here is tested in node (scripts/test-practice.mjs).
  */
-import type { Day, PracticeState } from './types';
+import type { Day, DayProgress, PracticeState } from './types';
 import type { CardRef } from './review';
+import { unlocked } from './parts';
+
+/** Enough of a day's progress to say which parts have been read. */
+type Read = Pick<DayProgress, 'theoryDone' | 'parts'> | undefined;
 
 export const ROUND_SIZE = 10;
 /** Of a round, how much is typed from memory rather than picked from options. */
@@ -32,13 +36,18 @@ type Rng = () => number;
 
 export const emptyPractice = (): PracticeState => ({ first: {}, rounds: [], landedAt: null, movedOn: false });
 
-/** Every item in a day's bank, as review cards. */
-export function bankCards(day: Day): CardRef[] {
+/**
+ * Every item in a day's bank, as review cards. Given the day's progress, only the items
+ * whose part has been read: an item that needs a part you have not reached would be asking
+ * about something no lesson has shown you yet.
+ */
+export function bankCards(day: Day, read?: Read): CardRef[] {
   const p = day.practice;
   if (!p) return [];
+  const open = (part: number | null | undefined) => read === undefined || unlocked(day, read, part);
   return [
-    ...(p.write?.challenges ?? []).map((c) => ({ id: `write:${day.id}:${c.id}`, kind: 'write' as const, dayId: day.id, questionId: c.id })),
-    ...p.drill.map((s) => ({ id: `drill:${day.id}:${s.id}`, kind: 'drill' as const, dayId: day.id, questionId: s.id })),
+    ...(p.write?.challenges ?? []).filter((c) => open(c.part)).map((c) => ({ id: `write:${day.id}:${c.id}`, kind: 'write' as const, dayId: day.id, questionId: c.id })),
+    ...p.drill.filter((s) => open(s.part)).map((s) => ({ id: `drill:${day.id}:${s.id}`, kind: 'drill' as const, dayId: day.id, questionId: s.id })),
   ];
 }
 
@@ -58,9 +67,9 @@ export interface PracticeStatus {
   movedOn: boolean;
 }
 
-export function practiceStatus(day: Day, state: PracticeState | undefined): PracticeStatus {
+export function practiceStatus(day: Day, state: PracticeState | undefined, read?: Read): PracticeStatus {
   const s = state ?? emptyPractice();
-  const cards = bankCards(day);
+  const cards = bankCards(day, read);
   const seen = cards.filter((c) => itemKey(c) in s.first);
   const last = s.rounds.at(-1);
   return {
@@ -96,9 +105,9 @@ function shuffle<T>(xs: T[], rng: Rng): T[] {
  * Quick items are spread through the round rather than bunched, so it alternates
  * between typing and thinking instead of ending on a run of multiple choice.
  */
-export function buildRound(day: Day, state: PracticeState | undefined, rng: Rng = Math.random, size = ROUND_SIZE): CardRef[] {
+export function buildRound(day: Day, state: PracticeState | undefined, rng: Rng = Math.random, size = ROUND_SIZE, read?: Read): CardRef[] {
   const s = state ?? emptyPractice();
-  const all = bankCards(day);
+  const all = bankCards(day, read);
   const fresh = all.filter((c) => !(itemKey(c) in s.first));
   const missed = all.filter((c) => s.first[itemKey(c)] === false);
   const rest = all.filter((c) => s.first[itemKey(c)] === true);

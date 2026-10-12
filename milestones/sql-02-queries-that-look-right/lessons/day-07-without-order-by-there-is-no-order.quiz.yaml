@@ -4,6 +4,7 @@
 # deterministically, so authoring the correct one first is safe.
 questions:
   - id: q1
+    part: 1
     prompt: >
       A query without `ORDER BY` has returned rows in insertion order for months. Name two
       things that can change that order without the query changing.
@@ -34,6 +35,7 @@ questions:
           far more often.
 
   - id: q2
+    part: 2
     prompt: >
       `ORDER BY score DESC LIMIT 1` on a table where two players share the top score:
       which one is returned, and how do you make the answer stable?
@@ -65,6 +67,7 @@ questions:
           one row.
 
   - id: q3
+    part: 3
     prompt: >
       A feed pages with `LIMIT 20 OFFSET 20` for page 2, and a new post is published
       while the reader is still on page 1. What does the reader see on page 2, and why?
@@ -94,6 +97,7 @@ questions:
           silence is why the bug is so common.
 
   - id: q4
+    part: 3
     prompt: >
       Why does `LIMIT 10 OFFSET 90000` stay slow even with an index that matches the
       `ORDER BY` exactly?
@@ -124,6 +128,7 @@ questions:
           to jump by position. That is the whole problem.
 
   - id: q5
+    part: 4
     prompt: >
       Why must keyset pagination write `(created_at, id) < (x, y)` rather than
       `created_at < x AND id < y`?
@@ -150,3 +155,129 @@ questions:
         correct: false
         why: >
           It supports it fine — the query runs and returns the wrong rows, silently.
+
+  - id: q6
+    part: 1
+    tag: no order without ORDER BY
+    prompt: >
+      `SELECT * FROM players` (no `ORDER BY`) lists `ana` first. After
+      `UPDATE players SET score = 91 WHERE id = 1`, the same query lists `ana` last. Why?
+    options:
+      - text: >
+          The update wrote a new version of `ana`'s row in the next free slot, and a
+          sequential scan meets rows in the order they sit in the table's pages
+        correct: true
+        why: >
+          An `UPDATE` never changes a row in place in PostgreSQL; it writes a new version
+          elsewhere (`ctid` shows where). Without `ORDER BY`, the order is simply where the
+          scan finds things.
+      - text: Updated rows are sorted to the end so the latest change is easy to find
+        correct: false
+        why: >
+          Nothing sorts anything without `ORDER BY`. The new position is a storage accident,
+          and the next `VACUUM` or update can change it again.
+      - text: "`SELECT *` orders by the primary key, and the update changed the key's position"
+        correct: false
+        why: >
+          No order is implied by a primary key. The id did not change; where the row is
+          stored did.
+
+  - id: q7
+    part: 2
+    tag: ties and stable order
+    prompt: >
+      Scores are 90, 90, 75, 75, 60. `ORDER BY score DESC FETCH FIRST 3 ROWS WITH TIES`
+      returns four rows. Why?
+    options:
+      - text: >
+          The third place is a tie between the two 75s, and `WITH TIES` keeps every row
+          that ties with the last one rather than picking one
+        correct: true
+        why: >
+          `LIMIT 3` would cut between the two 75s arbitrarily. `WITH TIES` (PostgreSQL 13)
+          says ties share their place, so the count can come out above 3.
+      - text: "`FETCH FIRST` counts distinct scores, and there are three: 90, 75, 60"
+        correct: false
+        why: >
+          That would return all five rows. It counts rows, then extends the last place to
+          include its ties.
+      - text: It is a bug in older versions; it should return exactly three
+        correct: false
+        why: >
+          Returning more than three on a tie is the whole point of `WITH TIES`. `LIMIT 3`
+          is the form that returns exactly three.
+
+  - id: q8
+    part: 4
+    tag: keyset pagination
+    prompt: >
+      What does keyset pagination remember between pages, and what can it not do that
+      `OFFSET` can?
+    options:
+      - text: >
+          The sort key of the last row it showed; it cannot jump straight to an arbitrary
+          page number such as page 37
+        correct: true
+        why: >
+          Each page asks for the rows after that position, which an index can find directly
+          and which a new row cannot shift. The price is that "page 37" has no position to
+          start from — fine for feeds, exports and APIs.
+      - text: The number of rows already shown; it cannot go backwards
+        correct: false
+        why: >
+          Remembering a count is what `OFFSET` does, and why it duplicates and skips under
+          writes. Keyset can go backwards by flipping the comparison and the sort.
+      - text: A cursor held open on the server; it cannot survive a reconnect
+        correct: false
+        why: >
+          It holds nothing open: the position is just values the client sends back, like
+          Stripe's `starting_after=<id>`.
+
+  - id: q9
+    part: 5
+    tag: no order without ORDER BY
+    prompt: >
+      Nobody is writing to the table, yet `SELECT id FROM big LIMIT 3` suddenly returns ids
+      near 100,000 instead of 1, 2, 3. What made it start there?
+    options:
+      - text: >
+          A synchronized sequential scan: another scan of the same big table was partway
+          through, so this one joined it there
+        correct: true
+        why: >
+          On tables larger than a quarter of `shared_buffers`, a new sequential scan starts
+          where a current one is, wraps round at the end, and they share reads. Turn off
+          `synchronize_seqscans` and it starts at the beginning again.
+      - text: "`VACUUM` reordered the table by moving old rows to the end"
+        correct: false
+        why: >
+          The rows did not move at all. The same rows were read starting from a different
+          page.
+      - text: A cached plan used an index on `id` backwards
+        correct: false
+        why: >
+          The plan is a sequential scan both times. What changed is where in the table it
+          began.
+
+  - id: q10
+    part: 5
+    tag: no order without ORDER BY
+    prompt: >
+      Which change makes "the first three rows" of `big` the same on every run, whatever
+      else is happening on the server?
+    options:
+      - text: "`ORDER BY id LIMIT 3`"
+        correct: true
+        why: >
+          Only `ORDER BY` promises an order, and `id` is unique so there are no ties to
+          break. With an index on `id` it is also cheap.
+      - text: "`SET synchronize_seqscans = off` in the application's session"
+        correct: false
+        why: >
+          It removes one cause, not the rule. Updates, `VACUUM` and plan changes can still
+          reorder an unordered result.
+      - text: Running `CLUSTER big` once so the rows are stored in id order
+        correct: false
+        why: >
+          `CLUSTER` sorts the table once; the next updates put rows wherever there is space,
+          and a synchronized scan still starts mid-table.

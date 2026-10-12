@@ -1,6 +1,6 @@
 # Time is not a number
 
-## Theory
+## Part 1: What a timestamptz stores
 
 A timestamp looks like a number with a funny format. It is not one. It sits on top of
 time zones that governments redraw, a calendar whose months differ in length, days that
@@ -123,7 +123,18 @@ local-time events he stores the local time *and* the zone name, and works out th
 when it is needed. Past events are facts; future ones are intentions, and an intention
 can be stored more faithfully than as an instant.
 
-### AT TIME ZONE goes both ways
+### Check yourself
+
+1. What does a `timestamptz` value actually store, and what does the session's `TimeZone`
+   setting change about it?
+2. The text `'2026-03-29 12:00:00'` is inserted into a `timestamptz` column from two
+   sessions, one with `TimeZone` set to UTC and one set to `America/New_York`. Are the
+   stored values the same?
+
+## Part 2: AT TIME ZONE, both ways
+
+Starting a new psql session? Run `SET search_path = day10;` first — the tables
+are still there, but the setting lasts only for the session.
 
 `AT TIME ZONE` converts between the two types. Applied to a `timestamptz` it answers
 "what did the clock on the wall say *there*?", and returns a plain `timestamp`:
@@ -143,7 +154,36 @@ Applied to a plain `timestamp`, it does the reverse: "this wall-clock time, read
 place, was which instant?", and returns a `timestamptz`. Same keywords, opposite types.
 That is the most common way people get it backwards.
 
-### Days are not always 24 hours
+### Worth knowing: 'UTC+5' is five hours behind UTC
+
+```sql
+SELECT timestamptz '2026-06-01 12:00 UTC+5' AS posix_style,
+       timestamptz '2026-06-01 12:00+05'    AS iso_style;
+```
+
+```text
+      posix_style       |       iso_style
+------------------------+------------------------
+ 2026-06-01 17:00:00+00 | 2026-06-01 07:00:00+00
+```
+
+Same digits, opposite answers, ten hours apart. `+05` is ISO 8601, where positive means
+*east* of Greenwich: Tashkent's offset. `UTC+5` is read as a POSIX time-zone string, and
+POSIX counts positive offsets *west* of Greenwich. That is the convention behind strings
+like `EST5EDT`, where New York is "5". So `12:00 UTC+5` is 12:00 in a zone five hours
+behind UTC, which is 17:00 UTC. Use zone names (`Asia/Tashkent`) or ISO offsets
+(`+05:00`), and never write an offset as `UTC+n`.
+
+### Check yourself
+
+1. What type does `timestamptz '2026-03-29 12:00+00' AT TIME ZONE 'Asia/Tashkent'` return,
+   and what does the value mean?
+2. `'12:00 UTC+5'` and `'12:00+05'` look like the same moment. Which is earlier, and why?
+
+## Part 3: Days and months are not fixed lengths
+
+Starting a new psql session? Run `SET search_path = day10;` first — the tables
+are still there, but the setting lasts only for the session.
 
 On 29 March 2026, Berlin's clocks jump from 02:00 straight to 03:00. 02:30 does not exist
 there that day:
@@ -232,7 +272,17 @@ LINE 1: SELECT date '2025-02-29';
 
 Interval arithmetic knows about calendars. String surgery on a date does not.
 
-### BETWEEN loses most of a day
+### Check yourself
+
+1. On the day Berlin moves its clocks forward, what is the difference between adding
+   `interval '1 day'` and adding `interval '24 hours'` to 01:00?
+2. A subscription renews by adding one month to the *previous* renewal date, starting on
+   31 January. What goes wrong, and what should it do instead?
+
+## Part 4: Ranges, and whose today
+
+Starting a new psql session? Run `SET search_path = day10;` first — the tables
+are still there, but the setting lasts only for the session.
 
 ```sql
 CREATE TABLE logins (id int, at timestamptz);
@@ -343,26 +393,6 @@ a long transaction inserts gets the same `now()`, which is usually what you want
 logical moment for one unit of work. When you need the actual current time, for example to
 measure how long something took, `clock_timestamp()` keeps ticking.
 
-### Worth knowing: 'UTC+5' is five hours behind UTC
-
-```sql
-SELECT timestamptz '2026-06-01 12:00 UTC+5' AS posix_style,
-       timestamptz '2026-06-01 12:00+05'    AS iso_style;
-```
-
-```text
-      posix_style       |       iso_style
-------------------------+------------------------
- 2026-06-01 17:00:00+00 | 2026-06-01 07:00:00+00
-```
-
-Same digits, opposite answers, ten hours apart. `+05` is ISO 8601, where positive means
-*east* of Greenwich: Tashkent's offset. `UTC+5` is read as a POSIX time-zone string, and
-POSIX counts positive offsets *west* of Greenwich. That is the convention behind strings
-like `EST5EDT`, where New York is "5". So `12:00 UTC+5` is 12:00 in a zone five hours
-behind UTC, which is 17:00 UTC. Use zone names (`Asia/Tashkent`) or ISO offsets
-(`+05:00`), and never write an offset as `UTC+n`.
-
 ### Carry this
 
 - `timestamptz` stores an instant and no zone. The session's `TimeZone` decides how it is
@@ -373,19 +403,13 @@ behind UTC, which is 17:00 UTC. Use zone names (`Asia/Tashkent`) or ISO offsets
 - Use half-open ranges, `>= start AND < end`, never `BETWEEN`, for time.
 - Pass the zone explicitly to `date_trunc` in anything that reports by day.
 
-## Quiz
+### Check yourself
 
-1. What does a `timestamptz` value actually store, and what does the session's `TimeZone`
-   setting change about it?
-2. The text `'2026-03-29 12:00:00'` is inserted into a `timestamptz` column from two
-   sessions, one with `TimeZone` set to UTC and one set to `America/New_York`. Are the
-   stored values the same?
-3. Why does `WHERE at BETWEEN '2026-06-01' AND '2026-06-07'` miss most of June 7th, and
+1. Why does `WHERE at BETWEEN '2026-06-01' AND '2026-06-07'` miss most of June 7th, and
    what should be written instead?
-4. On the day Berlin moves its clocks forward, what is the difference between adding
-   `interval '1 day'` and adding `interval '24 hours'` to 01:00?
-5. Why can a daily revenue report built on `date_trunc('day', created_at)` give different
+2. Why can a daily revenue report built on `date_trunc('day', created_at)` give different
    totals when run from different servers?
+3. A transaction inserts rows for a minute, each with `now()`. What times do the rows get?
 
 ## Drill
 

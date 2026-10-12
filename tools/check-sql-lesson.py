@@ -33,7 +33,9 @@ PSQL = ['psql', '-h', os.environ.get('PGHOST', 'localhost'), '-U', os.environ.ge
 
 
 def fences(md):
-    theory = md.split('\n## Quiz')[0]
+    # The theory: one `## Theory` section, or every `## Part N:` of a day read in parts —
+    # all of it run in order in one session, as someone reading the parts would.
+    theory = re.split(r'\n## (?:Quiz|Drill|Task)\b', md)[0]
     return [(m.group(1).strip(), m.group(2)) for m in re.finditer(r'```([^\n]*)\n(.*?)```', theory, re.S)]
 
 

@@ -8,6 +8,7 @@ setup: |
 
 challenges:
   - id: whole-week
+    part: 4
     prompt: >
       The ids of the logins in the week of 1–7 June, **including everything on the 7th**
       and nothing from the 8th. Ordered by id. `BETWEEN` can't express this.
@@ -18,6 +19,7 @@ challenges:
       ORDER BY id;
 
   - id: wall-clock
+    part: 2
     prompt: >
       What did a wall clock in Tashkent (`'Asia/Tashkent'`) show at the instant
       `2026-03-29 12:00:00+00`? Return it as a plain timestamp, without a time zone.
@@ -26,6 +28,7 @@ challenges:
       SELECT timestamptz '2026-03-29 12:00:00+00' AT TIME ZONE 'Asia/Tashkent' AS wall_clock;
 
   - id: pinned-day
+    part: 4
     prompt: >
       Cut the instant `2026-06-01 22:30+00` down to the start of its day **in UTC**, so
       the answer doesn't depend on the session's time zone. Pass the zone explicitly.
@@ -34,6 +37,7 @@ challenges:
       SELECT date_trunc('day', timestamptz '2026-06-01 22:30+00', 'UTC') AS utc_day;
 
   - id: month-clamp
+    part: 3
     prompt: >
       The date one month after 31 January 2026, returned as a `date` — not a timestamp.
     hint: Add an interval, then cast the result back down.

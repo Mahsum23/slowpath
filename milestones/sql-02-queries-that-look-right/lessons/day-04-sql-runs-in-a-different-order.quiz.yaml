@@ -4,6 +4,7 @@
 # deterministically, so authoring the correct one first is safe.
 questions:
   - id: q1
+    part: 2
     prompt: >
       `SELECT amount * 2 AS doubled FROM orders WHERE doubled > 100` fails with "column
       doubled does not exist", while `… ORDER BY doubled` on the same query works. Why?
@@ -39,6 +40,7 @@ questions:
           the rule comes from the logical order.
 
   - id: q2
+    part: 3
     prompt: >
       A report should list customers whose **paid** orders total more than 150. Where does
       `status = 'paid'` go, where does `sum(amount) > 150` go, and what goes wrong if the
@@ -73,6 +75,7 @@ questions:
           answer, so no optimizer will paper over it.
 
   - id: q3
+    part: 3
     prompt: >
       In an `EXPLAIN` plan for a grouped query with both a `WHERE` and a `HAVING`, where
       does each filter appear, and why there?
@@ -103,6 +106,7 @@ questions:
           them is one of the most useful things EXPLAIN gives you.
 
   - id: q4
+    part: 4
     prompt: >
       `SELECT customer, status, sum(amount) FROM orders GROUP BY customer` is rejected,
       but grouping by a table's primary key lets you select that table's other columns.
@@ -136,6 +140,7 @@ questions:
           including text columns of the grouped table — can be selected.
 
   - id: q5
+    part: 5
     prompt: >
       `SELECT sum(amount) FROM orders WHERE false` and the same query with
       `GROUP BY customer` added: how many rows does each return, and what is in them?
@@ -163,3 +168,291 @@ questions:
         why: >
           With GROUP BY, one output row is produced per group, and an empty input has no
           groups.
+
+  # --- part 1 ---------------------------------------------------------------------
+  - id: q6
+    part: 1
+    tag: running order
+    prompt: >
+      In what order does PostgreSQL logically run the clauses `SELECT`, `FROM`, `WHERE`,
+      `GROUP BY`, `HAVING`, `ORDER BY` and `LIMIT`?
+    options:
+      - text: "`FROM`, `WHERE`, `GROUP BY`, `HAVING`, `SELECT`, `ORDER BY`, `LIMIT`"
+        correct: true
+        why: >
+          Build the rows, drop rows, form groups, drop groups, compute and name the output,
+          sort it, slice it. Every name-resolution rule in SQL follows from this order.
+      - text: "`SELECT`, `FROM`, `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT`"
+        correct: false
+        why: >
+          That is the order you *write* it in. `SELECT` runs nearly last: it cannot compute
+          output columns before there are rows and groups to compute them from.
+      - text: "`FROM`, `SELECT`, `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT`"
+        correct: false
+        why: >
+          If `SELECT` ran before `WHERE`, `WHERE` could use its aliases — and it famously
+          cannot ("column does not exist").
+      - text: "`FROM`, `WHERE`, `SELECT`, `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT`"
+        correct: false
+        why: >
+          `SELECT` can contain `sum(amount)`, which only means something once groups exist,
+          so it has to come after `GROUP BY` and `HAVING`.
+
+  - id: q7
+    part: 1
+    tag: running order
+    prompt: >
+      The optimizer may execute a query in a different physical order from the logical
+      clause order: push a filter down, use an index instead of sorting, stop early for a
+      `LIMIT`. What is it not allowed to change?
+    options:
+      - text: The answer — it must return exactly what running the clauses in logical order would
+        correct: true
+        why: >
+          The logical order defines the result; the physical plan is free as long as the
+          result is the same. That is why you reason in the logical order even though the
+          engine rarely executes it literally.
+      - text: The order of the joins in `FROM`
+        correct: false
+        why: >
+          Join order is one of the main things the planner *does* change. Inner joins can
+          be reordered freely because the result is the same.
+      - text: Whether `WHERE` runs before `GROUP BY`
+        correct: false
+        why: >
+          Close, but the rule is wider: anything may move, as long as the result does not
+          change. A row filter can even be applied inside an index scan.
+      - text: Nothing — the logical order is exactly the execution order
+        correct: false
+        why: >
+          `EXPLAIN` shows otherwise: filters attached to scans, sorts skipped because an
+          index already delivers rows in order, a `LIMIT` that stops a scan early.
+
+  # --- part 2 ---------------------------------------------------------------------
+  - id: q8
+    part: 2
+    tag: what a clause can see
+    prompt: >
+      `SELECT id, amount * 1.2 AS gross FROM orders ORDER BY gross` works, but
+      `… ORDER BY gross + 0` fails with "column gross does not exist". What is different
+      about the second?
+    options:
+      - text: >
+          Inside an expression, `ORDER BY` looks a name up among the input columns, and
+          `gross` is only an output name
+        correct: true
+        why: >
+          `ORDER BY` accepts an output alias only on its own — a SQL-92 leftover. A name
+          inside an expression is always taken as an input column. Repeat the expression
+          (`amount * 1.2 + 0`) or sort by the position.
+      - text: "`ORDER BY` cannot sort by an expression, only by a column"
+        correct: false
+        why: >
+          It can: `ORDER BY amount * 1.2 + 0` works. What fails is finding the *alias*
+          inside the expression.
+      - text: Adding 0 turns the value into text, which cannot be sorted numerically
+        correct: false
+        why: >
+          `numeric + 0` is still numeric, and text can be sorted anyway. The error is
+          about the name, raised before any value is computed.
+
+  # --- part 4 ---------------------------------------------------------------------
+  - id: q9
+    part: 4
+    tag: GROUP BY rules
+    prompt: >
+      `orders` has rows for customers `'ana'` and `'Ana'`. Which `customer` does the
+      `GROUP BY` use in
+      `SELECT lower(customer) AS customer, count(*) FROM orders GROUP BY customer`, and
+      what does that do to the result?
+    options:
+      - text: >
+          The input column, so `'ana'` and `'Ana'` are separate groups — and both print
+          as `ana`, twice
+        correct: true
+        why: >
+          When a name could be either, `GROUP BY` resolves it to the input column (its
+          SQL-92 meaning) and `ORDER BY` to the output column. Never reuse an input
+          column's name as an alias; group by `lower(customer)` or by position.
+      - text: The alias, so all the spellings of ana fall into one group
+        correct: false
+        why: >
+          That is what was meant, and it is what `ORDER BY customer` would have used. In
+          `GROUP BY` an ambiguous name means the input column.
+      - text: Neither — the query is rejected as ambiguous
+        correct: false
+        why: >
+          It runs without a warning, which is the problem. Postgres has a rule for the
+          ambiguity rather than an error.
+
+  # --- part 5 ---------------------------------------------------------------------
+  - id: q10
+    part: 5
+    tag: aggregates over nothing
+    prompt: >
+      A dashboard shows `count(*)` and `coalesce(sum(amount), 0)` for a customer with no
+      orders. Why is the `coalesce` needed on the sum, when `count(*)` already says 0?
+    options:
+      - text: "`count` of no rows is 0, but `sum` of no rows is NULL"
+        correct: true
+        why: >
+          `count` is the one standard aggregate that returns 0 over nothing; `sum`, `avg`,
+          `min` and `max` return NULL. A NULL in arithmetic makes the whole result NULL.
+      - text: Without `coalesce` the query returns no row at all for that customer
+        correct: false
+        why: >
+          With no `GROUP BY` there is always exactly one row. The row is there; its sum is
+          NULL.
+      - text: "`sum` returns 0 too, the `coalesce` is only defensive"
+        correct: false
+        why: >
+          Run `SELECT sum(amount) FROM orders WHERE false` — it prints an empty cell, a
+          NULL, not 0.
+
+  # --- part 6 ---------------------------------------------------------------------
+  - id: q11
+    part: 6
+    tag: grouping by a computed value
+    prompt: >
+      A monthly revenue report groups by `extract(month FROM placed)`. The data covers
+      2025 and 2026. What is wrong with the result?
+    options:
+      - text: >
+          January 2025 and January 2026 are added together into one "1" — it should
+          group by `date_trunc('month', placed)`
+        correct: true
+        why: >
+          `extract(month …)` is the month *of the year*, 1 to 12, with the year thrown
+          away. `date_trunc` keeps the year: it is a month on a timeline. No error either
+          way, which is why this survives into dashboards.
+      - text: Nothing, as long as it is sorted by month
+        correct: false
+        why: >
+          Sorting cannot separate rows that grouping already merged. There are only twelve
+          possible groups.
+      - text: It is rejected, because `extract` cannot be used in `GROUP BY`
+        correct: false
+        why: >
+          Any expression can be grouped on. The query runs, and returns twelve rows at most.
+
+  - id: q12
+    part: 6
+    tag: grouping by a computed value
+    prompt: >
+      What type does `date_trunc('month', date '2026-01-20')` return, and how do you get
+      a plain date back?
+    options:
+      - text: "A `timestamp with time zone` (midnight on the 1st) — cast it with `::date`"
+        correct: true
+        why: >
+          `pg_typeof` shows it. `date_trunc` works on timestamps, so the date is converted
+          first and a timestamp comes back; `::date` (or `CAST(… AS date)`) turns it into
+          `2026-01-01`.
+      - text: "A `date`, already — `2026-01-01`"
+        correct: false
+        why: >
+          It prints `2026-01-01 00:00:00+00`. The time and the zone are part of the value,
+          not formatting.
+      - text: "A month number, `1` — use `make_date` to turn it back into a date"
+        correct: false
+        why: >
+          That is `extract(month …)`. `date_trunc` keeps the whole point in time, just cut
+          down to the start of the month.
+
+  - id: q13
+    part: 6
+    tag: integer division
+    prompt: >
+      `SELECT round(count(*) / 12, 2) FROM sales` returns `0.00` when there are 3 rows.
+      Why, and what is the smallest fix?
+    options:
+      - text: >
+          `count(*) / 12` is integer division, so it is 0 before `round` sees it — cast
+          one side, `count(*)::numeric / 12`
+        correct: true
+        why: >
+          An integer divided by an integer is an integer, rounded towards zero. `round`
+          then rounds 0 to two places. Make either side numeric and the division keeps
+          its fraction: 0.25.
+      - text: "`round(x, 2)` rounds to two significant digits, so 0.25 becomes 0.00"
+        correct: false
+        why: >
+          It rounds to two *decimal places*: `round(0.25, 2)` is `0.25`. The fraction was
+          already gone.
+      - text: "`count(*)` cannot be divided; it has to be wrapped in a subquery first"
+        correct: false
+        why: >
+          It can be divided like any value. The trouble is its type, `bigint`, and 12 is an
+          integer too.
+
+  # --- part 7 ---------------------------------------------------------------------
+  - id: q14
+    part: 7
+    tag: aggregate filters
+    prompt: >
+      A per-customer report shows all payment attempts and the paid ones in the same row.
+      Why does adding `WHERE status = 'paid'` break it, beyond the attempts column?
+    options:
+      - text: >
+          Customers with no paid payments vanish entirely, because no row of theirs
+          reaches `GROUP BY` to form a group
+        correct: true
+        why: >
+          `WHERE` runs before grouping and applies to every aggregate. A customer whose
+          rows are all filtered out has no group. `count(*) FILTER (WHERE status = 'paid')`
+          filters one aggregate and keeps every customer.
+      - text: Those customers stay, with 0 in both columns
+        correct: false
+        why: >
+          There is nothing to put the 0 in. No input rows means no group, so no output row.
+      - text: The query is rejected because `status` is not in the `GROUP BY`
+        correct: false
+        why: >
+          `WHERE` runs on rows before grouping, so it can use any column. It runs, and
+          returns fewer customers.
+
+  - id: q15
+    part: 7
+    tag: aggregate filters
+    prompt: >
+      What does `count(CASE WHEN status = 'paid' THEN 1 ELSE 0 END)` count?
+    options:
+      - text: Every row, paid or not
+        correct: true
+        why: >
+          `count(x)` counts the rows where `x` is not NULL, and `0` is not NULL. Drop the
+          `ELSE` (so a miss is NULL), use `sum` instead of `count`, or write
+          `count(*) FILTER (WHERE status = 'paid')`.
+      - text: The paid rows — the zeros are ignored
+        correct: false
+        why: >
+          `count` ignores NULLs, not zeros. `sum(CASE … THEN 1 ELSE 0 END)` would count the
+          paid rows; `count` of the same thing does not.
+      - text: The rows that are not paid
+        correct: false
+        why: >
+          Both branches give a non-NULL value, so the condition makes no difference to
+          `count` at all.
+
+  - id: q16
+    part: 7
+    tag: aggregate filters
+    prompt: >
+      For a customer with no paid payments, what does
+      `sum(amount) FILTER (WHERE status = 'paid')` return in that customer's row?
+    options:
+      - text: NULL — a sum over no rows, even inside a group
+        correct: true
+        why: >
+          The filter leaves the aggregate nothing to add up, and `sum` of nothing is NULL.
+          Wrap it in `coalesce(…, 0)` when the report means zero.
+      - text: "0"
+        correct: false
+        why: >
+          Only `count` returns 0 over nothing. `count(*) FILTER (…)` would say 0 here; the
+          `sum` says NULL.
+      - text: The customer's total of all payments, since the filter found nothing to keep
+        correct: false
+        why: >
+          The filter does not fall back to every row when nothing matches; it simply leaves
+          nothing.

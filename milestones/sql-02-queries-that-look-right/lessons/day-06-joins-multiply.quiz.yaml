@@ -4,6 +4,7 @@
 # deterministically, so authoring the correct one first is safe.
 questions:
   - id: q1
+    part: 1
     prompt: >
       An order totalling 100.00 has three item rows. Why does
       `SELECT sum(o.total) FROM orders o JOIN items i ON i.order_id = o.id` count it as
@@ -34,6 +35,7 @@ questions:
           group per order — still containing three rows each, still summing to 300.
 
   - id: q2
+    part: 1
     prompt: >
       One order has 3 items and 2 payments. When both tables are joined to it in one
       query, how many rows does that order become, and why?
@@ -62,6 +64,7 @@ questions:
           pairings satisfy ON.
 
   - id: q3
+    part: 3
     prompt: >
       A report joins orders to both items and payments and shows inflated payment totals.
       Why is changing `sum(p.amount)` to `sum(DISTINCT p.amount)` not a fix?
@@ -91,6 +94,7 @@ questions:
           is exactly why it collapses equal amounts.
 
   - id: q4
+    part: 2
     prompt: >
       What does "the grain of a result" mean, and what rule about grain prevents fan-out?
     options:
@@ -120,6 +124,7 @@ questions:
           matters is aggregating down to the intended grain before joining.
 
   - id: q5
+    part: 2
     prompt: >
       How can `EXPLAIN ANALYZE` show you that a join has fanned out?
     options:
@@ -145,3 +150,80 @@ questions:
         why: >
           EXPLAIN ANALYZE's `actual rows` is the clearest place to see it, node by node,
           before any aggregate has hidden it.
+
+  - id: q6
+    part: 3
+    tag: aggregate first
+    prompt: >
+      A report joins `orders` to `items` and to `payments` and every total is inflated.
+      Why does collapsing `items` and `payments` to one row per order *before* the join
+      make every total right?
+    options:
+      - text: >
+          Each join becomes one-to-one, so no order row is repeated and nothing is counted
+          more than once
+        correct: true
+        why: >
+          Fan-out happens when a row meets several matches. Bring each side to the report's
+          grain first — one row per order — and every pairing is one row with one row.
+      - text: Subqueries in `FROM` are evaluated separately, so their rows are never joined
+        correct: false
+        why: >
+          They are joined like any table. What changed is that they now have one row per
+          order, so the join has nothing to multiply.
+      - text: Grouping removes duplicate values, the same thing `DISTINCT` does
+        correct: false
+        why: >
+          `GROUP BY order_id` collapses rows by *key*: two payments of 50.00 are added, not
+          merged as one value. That is exactly the difference from `DISTINCT`.
+
+  - id: q7
+    part: 4
+    tag: detecting fan-out
+    prompt: >
+      Before trusting a `sum` over a join meant to be one row per order, which two counts do
+      you compare to see whether the join fanned out?
+    options:
+      - text: "`count(*)` of the joined rows against `count(DISTINCT o.id)`"
+        correct: true
+        why: >
+          At the grain you meant, every order is one row, so the two are equal. If the join
+          produced more rows than distinct orders, something repeated them, and every sum
+          over it is suspect.
+      - text: "`count(*)` of `orders` against `count(*)` of `items`"
+        correct: false
+        why: >
+          Those are always different when orders have several items, and say nothing about
+          what a particular join did.
+      - text: "`sum(o.total)` against `sum(DISTINCT o.total)`"
+        correct: false
+        why: >
+          Two different orders can have the same total, so the distinct sum can be wrong
+          even when nothing fanned out. Count keys, not values.
+
+  - id: q8
+    part: 4
+    tag: detecting fan-out
+    prompt: >
+      Someone says "each order has exactly one payment". How do you check it, and how would
+      you make the database guarantee it?
+    options:
+      - text: >
+          `SELECT order_id, count(*) FROM payments GROUP BY order_id HAVING count(*) > 1`
+          lists the exceptions; a `UNIQUE` constraint on `payments.order_id` prevents them
+        correct: true
+        why: >
+          An assumption the schema does not enforce is a guess. The query finds the orders
+          that break it; the constraint makes the database refuse the second payment, and
+          only then is it safe to rely on.
+      - text: >
+          Check that `payments.order_id` has a foreign key to `orders`; the foreign key
+          guarantees one payment per order
+        correct: false
+        why: >
+          A foreign key says each payment points at a real order. Any number of payments may
+          point at the same one.
+      - text: Join the two tables and check that nothing errors
+        correct: false
+        why: >
+          A join never errors on duplicates. It multiplies quietly, which is the whole problem.

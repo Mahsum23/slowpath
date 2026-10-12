@@ -11,8 +11,9 @@ setup: |
 
 challenges:
   - id: share
+    part: 1
     prompt: >
-      For every sale return `id` and its percentage of its **region's** total, rounded
+      For every sale return `id` and `pct`, its percentage of its **region's** total, rounded
       to one decimal place (so 100 of north's 250 is `40.0`). Keep all seven rows.
       Ordered by id.
     hint: A window over each region keeps the rows; `100.0` avoids integer division.
@@ -22,6 +23,7 @@ challenges:
       ORDER BY id;
 
   - id: top-per-region
+    part: 2
     prompt: >
       Each region's biggest sale — `region`, `id`, `amount` — keeping **both** when two
       sales tie for first. Ordered by region, then id. You can't filter on a window
@@ -38,6 +40,7 @@ challenges:
       ORDER BY region, id;
 
   - id: running-total
+    part: 3
     prompt: >
       A running total of north's sales in order of day then id: return `id` and
       `running`, ordered by id. Two sales share a day, so the default frame would get
@@ -51,6 +54,7 @@ challenges:
       ORDER BY id;
 
   - id: day-change
+    part: 4
     prompt: >
       Total sales per day, and how much each day changed from the day before: `day`,
       `total`, `change` (NULL for the first day). Ordered by day.
@@ -61,6 +65,7 @@ challenges:
       ORDER BY day;
 
   - id: one-per-region
+    part: 3
     prompt: >
       Exactly one top sale per region (the lowest id wins a tie): `region`, `id`,
       `amount`, ordered by region. Use the PostgreSQL-specific shortcut, not a subquery.

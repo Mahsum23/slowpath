@@ -822,7 +822,9 @@
   /** Start a round of the given day's bank. */
   function startRound() {
     if (!roundCtx) return;
-    roundCards = buildRound(roundCtx.day, app.progress.days[roundCtx.day.id]?.practice);
+    // Only items whose part has been read: a part added later opens its items when read.
+    const read = app.progress.days[roundCtx.day.id];
+    roundCards = buildRound(roundCtx.day, read?.practice, Math.random, undefined, read);
     roundAt = 0;
     roundRight = 0;
     roundDone = null;
@@ -911,7 +913,7 @@
   </header>
 
   {#if roundDay && roundDone && roundCtx}
-    {@const st = practiceStatus(roundCtx.day, app.progress.days[roundCtx.day.id]?.practice)}
+    {@const st = practiceStatus(roundCtx.day, app.progress.days[roundCtx.day.id]?.practice, app.progress.days[roundCtx.day.id])}
     <div class="empty card roundend" class:landed={roundDone.landed}>
       <p class="score numeral">{roundDone.right}<span>/{roundDone.asked}</span></p>
       <h2>{roundDone.landed ? 'Landed.' : 'Not landed yet.'}</h2>

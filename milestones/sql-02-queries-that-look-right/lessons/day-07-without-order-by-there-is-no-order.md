@@ -1,6 +1,6 @@
 # Without ORDER BY there is no order
 
-## Theory
+## Part 1: A table is a heap, not a list
 
 Run a `SELECT` without `ORDER BY` on a small table and the rows come back in the order you
 inserted them. Run it a thousand times and they come back the same way a thousand times.
@@ -60,6 +60,18 @@ write.
 ```sql
 UPDATE players SET score = 90 WHERE id = 1;
 ```
+
+### Check yourself
+
+1. A query without `ORDER BY` has returned rows in insertion order for months. Name two
+   things that can change that order without the query changing.
+2. After `UPDATE players SET score = 91 WHERE id = 1`, why does `ana` move from first to
+   last in `SELECT * FROM players`?
+
+## Part 2: Ties are unordered too
+
+Starting a new psql session? Run `SET search_path = day07;` first — the tables
+are still there, but the setting lasts only for the session.
 
 ### ORDER BY with ties is unordered too
 
@@ -135,7 +147,16 @@ SELECT name, score FROM players ORDER BY score DESC FETCH FIRST 3 ROWS WITH TIES
 Asked for three, got four. The third place is a tie between `bo` and `eli`, and
 `WITH TIES` refuses to pick one for you.
 
-### Pagination: where order bugs become user-visible
+### Check yourself
+
+1. `ORDER BY score DESC LIMIT 1` on a table where two players share the top score: which
+   one is returned, and how do you make the answer stable?
+2. `ORDER BY score DESC FETCH FIRST 3 ROWS WITH TIES` returns four rows. Why?
+
+## Part 3: Paging with OFFSET
+
+Starting a new psql session? Run `SET search_path = day07;` first — the tables
+are still there, but the setting lasts only for the session.
 
 The textbook way to page through a list:
 
@@ -205,7 +226,17 @@ The index scan did its job perfectly, and walked 90,010 entries to hand back 10.
 costs nine thousand times what page 1 costs. Users rarely go that deep, but crawlers,
 exports and "load all" buttons do.
 
-### Keyset pagination: remember where you were
+### Check yourself
+
+1. A feed uses `LIMIT 20 OFFSET 20` for page 2, and a post is published while the reader
+   is on page 1. What does the reader see on page 2, and why?
+2. Why does `LIMIT 10 OFFSET 90000` stay slow even with an index that matches the
+   `ORDER BY` exactly?
+
+## Part 4: Keyset pagination
+
+Starting a new psql session? Run `SET search_path = day07;` first — the tables
+are still there, but the setting lasts only for the session.
 
 Instead of remembering *how many* rows you have seen, remember *the last one*. Each page
 asks for the rows that come after it in the sort order. With a two-column sort, "after" is
@@ -316,6 +347,18 @@ ORDER BY created_at DESC, id DESC LIMIT 2;
   5 | imported late
 ```
 
+### Check yourself
+
+1. Why must keyset pagination write `(created_at, id) < (x, y)` rather than
+   `created_at < x AND id < y`?
+2. What does keyset pagination remember between pages, and what can it not do that
+   `OFFSET` can?
+
+## Part 5: The same query can start in the middle
+
+Starting a new psql session? Run `SET search_path = day07;` first — the tables
+are still there, but the setting lasts only for the session.
+
 ### Worth knowing: the same query can start in the middle of the table
 
 One more way order goes away, and it involves nobody's writes at all. Since 8.3, Postgres
@@ -404,18 +447,12 @@ there is that the order you saw was never a property of the table.
 - Keyset pagination: `WHERE (sort_col, id) < (last_sort_col, last_id)`, an index on
   exactly those columns, and never two separate `<` comparisons.
 
-## Quiz
+### Check yourself
 
-1. A query without `ORDER BY` has returned rows in insertion order for months. Name two
-   things that can change that order without the query changing.
-2. `ORDER BY score DESC LIMIT 1` on a table where two players share the top score: which
-   one is returned, and how do you make the answer stable?
-3. A feed uses `LIMIT 20 OFFSET 20` for page 2, and a post is published while the reader
-   is on page 1. What does the reader see on page 2, and why?
-4. Why does `LIMIT 10 OFFSET 90000` stay slow even with an index that matches the
-   `ORDER BY` exactly?
-5. Why must keyset pagination write `(created_at, id) < (x, y)` rather than
-   `created_at < x AND id < y`?
+1. With nobody writing to the table, `SELECT id FROM big LIMIT 3` returns rows from near
+   row 100,000. What made it start there?
+2. Which single change makes "the first three rows" of `big` the same on every run, whatever
+   else is happening on the server?
 
 ## Drill
 

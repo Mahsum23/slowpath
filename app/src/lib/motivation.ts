@@ -147,6 +147,7 @@ export function activityScores(progress: Progress, activity: Activity | undefine
   for (const [d, a] of Object.entries(activity ?? {})) add(d, a.n);
   for (const day of Object.values(progress.days)) {
     if (day.completedAt) add(localDateOf(day.completedAt), 10);
+    for (const at of Object.values(day.parts ?? {})) add(localDateOf(at), 5);
     for (const r of day.practice?.rounds ?? []) add(localDateOf(r.at), r.asked);
   }
   for (const rc of Object.values(progress.review.cards)) {

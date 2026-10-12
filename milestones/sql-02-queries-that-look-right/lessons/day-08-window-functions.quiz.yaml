@@ -4,6 +4,7 @@
 # deterministically, so authoring the correct one first is safe.
 questions:
   - id: q1
+    part: 1
     prompt: >
       What is the difference between what `GROUP BY` and a window function do to the rows
       of a query?
@@ -36,6 +37,7 @@ questions:
           they run over the grouped rows.
 
   - id: q2
+    part: 2
     prompt: >
       Why is `WHERE rank() OVER (…) = 1` rejected, and what is the standard way to filter
       on a window function in PostgreSQL?
@@ -65,6 +67,7 @@ questions:
           as `FROM sales AS qualify`, and errors at the next word.
 
   - id: q3
+    part: 3
     prompt: >
       Two sales share the same day. Why does `sum(amount) OVER (ORDER BY day)` give both
       of them the same running total, and how do you get a true row-by-row running total?
@@ -95,6 +98,7 @@ questions:
           per-day total.
 
   - id: q4
+    part: 2
     prompt: >
       Two rows tie for first place in a partition. What do `row_number`, `rank` and
       `dense_rank` assign to them, and to the row after them?
@@ -124,6 +128,7 @@ questions:
           BY yourself.
 
   - id: q5
+    part: 3
     prompt: >
       Why does `last_value(x) OVER (ORDER BY t)` return the current row's own value?
     options:
@@ -150,3 +155,72 @@ questions:
         why: >
           Partitioning changes which rows are related, not where the frame ends. Without
           an explicit frame it still stops at the current row.
+
+  - id: q6
+    part: 1
+    tag: what a window is
+    prompt: >
+      In `SELECT id, region, amount, sum(amount) OVER (PARTITION BY region) FROM sales`, what
+      does the window column hold for each sale?
+    options:
+      - text: The total of all sales in that sale's region, repeated on every row of the region
+        correct: true
+        why: >
+          `PARTITION BY region` makes the window "every row in my region". The sum is computed
+          over that window and written next to each row; no rows are collapsed.
+      - text: The running total of the region up to that sale
+        correct: false
+        why: >
+          A running total needs an `ORDER BY` inside the window. With only `PARTITION BY`, the
+          frame is the whole partition.
+      - text: One row per region, as with `GROUP BY region`
+        correct: false
+        why: >
+          A window function never changes the number of rows. Seven sales in, seven rows out.
+
+  - id: q7
+    part: 4
+    tag: lag and lead
+    prompt: >
+      `SELECT day, total - lag(total) OVER (ORDER BY day) AS change …` shows NULL for the
+      first day. Why?
+    options:
+      - text: >
+          The first row has no previous row, so `lag` returns NULL, and a number minus NULL
+          is NULL
+        correct: true
+        why: >
+          `lag` reads the value one row back in the window's order; before the first row
+          there is nothing. `lag(total, 1, 0)` supplies a default if 0 is what you mean.
+      - text: "`lag` skips the first row of every window by design"
+        correct: false
+        why: >
+          It does not skip it — the row is there, with a NULL in the column that needed a
+          previous value.
+      - text: The window has no frame clause, so `lag` cannot see earlier rows
+        correct: false
+        why: >
+          `lag` and `lead` ignore the frame: they always look by position in the partition.
+          The frame matters for aggregates and for `first_value`/`last_value`.
+
+  - id: q8
+    part: 4
+    tag: windows after WHERE
+    prompt: >
+      `SELECT id, amount, sum(amount) OVER () FROM sales WHERE region = 'north'` — is the
+      window total the whole table's, or north's?
+    options:
+      - text: North's — the window runs in the `SELECT` step, after `WHERE` removed the other rows
+        correct: true
+        why: >
+          `OVER ()` means "all rows", but only those that reached `SELECT`. For a share of the
+          whole table, compute the window in a subquery and filter outside it.
+      - text: The whole table's — `OVER ()` always sees every row
+        correct: false
+        why: >
+          A window is computed over the query's rows at that point in the pipeline. The other
+          regions were already gone.
+      - text: Neither — an empty `OVER ()` is an error
+        correct: false
+        why: >
+          `OVER ()` is valid: one window holding every row of the result.

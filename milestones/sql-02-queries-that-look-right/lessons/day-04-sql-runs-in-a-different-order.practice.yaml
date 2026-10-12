@@ -45,7 +45,7 @@ write:
     tag: WHERE vs HAVING
     prompt: >
       Which customers have **paid** more than 150 in total? Return `customer_id` and
-      `total`, by customer_id. Cancelled and pending orders must not count.
+      `total`, sorted by customer_id. Cancelled and pending orders must not count.
     hint: One condition is about a row, the other about a group — they belong to different clauses.
     solution: |
       SELECT customer_id, sum(amount) AS total
@@ -62,7 +62,7 @@ write:
     tag: WHERE vs HAVING
     prompt: >
       Which customers placed at least two orders worth more than 50 each? Return
-      `customer_id` and that count as `big_orders`, by customer_id.
+      `customer_id` and that count as `big_orders`, sorted by customer_id.
     hint: Filter the orders first, then count what's left per customer.
     solution: |
       SELECT customer_id, count(*) AS big_orders
@@ -78,7 +78,7 @@ write:
   - id: crowded-cities
     tag: WHERE vs HAVING
     prompt: >
-      Return each city with at least two customers: `city` and `customers`, by city.
+      Return each city with at least two customers: `city` and `customers`, sorted by city.
     hint: A condition on a count can only be checked once the groups exist.
     solution: |
       SELECT city, count(*) AS customers
@@ -91,10 +91,11 @@ write:
       - SELECT city, count(*) AS customers FROM customers GROUP BY city HAVING count(*) > 2 ORDER BY city;
 
   - id: paid-and-all
+    part: 7
     tag: aggregate filters
     prompt: >
       For every customer who has orders: `customer_id`, `orders` (all of them) and
-      `paid` (only the paid ones), by customer_id. One query, one pass — filtering on
+      `paid` (only the paid ones), sorted by customer_id. One query, one pass — filtering on
       status in `WHERE` would change the first count too.
     hint: An aggregate can carry its own filter, or count a CASE that is NULL for the rows you don't want.
     solution: |
@@ -109,10 +110,11 @@ write:
       - SELECT customer_id, count(*) AS orders, count(status) AS paid FROM orders GROUP BY customer_id ORDER BY customer_id;
 
   - id: share-of-orders
-    tag: aggregate filters
+    part: 6
+    tag: integer division
     prompt: >
       For each status: `status` and its `share` of all orders, as a fraction rounded to
-      2 decimal places, by status.
+      2 decimal places, sorted by status.
     hint: The denominator is one number for the whole table — a scalar subquery can supply it.
     solution: |
       SELECT status, round(count(*)::numeric / (SELECT count(*) FROM orders), 2) AS share
@@ -127,8 +129,8 @@ write:
   - id: filter-on-net
     tag: what a clause can see
     prompt: >
-      Return `id` and `net` (the amount times 0.8) for orders whose net is over 50, by
-      id. Write the expression `amount * 0.8` **once** and filter on the name.
+      Return `id` and `net` (the amount times 0.8) for orders whose net is over 50,
+      sorted by id. Write the expression `amount * 0.8` **once** and filter on the name.
     hint: Give the expression its name in an inner query; the outer query's WHERE can see it.
     solution: |
       SELECT id, net
@@ -155,6 +157,7 @@ write:
       - SELECT id, amount * 1.2 AS gross FROM orders LIMIT 3;
 
   - id: rounded-sort
+    part: 6
     tag: what a clause can see
     prompt: >
       Return `id` and `gross` (amount times 1.2) for every order, sorted by gross
@@ -171,22 +174,26 @@ write:
     tag: what a clause can see
     prompt: >
       The `tags` table has labels in mixed case (`Go`, `go`). Count them case-insensitively:
-      `label` in lower case, and `uses`, by label. Each label must appear once.
-    hint: If the alias has the same name as a column, GROUP BY picks the column. Avoid the clash.
+      return `label` (the label in lower case) and `uses`, sorted by `label`. Each label
+      must appear exactly once.
+    hint: >
+      Named `label`, the alias clashes with the table's own column — and GROUP BY picks the
+      column. Group by the expression itself.
     solution: |
-      SELECT lower(label) AS label_lower, count(*) AS uses
+      SELECT lower(label) AS label, count(*) AS uses
       FROM tags
       GROUP BY lower(label)
-      ORDER BY label_lower;
+      ORDER BY label;
     bad:
       - SELECT lower(label) AS label, count(*) AS uses FROM tags GROUP BY label ORDER BY label;
       - SELECT label, count(*) AS uses FROM tags GROUP BY label ORDER BY label;
 
   - id: per-month
-    tag: GROUP BY rules
+    part: 6
+    tag: grouping by a computed value
     prompt: >
-      Orders per month of `placed`: `month` (the first day of the month, as a date) and
-      `orders`, in month order.
+      Orders per month of `placed`: `month` (the first day of the month, as a `date`) and
+      `orders`, sorted by month.
     hint: Truncate the date to its month, group by that, and cast back to a date.
     solution: |
       SELECT date_trunc('month', placed)::date AS month, count(*) AS orders
@@ -201,7 +208,8 @@ write:
   - id: by-the-key
     tag: GROUP BY rules
     prompt: >
-      For each customer with orders: `id`, `name`, `city` and `orders` (how many), by id.
+      For each customer with orders: `id`, `name`, `city` and `orders` (how many), sorted
+      by id.
       Group by as little as Postgres will let you: just the customers' primary key.
     hint: Grouping by a primary key makes every other column of that table safe to select.
     solution: |
@@ -344,6 +352,7 @@ drill:
           problem is the name.
 
   - id: having-ordered
+    part: 6
     tag: WHERE vs HAVING
     kind: predict
     code: |
@@ -445,6 +454,7 @@ drill:
           sort key just has to be one of the things DISTINCT kept.
 
   - id: alias-in-group-by
+    part: 6
     tag: what a clause can see
     kind: predict
     code: |
@@ -490,6 +500,7 @@ drill:
           HAVING is exactly where aggregates *are* allowed. The complaint is about the name.
 
   - id: having-plain-column
+    part: 6
     tag: WHERE vs HAVING
     kind: predict
     code: |
@@ -589,6 +600,7 @@ drill:
           group: c++ 1, go 1, go 2, sql 1, sql 1.
 
   - id: counting-four-ways
+    part: 6
     tag: counting
     kind: predict
     code: |

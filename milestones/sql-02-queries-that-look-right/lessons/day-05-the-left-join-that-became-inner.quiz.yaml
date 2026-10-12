@@ -4,6 +4,7 @@
 # deterministically, so authoring the correct one first is safe.
 questions:
   - id: q1
+    part: 1
     prompt: >
       In a `LEFT JOIN`, what is a NULL-extended row, and when does the join produce one?
     options:
@@ -35,6 +36,7 @@ questions:
           trigger is "no match", not "a NULL in ON".
 
   - id: q2
+    part: 2
     prompt: >
       `customers LEFT JOIN orders ON o.customer_id = c.id WHERE o.status = 'paid'` loses
       every customer without a paid order. Why does it lose the customers who have no
@@ -70,6 +72,7 @@ questions:
           and planned it as an inner join.
 
   - id: q3
+    part: 3
     prompt: >
       To keep customers who have no paid orders, someone changes
       `WHERE o.status = 'paid'` to `WHERE o.status = 'paid' OR o.status IS NULL`. Why is
@@ -103,6 +106,7 @@ questions:
           duplicate. The problem is a missing customer, not an extra row.
 
   - id: q4
+    part: 2
     prompt: >
       You wrote a `LEFT JOIN`, and `EXPLAIN` shows a plain `Nested Loop` or `Hash Join`
       with no `Left` in it. What does that tell you?
@@ -136,6 +140,7 @@ questions:
           time; whether the WHERE kills their rows is not.
 
   - id: q5
+    part: 4
     prompt: >
       After `customers LEFT JOIN orders … GROUP BY c.name`, why does `count(*)` report 1
       for a customer who has never ordered, and what should be counted instead?
@@ -166,3 +171,131 @@ questions:
         why: >
           c.id comes from the left table and is never NULL, not even on the invented
           row, so it gives the same 1. The column has to come from the right side.
+
+  - id: q6
+    part: 1
+    tag: what a LEFT JOIN keeps
+    prompt: >
+      `customers JOIN orders ON o.customer_id = c.id`: what happens to a customer with no
+      orders, and what does writing `LEFT JOIN` change about that?
+    options:
+      - text: >
+          The inner join drops them; `LEFT JOIN` keeps them as one row with NULL in every
+          `orders` column
+        correct: true
+        why: >
+          An inner join returns only pairings that pass `ON`. A left join promises every
+          left row at least once, inventing a NULL-extended row when nothing matched.
+      - text: Both keep them, with the order columns empty
+        correct: false
+        why: >
+          Only an outer join invents rows. An inner join with no match for a customer has
+          simply nothing to return for them.
+      - text: The inner join keeps them once; `LEFT JOIN` keeps them once per order
+        correct: false
+        why: >
+          Both return one row per surviving pairing. The difference is only what happens
+          when there are none.
+
+  - id: q7
+    part: 3
+    tag: ON vs WHERE
+    prompt: >
+      In `customers c LEFT JOIN orders o ON o.customer_id = c.id AND c.name = 'ana'`, what
+      does the condition on the *left* table do?
+    options:
+      - text: >
+          Nothing is filtered out: every customer still appears, but only `ana` is allowed
+          to match any orders
+        correct: true
+        why: >
+          A left join keeps every left row whatever `ON` says. `ON` only decides which
+          pairings count as matches, so the others get NULL-extended rows. To report only
+          `ana`, the condition belongs in `WHERE`.
+      - text: Only `ana` is returned, with her orders
+        correct: false
+        why: >
+          That is what `WHERE c.name = 'ana'` does. Inside `ON` of a left join, a condition
+          cannot remove a left row.
+      - text: The query is rejected — `ON` may only mention the right table
+        correct: false
+        why: >
+          `ON` may mention either table. It runs, and returns all four customers.
+
+  - id: q8
+    part: 4
+    tag: anti-join
+    prompt: >
+      To find customers who have never ordered with
+      `customers c LEFT JOIN orders o ON o.customer_id = c.id`, which column should the
+      `WHERE … IS NULL` test, and why?
+    options:
+      - text: >
+          A right-table column that can only be NULL on an invented row, such as the join
+          column `o.customer_id` or the key `o.id`
+        correct: true
+        why: >
+          The join column matched `c.id`, so it is never NULL on a real match; only the
+          NULL-extended row has it NULL. `NOT EXISTS` says the same thing without the
+          choice to get wrong.
+      - text: Any column of `orders` — they are all NULL on the invented row
+        correct: false
+        why: >
+          They are, but a nullable column such as a `note` is also NULL on real orders, so
+          testing it would report customers who did order.
+      - text: "`c.id`, because the customer is the thing with no orders"
+        correct: false
+        why: >
+          `c.id` comes from the left table and is never NULL here. The test returns no rows.
+
+  - id: q9
+    part: 5
+    tag: join removal
+    prompt: >
+      `SELECT c.name FROM customers c LEFT JOIN profiles p ON p.customer_id = c.id` plans as
+      a plain scan of `customers`, with no join at all. What had to be true for PostgreSQL
+      to remove the join?
+    options:
+      - text: >
+          `profiles.customer_id` is unique, so the join cannot add rows, and no column of
+          `profiles` is used, so it cannot change the output
+        correct: true
+        why: >
+          A left join can never remove left rows; uniqueness means it cannot duplicate them;
+          and nothing from `profiles` is selected. Together the join is provably a no-op.
+          Select `p.bio`, or join a non-unique table, and it comes back.
+      - text: The `profiles` table was empty when the query was planned
+        correct: false
+        why: >
+          The planner does not rely on a table being empty; data can change between planning
+          and running. The proof is from the constraints.
+      - text: A foreign key from `profiles` to `customers` exists
+        correct: false
+        why: >
+          The foreign key is not what matters here: uniqueness of the joined column and an
+          unused right side are.
+
+  - id: q10
+    part: 5
+    tag: NATURAL JOIN
+    prompt: >
+      A query using `a NATURAL JOIN b` returns no rows after a migration that never touched
+      the query. What is the likely cause?
+    options:
+      - text: >
+          The migration added a column to one table whose name already exists in the other,
+          so the join now also compares that column
+        correct: true
+        why: >
+          `NATURAL JOIN` joins on every shared column name, decided when the query runs. A new
+          `note` column, NULL everywhere, turns the condition into `… AND a.note = b.note`,
+          which is never true. Write `ON` with the columns you mean.
+      - text: The migration rebuilt an index, and `NATURAL JOIN` needs one
+        correct: false
+        why: >
+          No join needs an index to be correct. The result changed because the condition did.
+      - text: "`NATURAL JOIN` is an outer join, so new NULLs removed the matches"
+        correct: false
+        why: >
+          It is an inner join. The NULLs matter because they sit in a column that became
+          part of the join condition.

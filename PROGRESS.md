@@ -622,3 +622,21 @@ knowledge map of every concept reached by strength; an activity calendar that co
 up and never says "broken"; weekly right-first-time; a fresh-start greeting after a gap; and
 the day's wins named on Done. No new points.
 
+**Smaller lessons, and cards that only ask what was taught (2026-10-12).** He sent two cards:
+one whose prompt never said the answer was sorted (and never named its `label_lower` column),
+and one that needed `date_trunc(…)::date`, which no lesson had shown. He also asked for the
+material to be more atomic: small lessons each with a quiz and review, one big task after
+several. Built:
+- Days are now read in **parts** of 5–9 minutes, each closed by two or three questions, its
+  cards entering review straight away; drill, task and teach-back come after the last part.
+  A part counts as a day for the streak. SQL days 4–10 are split (32 new questions).
+- Day 4 gained two parts he hasn't read: **grouping by computed values** (`::`, `date_trunc`,
+  `extract`, `round`, integer division, `WITH … VALUES`) and **`FILTER`** (with the
+  `count(CASE … ELSE 0 END)` trap). Today offers them first; seven bank items that need them
+  wait until they're read.
+- Two automatic guards: prompts must state the sort order and name every column
+  (`check-write-cards.py`), and no card may use a function, cast or keyword the lessons
+  haven't shown by then (`tools/check-syllabus.py`). They found 28 prompt problems and 14
+  untaught constructs; all fixed. Three day-2 bank items that leaned on time functions were
+  rewritten or dropped.
+

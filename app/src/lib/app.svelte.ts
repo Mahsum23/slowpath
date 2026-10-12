@@ -29,6 +29,8 @@ import { evaluate as evaluateBadges } from './badges';
 import { deriveXp, XP_CLEAN_SWEEP, XP_SESSION } from './xp';
 import { localDateOf, today } from './date';
 import { bankCards, emptyPractice, finishRound, needsPractice, recordFirst } from './practice';
+import { allPartsDone, nextPart, partDone, partsOf } from './parts';
+import type { DayPart } from './types';
 import { heatMap, themeLabel, type Heat } from './focus';
 import {
   activityScores, conceptStrength, knownNow, logAnswer, type ConceptStrength,
@@ -111,9 +113,11 @@ class AppStore {
     const have = new Set(this.deck.map((c) => c.id));
     const extra: CardRef[] = [];
     for (const { day } of this.availableDays) {
-      if (!this.progress.days[day.id]?.theoryDone) continue;
-      const first = this.progress.days[day.id]?.practice?.first ?? {};
-      for (const c of bankCards(day)) {
+      const read = this.progress.days[day.id];
+      if (!read?.theoryDone && !Object.keys(read?.parts ?? {}).length) continue;
+      const first = read?.practice?.first ?? {};
+      // Only items whose part has been read: a follow-up is never about something unseen.
+      for (const c of bankCards(day, read)) {
         if (!(`${c.kind}:${c.questionId}` in first) && !have.has(c.id)) extra.push(c);
       }
     }
@@ -162,6 +166,10 @@ class AppStore {
       const p = this.progress.days[day.id];
       if (p?.practice?.landedAt && localDateOf(p.practice.landedAt) === t) landed.push(day.title);
       if (p?.completedAt && localDateOf(p.completedAt) === t) lessons.push(day.title);
+      else for (const part of partsOf(day)) {
+        const at = p?.parts?.[String(part.n)];
+        if (at && localDateOf(at) === t) lessons.push(part.title);
+      }
     }
     return { answered: a?.n ?? 0, right: a?.right ?? 0, stronger: [...stronger], landed, lessons };
   }
@@ -295,6 +303,33 @@ class AppStore {
     return { week: latest.week, day: latest.day };
   }
 
+  /**
+   * The next part to read, if the next thing on this track is a part: one added to a day
+   * already finished (those come first — they fill a gap behind you), else the next part of
+   * the current day. Null when the current day is read in one go, or all its parts are read.
+   */
+  get reading(): { week: Week; day: Day; part: DayPart; added: boolean } | null {
+    for (const { week, day } of this.availableDays) {
+      const p = this.progress.days[day.id];
+      if (p?.completedAt) {
+        const part = partsOf(day).find((x) => x.added && !partDone(day, p, x.n));
+        if (part) return { week, day, part, added: true };
+        continue;
+      }
+      const part = nextPart(day, p);
+      return part ? { week, day, part, added: false } : null;
+    }
+    return null;
+  }
+
+  /** Read a part today, on this track. */
+  get readToday(): boolean {
+    const t = today();
+    return this.availableDays.some(({ day }) =>
+      Object.values(this.progress.days[day.id]?.parts ?? {}).some((at) => localDateOf(at) === t),
+    );
+  }
+
   /** Finished a practice round on this track today. */
   get practisedToday(): boolean {
     const t = today();
@@ -347,7 +382,7 @@ class AppStore {
    */
   get completedToday(): boolean {
     const t = today();
-    if (this.practisedToday) return true;
+    if (this.practisedToday || this.readToday) return true;
     return this.availableDays.some(({ day }) => {
       const at = this.progress.days[day.id]?.completedAt;
       return at && localDateOf(at) === t;
@@ -591,6 +626,26 @@ class AppStore {
     await this.persist();
   }
 
+  /**
+   * A part read and its questions answered. Its cards join the deck at once (cardsFor asks
+   * parts.ts), the sitting counts for the streak, and the last part closes the theory —
+   * and the quiz, once every question of the day has an answer.
+   */
+  async markPartDone(day: Day, weekId: string, n: number) {
+    const p = this.mutable(day.id, weekId);
+    if (!p.parts?.[String(n)]) p.parts = { ...(p.parts ?? {}), [String(n)]: new Date().toISOString() };
+    if (allPartsDone(day, p)) p.theoryDone = true;
+    const qs = day.quiz ?? [];
+    if (p.theoryDone && !p.quiz.completedAt && qs.every((q) => q.id in p.quiz.answers)) {
+      await this.finishQuiz(day, weekId);
+    }
+    this.progress.streak = deriveStreak(
+      Object.values($state.snapshot(this.progress).days),
+      $state.snapshot(this.progress.streak),
+    );
+    await this.persist();
+  }
+
   /** One shot per question — the answer is recorded on first tap, then explained. */
   async answerQuiz(day: Day, weekId: string, questionId: string, optionIndex: number) {
     const p = this.mutable(day.id, weekId);
@@ -632,9 +687,15 @@ class AppStore {
    * cheap kind of retrieval practice — same questions, no theory on screen — and it
    * should cost nothing to reach for.
    */
-  async retakeQuiz(day: Day, weekId: string) {
+  async retakeQuiz(day: Day, weekId: string, only?: string[]) {
     const p = this.mutable(day.id, weekId);
-    p.quiz = { ...p.quiz, answers: {}, correct: {} };
+    if (only) {
+      // One part's questions again; the other parts keep their answers.
+      const answers = { ...p.quiz.answers };
+      const correct = { ...p.quiz.correct };
+      for (const id of only) { delete answers[id]; delete correct[id]; }
+      p.quiz = { ...p.quiz, answers, correct };
+    } else p.quiz = { ...p.quiz, answers: {}, correct: {} };
     await this.persist();
   }
 

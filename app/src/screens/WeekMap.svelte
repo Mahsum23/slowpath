@@ -2,6 +2,7 @@
   import { app } from '../lib/app.svelte';
   import { router, sessionPath } from '../lib/router.svelte';
   import type { Day } from '../lib/types';
+  import { partDone } from '../lib/parts';
 
   /**
    * One path per track. Topics are dividers on it, never a unit that ends: there is no
@@ -64,7 +65,13 @@
             </span>
             <span class="body">
               <span class="title">Day {day.day} · {day.title}</span>
-              {#if state === 'current'}
+              {#if day.parts?.length && state !== 'upcoming'}
+                {@const read = day.parts.filter((p) => partDone(day, app.progress.days[day.id], p.n)).length}
+                <span class="parts">
+                  {#if state === 'current'}<span class="tag now">Today</span>{/if}
+                  {read === day.parts.length ? `${day.parts.length} parts` : `${read} of ${day.parts.length} parts read`}
+                </span>
+              {:else if state === 'current'}
                 <span class="tag now">Today</span>
               {:else if day.teaser}
                 <span class="teaser">{day.teaser}</span>
@@ -224,6 +231,14 @@
   .path li.locked .title {
     color: var(--text-faint);
     font-weight: 500;
+  }
+
+  .parts {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--text-faint);
   }
 
   .teaser,

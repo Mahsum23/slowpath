@@ -6,6 +6,7 @@ setup: |
 
 challenges:
   - id: conversion-rate
+    part: 1
     prompt: >
       The conversion rate of `visits` as a percentage rounded to two decimals, in one
       column. Beware: counts are integers, and integer division throws the remainder away.
@@ -14,6 +15,7 @@ challenges:
       SELECT round(100.0 * count(*) FILTER (WHERE converted) / count(*), 2) AS rate FROM visits;
 
   - id: tolerance
+    part: 2
     prompt: >
       Which rows of `m` hold the value 0.3? Row 1 stores `0.1 + 0.2` as a `float8`, so
       `v = 0.3` finds only row 2 — compare with a tolerance of `1e-9` instead, and return
@@ -23,6 +25,7 @@ challenges:
       SELECT id FROM m WHERE abs(v - 0.3) < 1e-9 ORDER BY id;
 
   - id: exact-sum
+    part: 2
     prompt: >
       Add 0.1 up a thousand times and get exactly the answer, in decimal arithmetic.
       Use `generate_series` for the thousand rows, and return the single sum.
@@ -31,6 +34,7 @@ challenges:
       SELECT sum(0.1::numeric) AS total FROM generate_series(1, 1000);
 
   - id: no-overflow
+    part: 4
     prompt: >
       `SELECT 2147483647 + 1` fails with `integer out of range`. Return that sum
       successfully, by making the arithmetic happen in the wider integer type.

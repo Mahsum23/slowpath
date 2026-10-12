@@ -4,15 +4,18 @@
   import Button from '../../components/Button.svelte';
   import { answerKeys } from '../../lib/shortcuts.svelte';
   import { inlineHtml } from '../../lib/inline';
+  import { partQuestions } from '../../lib/parts';
 
   interface Props {
     day: Day;
     weekId: string;
+    /** On a day read in parts: ask only this part's questions, and finish the part. */
+    part?: number | null;
     onnext: () => void;
   }
-  let { day, weekId, onnext }: Props = $props();
+  let { day, weekId, part = null, onnext }: Props = $props();
 
-  const questions = $derived(day.quiz ?? []);
+  const questions = $derived(part ? partQuestions(day, part) : (day.quiz ?? []));
   const answers = $derived(app.dayProgress(day.id, weekId).quiz.answers);
 
   // Resume where he left off rather than replaying answered questions. Computed
@@ -21,8 +24,9 @@
   // of the quiz.
   const startAt = (() => {
     const seen = app.dayProgress(day.id, weekId).quiz.answers;
-    const open = (day.quiz ?? []).findIndex((q) => !(q.id in seen));
-    return open === -1 ? Math.max((day.quiz?.length ?? 1) - 1, 0) : open;
+    const list = part ? partQuestions(day, part) : (day.quiz ?? []);
+    const open = list.findIndex((q) => !(q.id in seen));
+    return open === -1 ? Math.max(list.length - 1, 0) : open;
   })();
   let index = $state(startAt);
 
@@ -42,7 +46,7 @@
    * settings, and it costs nothing: the day stays finished and a clean sweep stays won.
    */
   async function retake() {
-    await app.retakeQuiz(day, weekId);
+    await app.retakeQuiz(day, weekId, part ? questions.map((qq) => qq.id) : undefined);
     index = 0;
     scrollTo({ top: 0 });
   }
@@ -63,7 +67,8 @@
 
   function next() {
     if (last) {
-      void app.finishQuiz(day, weekId);
+      // A part's questions are finished by finishing the part (Session does it).
+      if (!part) void app.finishQuiz(day, weekId);
       onnext();
     } else {
       index += 1;
@@ -75,7 +80,7 @@
 
 {#if q}
   <div class="head">
-    <p class="eyebrow">Question {index + 1} of {questions.length}</p>
+    <p class="eyebrow">{part ? 'Check yourself · ' : 'Question '}{index + 1} of {questions.length}</p>
     {#if anyAnswered}
       <button class="retake" onclick={retake}>
         <svg viewBox="0 0 24 24"
@@ -129,11 +134,14 @@
 
     <div class="cta">
       <Button full onclick={next}>
-        {last ? 'On to the task' : 'Next question'}
+        {last ? (part ? 'Finish the part' : 'On to the task') : 'Next question'}
         <svg class="arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
       </Button>
     </div>
   {/if}
+{:else if part}
+  <p class="none">Nothing to check in this part — it sets up the next one.</p>
+  <Button full onclick={onnext}>Finish the part</Button>
 {:else}
   <p class="none">No quiz for this day.</p>
   <Button full onclick={onnext}>On to the task</Button>

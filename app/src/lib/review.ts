@@ -23,6 +23,7 @@
  */
 import { localDateOf, today } from './date';
 import type { Day, DayProgress, ReviewCard, ReviewState } from './types';
+import { isParted, unlocked } from './parts';
 
 /** How a card went. Recall is close enough to binary that finer grades are noise. */
 export type Grade = 'again' | 'good';
@@ -189,9 +190,11 @@ export function cardsFor(day: Day, progress: DayProgress | undefined, lang = 'cp
     }
   }
   // Typed from memory against a real database. Gated on the theory having been read, since
-  // the syntax is what the theory taught; the quiz need not have been answered.
-  if (progress.theoryDone) {
-    for (const c of day.write?.challenges ?? []) {
+  // the syntax is what the theory taught; the quiz need not have been answered. A card that
+  // names a part arrives as soon as that part is read, so a day split into parts feeds the
+  // deck part by part.
+  for (const c of day.write?.challenges ?? []) {
+    if (unlocked(day, progress, c.part)) {
       cards.push({ id: cardId('write', day.id, c.id), kind: 'write', dayId: day.id, questionId: c.id });
     }
   }
@@ -221,6 +224,8 @@ export function cardsFor(day: Day, progress: DayProgress | undefined, lang = 'cp
   // positional then editing a lesson would silently hand block 5's ease and interval to
   // whatever moved into slot 5.
   for (const block of codeBlocksFor(day, lang)) {
+    // On a day read in parts, a block is a card once the part it is in has been read.
+    if (isParted(day) && !unlocked(day, progress, block.part)) continue;
     cards.push({ id: cardId('parsons', day.id, block.key), kind: 'parsons', dayId: day.id, questionId: block.key });
   }
   return cards;
@@ -260,6 +265,8 @@ export interface CodeBlock {
   /** Stable id for this block, derived from its text. */
   key: string;
   lines: string[];
+  /** The part of the day the block is in, on a day read in parts. */
+  part?: number;
 }
 
 /**
@@ -279,9 +286,13 @@ function keyOf(lines: string[]): string {
 }
 
 export function codeBlocksFor(day: Day, lang = 'cpp', min = 3, max = 12): CodeBlock[] {
-  const md = day.theoryMarkdown;
-  if (!md) return [];
+  if (day.parts?.length) {
+    return day.parts.flatMap((p) => blocksIn(p.markdown, lang, min, max).map((b) => ({ ...b, part: p.n })));
+  }
+  return day.theoryMarkdown ? blocksIn(day.theoryMarkdown, lang, min, max) : [];
+}
 
+function blocksIn(md: string, lang: string, min: number, max: number): CodeBlock[] {
   const blocks: CodeBlock[] = [];
   // Scanned line by line rather than matched with one regex. A regex that treats
   // ``` as both an opener and a closer will happily pair a *closing* fence with the

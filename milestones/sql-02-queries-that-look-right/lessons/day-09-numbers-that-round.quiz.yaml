@@ -4,6 +4,7 @@
 # deterministically, so authoring the correct one first is safe.
 questions:
   - id: q1
+    part: 1
     prompt: >
       Why does `count(*) FILTER (WHERE converted) / count(*) * 100` return 0 for a 12.5%
       conversion rate in PostgreSQL, and how do you fix it?
@@ -32,6 +33,7 @@ questions:
           count returns bigint, an integer. That is exactly why the division truncates.
 
   - id: q2
+    part: 2
     prompt: >
       Why is `0.1::float8 + 0.2::float8 = 0.3` false in PostgreSQL while
       `0.1 + 0.2 = 0.3` is true?
@@ -62,6 +64,7 @@ questions:
           false.
 
   - id: q3
+    part: 3
     prompt: >
       You insert 19.999 into a `numeric(10,2)` column. What is stored, and does anything
       warn you?
@@ -88,6 +91,7 @@ questions:
           that the column holds exactly two decimals, kept by rounding.
 
   - id: q4
+    part: 3
     prompt: >
       What do `round(2.5)` and `round(2.5::float8)` return in PostgreSQL, and why do they
       differ?
@@ -117,6 +121,7 @@ questions:
           the tie-breaking rule is what differs.
 
   - id: q5
+    part: 4
     prompt: >
       Which type would you use for an amount of money in PostgreSQL, and why not `float8`
       or `money`?
@@ -146,3 +151,80 @@ questions:
         why: >
           real has a 24-bit significand: it cannot even represent every integer above
           16,777,216, and adding 0.1 a million times gives 100,958.
+
+  - id: q6
+    part: 1
+    tag: integer division
+    prompt: >
+      What is `-7/2` in PostgreSQL, and why does the same expression ported from Python's
+      `-7 // 2` give a different answer?
+    options:
+      - text: >
+          `-3`: PostgreSQL's integer division truncates toward zero, while Python's `//`
+          floors, giving `-4`
+        correct: true
+        why: >
+          Both discard the fraction, but in different directions for negative numbers.
+          Code moved between the two agrees on every positive input and quietly disagrees
+          on negative ones.
+      - text: "`-3.5`: PostgreSQL keeps the fraction when the result is negative"
+        correct: false
+        why: >
+          Integer / integer is always an integer in PostgreSQL, whatever the sign. Make one
+          side `numeric` to keep the fraction.
+      - text: "`-4`, the same as Python: both round down"
+        correct: false
+        why: >
+          `SELECT -7/2` prints `-3`. Truncating toward zero is "round down" only for
+          positive numbers.
+
+  - id: q7
+    part: 2
+    tag: floating point
+    prompt: >
+      To check whether a `float8` column will compare cleanly, someone types
+      `SELECT 0.1 + 0.2 = 0.3` into psql and gets `true`. Why is that check misleading?
+    options:
+      - text: >
+          In PostgreSQL a literal like `0.1` is `numeric`, which is exact, so the check never
+          touched floating point at all
+        correct: true
+        why: >
+          `pg_typeof(0.1)` says `numeric`. The column holds `float8`, where `0.1 + 0.2` is
+          `0.30000000000000004`. Test with `0.1::float8 + 0.2::float8`, and never compare
+          floats for equality.
+      - text: psql rounds results for display, so the comparison was done on rounded values
+        correct: false
+        why: >
+          The comparison happens in the server, on the values themselves. The display has
+          nothing to do with it.
+      - text: It is not misleading — PostgreSQL corrects float rounding errors in comparisons
+        correct: false
+        why: >
+          It does not: a `float8` column holding `0.1::float8 + 0.2::float8` does not match
+          `WHERE v = 0.3`.
+
+  - id: q8
+    part: 4
+    tag: overflow
+    prompt: >
+      A table's `int` primary key reaches 2,147,483,647. What happens on the next insert,
+      and what should the column have been?
+    options:
+      - text: >
+          The insert fails with `integer out of range`; the column should have been `bigint`
+        correct: true
+        why: >
+          PostgreSQL refuses to overflow rather than wrapping round, which is loud and right,
+          but a table that cannot take inserts is an outage — Basecamp 3 went read-only for
+          hours this way in 2018. `bigint` costs 4 bytes more per row.
+      - text: The id wraps round to −2,147,483,648 and inserts carry on
+        correct: false
+        why: >
+          That is what wrapping arithmetic in C-like languages can do. PostgreSQL raises an
+          error instead.
+      - text: PostgreSQL widens the column to `bigint` automatically
+        correct: false
+        why: >
+          Types never change on their own. Widening is an `ALTER TABLE` that rewrites the
+          table, which is why it is best chosen up front.

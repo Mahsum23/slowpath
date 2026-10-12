@@ -13,8 +13,23 @@ setup: |
     (5, 'cy',  'paid',       90.00),
     (6, 'cy',  'paid',       25.00);
 
+  CREATE TABLE sales (
+    id     int PRIMARY KEY,
+    placed date NOT NULL,
+    amount numeric(10,2) NOT NULL
+  );
+  INSERT INTO sales VALUES
+    (1, '2025-01-11',  60.00),
+    (2, '2025-12-30',  80.00),
+    (3, '2026-01-05', 120.00),
+    (4, '2026-01-20',  40.00),
+    (5, '2026-01-31',  15.50),
+    (6, '2026-02-02',  30.00),
+    (7, '2026-02-14',  99.99);
+
 challenges:
   - id: big-spenders
+    part: 3
     tag: WHERE vs HAVING
     prompt: >
       Which customers have **paid** more than 150 in total? Return `customer` and
@@ -29,6 +44,7 @@ challenges:
       ORDER BY customer;
 
   - id: filter-an-alias
+    part: 2
     tag: what a clause can see
     prompt: >
       Return `id` and `gross` (the amount times 1.2) for the orders whose gross is over
@@ -42,6 +58,7 @@ challenges:
       ORDER BY gross DESC;
 
   - id: zero-not-null
+    part: 5
     tag: aggregates over nothing
     prompt: >
       Return the total amount of orders over 1000, as a single value that is `0` when
@@ -51,6 +68,7 @@ challenges:
       SELECT coalesce(sum(amount), 0) AS total FROM orders WHERE amount > 1000;
 
   - id: per-customer
+    part: 4
     tag: ORDER BY and LIMIT
     prompt: >
       Return each customer and how many orders they have, most orders first, ties
@@ -61,3 +79,38 @@ challenges:
       FROM orders
       GROUP BY customer
       ORDER BY orders DESC, customer;
+
+  - id: monthly-totals
+    part: 6
+    tag: grouping by a computed value
+    prompt: >
+      From `sales`: one row per calendar month, `month` (its first day, as a `date`) and
+      `total` (the sum of `amount`), sorted by month. January 2025 and January 2026 are
+      different months.
+    hint: Cut each date down to its month, keeping the year, and cast it back to a date.
+    solution: |
+      SELECT date_trunc('month', placed)::date AS month, sum(amount) AS total
+      FROM sales
+      GROUP BY 1
+      ORDER BY 1;
+    bad:
+      - SELECT extract(month FROM placed) AS month, sum(amount) AS total FROM sales GROUP BY 1 ORDER BY 1;
+      - SELECT date_trunc('month', placed) AS month, sum(amount) AS total FROM sales GROUP BY 1 ORDER BY 1;
+
+  - id: cancelled-alongside
+    part: 7
+    tag: aggregate filters
+    prompt: >
+      For every customer in `orders`: `customer`, `orders` (all of them) and `cancelled`
+      (how many were cancelled, 0 if none), sorted by customer. Every customer must appear.
+    hint: Give the second count its own filter instead of filtering the whole query.
+    solution: |
+      SELECT customer,
+             count(*) AS orders,
+             count(*) FILTER (WHERE status = 'cancelled') AS cancelled
+      FROM orders
+      GROUP BY customer
+      ORDER BY customer;
+    bad:
+      - SELECT customer, count(*) AS orders, count(*) AS cancelled FROM orders WHERE status = 'cancelled' GROUP BY customer ORDER BY customer;
+      - SELECT customer, count(*) AS orders, count(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled FROM orders GROUP BY customer ORDER BY customer;

@@ -159,8 +159,9 @@ follow-up question rather than front-loading everything.
 **Lessons and tasks are files, not just chat.** Write each session's theory block
 *and* that day's applied-task description to
 `milestones/<milestone>/lessons/day-NN-<slug>.md` (create the `lessons/` dir if it
-doesn't exist yet) — one file per day, with `## Theory`, `## Quiz` (question text
-only — see below), and `## Task` sections. The durable copy lives there, not only in
+doesn't exist yet) — one file per day, with its theory in `## Part N: Title` sections
+(see **A day is read in parts** below), then `## Drill` and `## Task`. Older days have one
+`## Theory` and a `## Quiz` (question text only) instead. The durable copy lives there, not only in
 a chat transcript he can't grep later. Post it in chat too as you normally would; the
 file is in addition to that, not instead of it.
 
@@ -168,12 +169,15 @@ file is in addition to that, not instead of it.
 `day-NN-<slug>.md`, write `day-NN-<slug>.quiz.yaml` holding the quiz key: each
 question's `prompt`, its 2–4 `options` with `correct: true/false`, and a `why` on
 *every* option — including the wrong ones, since explaining why a plausible
-misconception is wrong is the part that teaches. The `.md`'s `## Quiz` section stays
-question-text-only, because that's the file he'd have open while doing the lesson.
+misconception is wrong is the part that teaches. The `.md` lists the questions as text
+only (each part's `### Check yourself`), because that's the file he'd have open while
+doing the lesson.
 
-**Five questions per quiz.** Not three, not eight — five, every day, in both the `.md`
-and the `.quiz.yaml`. Enough to cover a session's material properly; few enough to sit
-inside a 20–30 minute budget alongside theory and a task.
+**Two or three questions per part.** Each part of a day closes with its own short check,
+in both the `.md` and the `.quiz.yaml` (`part: N` on each question). A day of four or five
+parts ends up with ten or more questions, asked a few at a time, while the part they
+check is still on screen. (This replaced "five questions per quiz, at the end of the day":
+by the fifth question the first section was a page and a half behind.)
 
 **Everything shipped is written for a stranger, not for him.** Lessons, milestone specs,
 `README.md`, app copy and the model prompts in `app/src/lib/mentor.ts` are public: anyone
@@ -280,7 +284,7 @@ The phone app (`app/`, see `app/DESIGN.md`) is built from these files, so:
   `- File: \`path\``, `- Compile: \`command\``, and a `### Checklist` of `- [ ]`
   items. Everything else in the section stays free prose.
 - After writing or editing any lesson, run `cd app && npm run content` (and, for SQL days,
-  `tools/check-write-cards.py` and `tools/check-sql-lesson.py`). It regenerates
+  `tools/check-write-cards.py`, `tools/check-sql-lesson.py` and `tools/check-syllabus.py`). It regenerates
   the app's JSON and warns about missing `why` text, bad option counts, and drift
   between the `.md` and the key. Commit the regenerated `app/public/content/`.
 
@@ -416,6 +420,33 @@ Ask button and is silent wherever that button is deliberately absent — the les
 Explain steps (the mentor there would be the answer key, or would hand over what the examiner
 is measuring) and an unanswered review card. Elsewhere it opens the Mentor tab. So a new place
 that hides the mentor must not register `mentorKey`, and must not be reachable by `M`.
+
+## A day is read in parts
+
+He asked for the material to be "more manageable, more atomic, so I digest it better":
+smaller lessons, each with its own quiz and review, and one bigger task after a few of them.
+So a day's theory is split into **parts** (`app/src/lib/parts.ts`, tested in
+`test-parts.mjs`):
+
+- **A part is one sitting**: 5–9 minutes of reading (the build estimates it) and two or three
+  questions that check that part only, asked as soon as it is read. Finishing a part is a
+  complete day: it keeps the streak and Today says "Done today", with "keep going" offered,
+  never pushed. Four or five parts a day is the normal size.
+- **Review follows the part, not the day.** A part's questions and any write card or bank item
+  tagged `part: N` join the deck and the practice rounds the moment the part is done; an item
+  with no part waits for the whole day.
+- **The big task comes once, after the last part**: the drill, the lab task and the teach-back,
+  then practice rounds until the concept lands. That is the "one big task after some of it".
+- **In the `.md`**: `## Part N: Title` sections (numbered 1, 2, 3 … — the build fails
+  otherwise), each ending in `### Check yourself` with its questions as text. Every part after
+  the first opens with the `SET search_path = dayNN;` reminder, because a part is often read
+  on another day in a new session.
+- **A part added to a published day** carries `added: { N: YYYY-MM-DD }` in `topic.yaml`.
+  Someone who read the day before parts existed is credited with its original parts and
+  *offered* the added one — Today puts it ahead of anything else, since the day's cards may
+  lean on it. Such a part brings its own tables, so it runs without the rest of the day. Day 4's
+  parts 6 and 7 (computed values, FILTER) were added this way, after he found practice cards
+  using `date_trunc` and `FILTER` that no lesson had taught.
 
 ## There are no weeks: each subject is one track, and lessons come on request
 
@@ -663,7 +694,18 @@ so `NOT EXISTS` and `LEFT JOIN … IS NULL` are both right, with no model, no ke
 once the engine is cached. Rules that keep the cards honest:
 
 - The prompt names exactly what to return (columns, order, what a NULL means) — the target
-  table is what he aims at, so an ambiguous prompt is a card nobody can pass fairly.
+  table is what he aims at, so an ambiguous prompt is a card nobody can pass fairly. Two of
+  these are checked by `tools/check-write-cards.py`, because he caught a card that broke both:
+  a sorted answer must say what it is sorted by in words ("sorted by label", "newest first";
+  "by label" alone reads as "per label"), and with more than one output column, every column
+  is named in the prompt.
+- **Nothing a lesson has not shown.** A card once needed `date_trunc(…)::date` when no lesson
+  had shown either; it measured whether he already knew PostgreSQL. `tools/check-syllabus.py`
+  collects the functions, `::casts` and watched keywords (FILTER, OVER, WITH, CASE, coalesce …)
+  that the lessons' *code* has shown up to each day and part, and fails any solution, drill or
+  question that uses something else. When it fires, the fix is usually a lesson part that
+  teaches the thing, not a rewritten card — but a card can also wait for a later part with
+  `part: N`.
 - No answer a guess can hit. `test-write.mjs` fails a card that `SELECT 1` passes, which is
   how a single-row count (`1`) got caught; return ids or values, not a count that could be
   anything.
