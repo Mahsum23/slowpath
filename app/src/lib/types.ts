@@ -1,4 +1,5 @@
 import type { ShapeForbid, ShapeRequire } from "./shapecheck";
+import type { EggState } from "./eggs";
 
 // The contract with content built by app/scripts/build-content.mjs.
 
@@ -414,6 +415,8 @@ export interface Progress {
    * Optional: records from before it existed, and devices that haven't updated, lack it.
    */
   activity?: Record<string, { n: number; right: number; known?: number }>;
+  /** Surprises found, and hunts in progress (eggs.ts). Absent until the first. */
+  eggs?: EggState;
 }
 
 export function emptyReview(): ReviewState {

@@ -464,6 +464,7 @@
     if (shaped) return checkShape();
     const text = writeSql.trim();
     if (!text || running || solved || revealed || !wc || !target) return;
+    void app.noticeAnswer(text, 'sql');
     // A card about how the query is written can rule things out before anything runs.
     const ruledOut = forbiddenHit(text, wc.forbids);
     if (ruledOut) {
@@ -534,6 +535,7 @@
     const code = writeSql.trim();
     const set = writeHit?.set;
     if (!code || solved || revealed || !wc || !set || set.lang === 'sql') return;
+    void app.noticeAnswer(code, set.lang);
     let report: ShapeReport;
     try {
       report = judge(code, set.lang, { requires: wc.requires, forbids: wc.forbids }, set.defs);

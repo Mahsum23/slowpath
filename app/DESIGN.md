@@ -855,6 +855,17 @@ more digestible lessons with a quiz and review after each, and one big task afte
 - Verified: `test-parts.mjs`; all SQL checkers on PG16; PGlite vs PG16; Chromium (a reader who
   finished day 4 before parts, offered part 6; a fresh reader moving part to part).
 
+## 8.14 Surprises (2026-10-12)
+
+Unannounced, one-time surprises (`eggs.ts`, `EggToast.svelte`, `Curiosities.svelte`), recorded
+in `progress.eggs` (found: id → {at, kind, glyph, title, body}; hunts: theme → run), merged by
+union with the earlier find winning. Triggers live in `app.svelte.ts` (`afterAnswer`,
+`markPartDone`, `finishPracticeRound`, `completeDay`, `noticeAnswer`, `toggleSecret`), in
+`chat.svelte.ts` (the mentor store only, never the examiner's) and in the shortcut handler.
+Secret modes are device-local (`localStorage`). The cabinet appears on Stats only after the
+first find and never shows what is left. Contents are deliberately not listed here — read
+`eggs.ts`. Verified: `test-eggs.mjs`, Chromium run of each trigger kind.
+
 ## 9. Offline & local storage
 
 - **Content cache:** Cache API / IndexedDB — loaded weeks fully offline.

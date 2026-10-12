@@ -8,6 +8,7 @@ export type Route =
   | { name: 'mentor' }
   | { name: 'review'; practice: boolean; round: string | null }
   | { name: 'settings' }
+  | { name: 'curiosities' }
   | { name: 'session'; weekId: string; dayId: string; step: number; part: number | null };
 
 function parse(hash: string): Route {
@@ -23,6 +24,8 @@ function parse(hash: string): Route {
       return { name: 'review', practice: parts[1] === 'practice', round: parts[1] === 'round' ? (parts[2] ?? null) : null };
     case 'settings':
       return { name: 'settings' };
+    case 'curiosities':
+      return { name: 'curiosities' };
     case 'session':
       if (parts[1] && parts[2]) {
         return {

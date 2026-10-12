@@ -12,6 +12,8 @@
   import { update } from './lib/update.svelte';
   import { shortcuts } from './lib/shortcuts.svelte';
   import ShortcutsHelp from './components/ShortcutsHelp.svelte';
+  import EggToast from './components/EggToast.svelte';
+  import Curiosities from './screens/Curiosities.svelte';
 
   const route = $derived(router.route);
 
@@ -43,6 +45,7 @@
 <svelte:window onkeydown={(e) => shortcuts.handle(e)} />
 
 <ShortcutsHelp />
+<EggToast />
 
 {#if update.ready}
   <!-- Deliberately an offer, not an automatic reload: at this point there may be a
@@ -70,6 +73,8 @@
     {/key}
   {:else if route.name === 'settings'}
     <Settings />
+  {:else if route.name === 'curiosities'}
+    <Curiosities />
   {:else}
     <Today />
   {/if}

@@ -640,3 +640,9 @@ several. Built:
   untaught constructs; all fixed. Three day-2 bank items that leaned on time functions were
   rewritten or dropped.
 
+**Surprises (2026-10-12).** He asked to be surprised while learning, without being told what
+the surprises are. Asked four oblique questions about taste (all kinds of delight; absurd,
+nerdy and dark humour; myth and the hacker underground; old comments, secret modes, messages
+left behind), then hid things in the app accordingly. Not listed here on purpose; the code is
+`app/src/lib/eggs.ts`, and CLAUDE.md has the rules for adding more.
+

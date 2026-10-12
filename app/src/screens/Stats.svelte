@@ -46,6 +46,7 @@
   const map = $derived(allConcepts.filter((k) => k.s.met > 0 || app.progress.days[k.day.id]?.theoryDone));
   const ahead = $derived(allConcepts.length - map.length);
   const solid = $derived(map.filter((k) => k.s.status === 'solid').length);
+  const found = $derived(Object.keys(app.eggs.found).length);
 </script>
 
 <div class="screen">
@@ -172,9 +173,30 @@
       later than the fact you finished.
     </p>
   {/if}
+
+  <!-- Only there once something has been found: the cabinet is itself a surprise. -->
+  {#if found}
+    <button class="cabinet" onclick={() => router.go('/curiosities')}>
+      <span aria-hidden="true">🗝️</span>
+      <span>The cabinet of curiosities · {found} found</span>
+    </button>
+  {/if}
 </div>
 
 <style>
+  .cabinet {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 28px auto 8px;
+    padding: 9px 15px;
+    border-radius: 999px;
+    border: 1px dashed var(--border-strong);
+    color: var(--text-dim);
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
   .hero {
     padding: 18px 18px 12px;
   }
