@@ -1,6 +1,7 @@
 lang: go
 challenges:
   - id: make-cap
+    part: 2
     prompt: |
       Create a slice of `int` named `s` with length 0 and capacity 1000, in one statement.
     hint: The built-in that allocates slices, maps and channels takes the type, then a length, then an optional capacity.
@@ -31,6 +32,7 @@ challenges:
       - "s := []int{0, 1000}"
 
   - id: append-assign
+    part: 2
     prompt: |
       `s` holds `1, 2, 3`. Add `4` to it so that `s` itself holds four elements afterwards.
     given: |
@@ -62,6 +64,7 @@ challenges:
       - "s[3] = 4"
 
   - id: three-index
+    part: 3
     prompt: |
       `head` should be the first two elements of `full`, but appending to `head` must **never** overwrite `full[2]`. Define `head` with a *full slice expression* (the three-index form).
     given: |
@@ -95,6 +98,7 @@ challenges:
       - "head := full[:2][:2]"
 
   - id: detach-copy
+    part: 3
     prompt: |
       `firstLine` should be the first 60 bytes of `data`, in a **brand-new array**, so that `data` (which may be huge) can be garbage-collected. Use only built-ins — no imports.
     given: |
@@ -129,6 +133,7 @@ challenges:
       - "firstLine := append([]byte(nil), data[:60])"
 
   - id: nil-slice
+    part: 2
     prompt: |
       Declare `s` as a `[]int` that is **nil** — no `make`, no literal — then append `1` to it.
     hint: A slice's zero value is already usable with append.

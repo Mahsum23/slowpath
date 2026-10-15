@@ -1,6 +1,6 @@
 # Hello, and a compiler that says no
 
-## Theory
+## Part 1: The smallest program that works
 
 Go is a small language. That is not marketing — the spec is about 100 pages, it has 25
 keywords, and you can hold most of it in your head. C++ has 90-odd keywords and a
@@ -64,6 +64,15 @@ discovered the target box had the wrong `libstdc++`, you can probably see why th
 property is most of the reason Docker, Kubernetes, Terraform and Prometheus are all
 written in Go. Deployment is `scp`.
 
+### Check yourself
+
+1. `go run hello.go` executes your program immediately, the way `python script.py` does. What
+   is it actually doing underneath?
+2. A Go "hello world" binary is around 2 MB where the C equivalent is a few kilobytes. What is
+   in there, and what do you get in exchange?
+
+## Part 2: Unused things are errors
+
 ### Refusal one: an unused variable is an error
 
 ```go
@@ -119,6 +128,16 @@ That second one is not a hack — it is the standard way to register something. 
 `net/http/pprof` for its side effect is how you bolt a live profiler onto a running Go
 server, which is a genuinely great trick you will meet again.
 
+### Check yourself
+
+1. Your build fails with `"os" imported and not used`. Give two reasons this is an error
+   rather than a warning.
+2. You commented out the only line using a variable, and Go refuses to compile. What is the
+   one-line escape hatch?
+3. What does `import _ "net/http/pprof"` do, if you never refer to the package by name?
+
+## Part 3: No opinions about formatting
+
 ### Refusal three: you don't get to have opinions about formatting
 
 ```bash
@@ -172,19 +191,11 @@ the toolchain chose, not one the language demands, which is a distinction almost
 who complains about it knows. Reading the actual spec of a language you are learning is
 an unreasonably high-value hour, and Go's is short enough to make that realistic.
 
-## Quiz
+### Check yourself
 
-1. `go run` executes your program immediately, the way `python script.py` does. What is
-   it actually doing under the hood, and how is that different from an interpreter?
-2. Your build fails with `"os" imported and not used`. Give the two separate reasons Go's
-   designers made this an error rather than a warning.
-3. A Go "hello world" binary is about 2 MB, where the C equivalent is a few kilobytes.
-   What is in there, and what do you get in exchange for the size?
-4. You are mid-debug, you have commented out the only line that used a variable, and the
-   compiler now refuses to build. What is the one-line escape hatch, and why is it written
-   to be ugly?
-5. What does `import _ "net/http/pprof"` do, given that the underscore means you never
-   reference the package by name?
+1. What do `gofmt -d` and `gofmt -w` do, and how do you configure gofmt's brace style?
+2. The Go spec says a compiler *may* reject an unused local variable. What does "may" tell you
+   about the rule?
 
 ## Drill
 

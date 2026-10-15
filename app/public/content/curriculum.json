@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "title": "slowpath",
-  "generatedAt": "2026-10-12T11:43:51.004Z",
+  "generatedAt": "2026-10-15T14:06:20.714Z",
   "weeks": [
     {
       "id": "track-cpp",
@@ -33,7 +33,7 @@
       "days": 6,
       "availableDays": 6,
       "url": "content/weeks/track-go.json",
-      "contentHash": "sha256:489965fd204551646ca1c3b8d0167745",
+      "contentHash": "sha256:75a51ca4723fd7d436029933cdfe13fc",
       "available": true
     }
   ]

@@ -137,7 +137,8 @@ export function mergeReview(local: ReviewState, remote: ReviewState): ReviewStat
       continue;
     }
     const lead = (l.lastAt ?? '') >= (r.lastAt ?? '') ? l : r;
-    cards[id] = { ...lead, seen: Math.max(l.seen, r.seen), lapses: Math.max(l.lapses, r.lapses) };
+    const firstAt = [l.firstAt, r.firstAt].filter(Boolean).sort()[0] ?? null;
+    cards[id] = { ...lead, seen: Math.max(l.seen, r.seen), lapses: Math.max(l.lapses, r.lapses), ...(firstAt ? { firstAt } : {}) };
   }
 
   const ambush = (local.lastAmbush ?? '') >= (remote.lastAmbush ?? '') ? local.lastAmbush : remote.lastAmbush;

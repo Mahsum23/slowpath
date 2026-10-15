@@ -1,6 +1,7 @@
 lang: go
 challenges:
   - id: zero-values
+    part: 1
     prompt: |
       Declare three variables with `var` and **no initial value** — `i` an `int`, `s` a `string`, `p` a pointer to `int` — then print them with exactly this call shape: `fmt.Printf("int=%d string=%q ptr=%v\n", …)`.
     hint: "`var name type` on its own line gives the variable its type's zero value; a pointer's is `nil`."
@@ -54,6 +55,7 @@ challenges:
         fmt.Printf("int=%d string=%q ptr=%v\n", s, i, p)
 
   - id: package-level
+    part: 2
     prompt: |
       Outside any function, at package level, declare an `int` named `limit` with the value `10`.
     hint: The short declaration operator is only legal inside a function body.
@@ -88,6 +90,7 @@ challenges:
       - "int limit = 10"
 
   - id: shadow-fix
+    part: 2
     prompt: |
       This prints `outer count is 1`, and you want it to print `2`. Change only the inner line so it **assigns to the existing** `count` instead of creating a new variable that hides it.
     given: |
@@ -127,6 +130,7 @@ challenges:
       - "count == 2"
 
   - id: mixed-ints
+    part: 3
     prompt: |
       `a` is an `int` and `b` is an `int64`, and `fmt.Println(a + b)` does not compile. Write the one `fmt.Println` call that prints their sum by converting `a` to `int64`.
     given: |

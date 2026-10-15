@@ -646,3 +646,9 @@ nerdy and dark humour; myth and the hacker underground; old comments, secret mod
 left behind), then hid things in the app accordingly. Not listed here on purpose; the code is
 `app/src/lib/eggs.ts`, and CLAUDE.md has the rules for adding more.
 
+**A review that ends (2026-10-15).** He had 88 cards due and found it frightening. The review
+is now a daily slice: 15 cards by default (adjustable in Settings), the ones most likely to
+be forgotten first, plus at most 6 brand-new cards a day. The rest waits for later days and is
+never shown as a debt. Same request: Go got the parts treatment SQL had — days 1–6 split into
+2–3 parts with their own questions (6 new), and the "nothing untaught" check now covers Go cards.
+

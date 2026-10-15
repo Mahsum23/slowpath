@@ -174,6 +174,21 @@
   </section>
 
   <section>
+    <h2>Daily review</h2>
+    <div class="segmented" role="radiogroup" aria-label="Cards in a day's review">
+      {#each [10, 15, 25, 40] as n}
+        <button role="radio" aria-checked={app.dailyReview === n} class:on={app.dailyReview === n} onclick={() => app.setDailyReview(n)}>
+          {n}
+        </button>
+      {/each}
+    </div>
+    <p class="hint">
+      How many cards make a day's review, the ones you're most likely to forget first. Whatever
+      is left over waits for the next days rather than piling up as a debt.
+    </p>
+  </section>
+
+  <section>
     <h2>Keyboard</h2>
     <p class="hint">
       <kbd>M</kbd> asks the mentor, <kbd>Esc</kbd> closes it, <kbd>1</kbd>–<kbd>4</kbd> answer

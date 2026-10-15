@@ -4,6 +4,7 @@
 # deterministically, so authoring the correct one first is safe.
 questions:
   - id: q1
+    part: 1
     prompt: >
       `go run hello.go` executes your program immediately, the way `python script.py`
       does. What is it actually doing underneath, and how does that differ from an
@@ -39,6 +40,7 @@ questions:
           above it.
 
   - id: q2
+    part: 2
     prompt: >
       Your Go build fails with `"os" imported and not used`. Give two separate reasons
       the language designers made this an error rather than a warning.
@@ -74,6 +76,7 @@ questions:
           anything precisely because nothing refers to it.
 
   - id: q3
+    part: 1
     prompt: >
       A Go "hello world" binary is around 2 MB where the C equivalent is a few kilobytes.
       What is in there, and what do you get in exchange for the size?
@@ -108,6 +111,7 @@ questions:
           program needs from its first instruction.
 
   - id: q4
+    part: 2
     prompt: >
       You are mid-debug, you commented out the only line using a variable, and Go now
       refuses to compile. What is the one-line escape hatch, and why is it written to be
@@ -140,6 +144,7 @@ questions:
           declared inside a function and never used fails exactly the same way.
 
   - id: q5
+    part: 2
     prompt: >
       What does `import _ "net/http/pprof"` do, given that the blank identifier means you
       never refer to the package by name?
@@ -172,3 +177,54 @@ questions:
           That is `import . "pkg"`, the dot import, which is discouraged precisely because
           it makes it impossible to see where a name came from. The blank identifier is
           the opposite: no names at all.
+
+  - id: q6
+    part: 3
+    tag: gofmt
+    prompt: >
+      What do `gofmt -d ugly.go` and `gofmt -w ugly.go` do, and how do you configure
+      gofmt to put opening braces on their own line?
+    options:
+      - text: >
+          `-d` prints the diff it would apply, `-w` rewrites the file in place — and there
+          is no setting for brace style: one canonical format, no configuration
+        correct: true
+        why: >
+          That is the whole point of gofmt: every Go file on earth looks the same, so the
+          argument about style never starts. It has no indentation or brace options.
+      - text: "`-d` deletes formatting, `-w` warns; braces are set in a `.gofmt` file"
+        correct: false
+        why: >
+          `-d` means *diff* and `-w` means *write*. And there is no config file — unlike a
+          `.clang-format`, which differs per project.
+      - text: "`-d` and `-w` do the same thing; braces are set with `-style=allman`"
+        correct: false
+        why: >
+          One shows, the other writes. And gofmt deliberately has no style flags at all.
+
+  - id: q7
+    part: 3
+    tag: the unused-variable rule
+    prompt: >
+      The Go specification says "A compiler *may* make it illegal to declare a variable
+      inside a function body if the variable is never used." What does that wording tell
+      you about the rule?
+    options:
+      - text: >
+          It is an implementation restriction the language permits, not one it requires —
+          the standard `gc` compiler chooses to enforce it
+        correct: true
+        why: >
+          "May" grants permission. In practice it is a rule because the compiler everyone
+          uses exercises that permission, but it is the toolchain's choice, not the language's
+          demand.
+      - text: It is only a warning, and `go build` lets it through with a flag
+        correct: false
+        why: >
+          `gc` fails the build, and there is no flag to downgrade it. The escape hatch is
+          `_ = x` in the code.
+      - text: It is a language rule every Go compiler must enforce
+        correct: false
+        why: >
+          The spec's wording is "may", in a section titled *implementation restriction*. A
+          conforming compiler could accept the program.

@@ -276,5 +276,51 @@ ok('each marked block earns a card', pcards.filter((x) => x.kind === 'parsons').
 ok('the block key rides along', pcards.find((x) => x.kind === 'parsons').questionId === keyed);
 ok('a parsons id round-trips', parseCardId(`parsons:day-01:${keyed}`).questionId === keyed);
 
+// --- today's review: a slice, not a debt --------------------------------------
+{
+  const { todayQueue, waiting, DAILY_REVIEW, NEW_PER_DAY } = R;
+  const now = new Date(2026, 9, 15, 12, 0);
+  const on = today(now);
+  const ago = (d) => new Date(now.getTime() - d * 86400000).toISOString();
+  const deck = [];
+  const cards = {};
+  // 80 cards due again, with different chances of having been forgotten…
+  for (let i = 0; i < 80; i++) {
+    const id = `quiz:d:r${i}`;
+    deck.push({ id, kind: 'quiz', dayId: 'd', questionId: `r${i}` });
+    cards[id] = { interval: 1 + (i % 10), ease: 2.3, streak: 1, due: '2026-10-10', seen: 2, lapses: 0, lastAt: ago(5 + (i % 7)) };
+  }
+  // …and 30 never answered.
+  for (let i = 0; i < 30; i++) deck.push({ id: `quiz:d:n${i}`, kind: 'quiz', dayId: 'd', questionId: `n${i}` });
+  const st = { cards, lastAmbush: null };
+  const q = todayQueue(deck, st, now);
+  ok(`a backlog of 80 + 30 new is a slice of ${DAILY_REVIEW}`, q.length === DAILY_REVIEW, q.length);
+  const nNew = q.filter((c) => !cards[c.id]).length;
+  ok('new cards get room even behind a backlog', nNew >= 1 && nNew <= NEW_PER_DAY, nNew);
+  const r = (c) => { const x = cards[c.id]; const t = (now - new Date(x.lastAt)) / 86400000; return 1 / (1 + t / (9 * x.interval)); };
+  const picked = q.filter((c) => cards[c.id]).map(r);
+  const left = deck.filter((c) => cards[c.id] && !q.includes(c)).map(r);
+  ok('the reviews chosen are the ones most likely forgotten', Math.max(...picked) <= Math.min(...left) + 1e-12);
+  ok('the backlog is still counted, for whoever asks', waiting(deck, st, on) === 80);
+
+  // Answer five today: the slice shrinks by five, it does not refill.
+  const st2 = { cards: { ...cards }, lastAmbush: null };
+  for (const c of q.slice(0, 5)) st2.cards[c.id] = grade(st2.cards[c.id] ?? newCard(now), 'good', now, () => 0.5);
+  ok('answering shrinks the day', todayQueue(deck, st2, now).length === DAILY_REVIEW - 5);
+  const st3 = { cards: { ...cards }, lastAmbush: null };
+  for (const c of deck.slice(0, DAILY_REVIEW)) st3.cards[c.id] = grade(st3.cards[c.id] ?? newCard(now), 'good', now, () => 0.5);
+  ok('a finished day stays finished', todayQueue(deck, st3, now).length === 0);
+  ok('…until tomorrow', todayQueue(deck, st3, new Date(2026, 9, 16, 9, 0)).length === DAILY_REVIEW);
+
+  // New cards introduced today count against the day's new allowance.
+  const st4 = { cards: {}, lastAmbush: null };
+  const fresh = deck.filter((c) => !cards[c.id]);
+  for (const c of fresh.slice(0, NEW_PER_DAY)) st4.cards[c.id] = grade(newCard(now), 'again', now, () => 0.5);
+  ok('the first answer stamps firstAt', Boolean(st4.cards[fresh[0].id].firstAt));
+  ok('no more new cards once the day has had its share', todayQueue(fresh, st4, now).filter((c) => !st4.cards[c.id]).length === 0);
+  ok('a small budget is honoured', todayQueue(deck, st, now, 4).length === 4);
+  ok('an empty deck is an empty day', todayQueue([], st, now).length === 0);
+}
+
 console.log(fails ? `\n  ${fails} FAILING` : '\n  all review cases pass');
 process.exit(fails ? 1 : 0);

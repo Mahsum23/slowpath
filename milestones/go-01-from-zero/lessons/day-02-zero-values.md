@@ -1,6 +1,6 @@
 # Zero values, and the walrus that bites
 
-## Theory
+## Part 1: There is no uninitialised memory
 
 Yesterday was the toolchain. Today is the part of Go you will type a thousand times:
 declaring things. It is a small topic with two genuinely sharp edges in it.
@@ -38,6 +38,14 @@ The design payoff is that zero values are chosen to be *useful*, not merely defi
 `nil` slice has length 0 and you can `append` to it. A `sync.Mutex`'s zero value is an
 unlocked mutex, so `var mu sync.Mutex` is ready to use with no constructor. Go has no
 constructors at all, and this is why it can get away with that.
+
+### Check yourself
+
+1. What is `var count int` before you assign anything, and how does that differ from
+   `int count;` inside a C function?
+2. Name two zero values chosen so the type is usable without initialising it.
+
+## Part 2: Declaring, and the `:=` trap
 
 ### Two ways to declare, and one of them is only for inside functions
 
@@ -97,6 +105,14 @@ you can attach with `go vet -vettool=...`, and it is kept out of the default set
 on idiomatic Go it fires constantly on shadowing that is entirely intentional. So this
 one is on you, and knowing the shape of it is most of the defence.
 
+### Check yourself
+
+1. You write `count := 2` inside an `if` block when `count` already exists outside it. What
+   happens to the outer variable?
+2. Why does `limit := 10` at package level fail to compile, and what do you write instead?
+
+## Part 3: No implicit conversions, and constants
+
 ### No implicit numeric conversions. None.
 
 ```go
@@ -150,18 +166,10 @@ in variable declaration (overflows)
 Note that the compiler tells you the *value* it computed. That is an error message you
 can only get from a language that does its constant arithmetic before choosing a type.
 
-## Quiz
+### Check yourself
 
-1. In Go, what is the value of `var count int` before you assign anything to it, and how
-   does that differ from `int count;` inside a function in C?
-2. Name two zero values that were deliberately chosen so the zero value is immediately
-   usable, and say what you can do with them without initialising anything.
-3. `count := 2` inside an `if` block, when `count` already exists outside it. What
-   happens to the outer variable, and what is this mistake called?
-4. Go refuses to compile `a + b` where `a` is `int` and `b` is `int64`, even on a machine
-   where both are 64 bits wide. Why, and what class of C bug does that prevent?
-5. Why can `const huge = (1 << 62) * 4` compile when no Go integer type can hold that
-   value?
+1. Why does Go refuse `a + b` where `a` is `int` and `b` is `int64`, even when both are 64 bits?
+2. Why can `const huge = (1 << 62) * 4` compile when no Go integer type can hold it?
 
 ## Drill
 

@@ -1,6 +1,7 @@
 lang: go
 challenges:
   - id: return-err
+    part: 1
     prompt: |
       `os.Open` returned `f` and `err`. Write the check that hands the error straight up to the caller when there is one.
     given: |
@@ -59,6 +60,7 @@ challenges:
         if (err != nil) then return err
 
   - id: defer-close
+    part: 2
     prompt: |
       `f` was opened successfully. Add the one line that guarantees it is closed when the surrounding function returns — on every path, including a panic — without calling `Close` right now.
     given: |
@@ -108,6 +110,7 @@ challenges:
       - "defer close(f)"
 
   - id: defer-order
+    part: 2
     prompt: |
       Write a `main` body that prints `body` normally and uses *three* `defer` statements so the full output is, in order: `body`, `first`, `second`, `third`. Print each with `fmt.Println`.
     hint: Deferred calls run last-in, first-out, like a stack.
@@ -165,6 +168,7 @@ challenges:
         defer fmt.Println("body")
 
   - id: wrap-error
+    part: 1
     prompt: |
       `err` is what `os.Open("/no/such/file")` returned. Build `wrapped`: an error whose message starts with `loading config: ` and which `errors.Is` can still see `err` *through*.
     given: |
@@ -206,6 +210,7 @@ challenges:
       - 'wrapped := fmt.Sprintf("loading config: %w", err)'
 
   - id: errors-is
+    part: 1
     prompt: |
       Print whether `wrapped` is — or wraps — `os.ErrNotExist`, using the `errors` package (not `==`).
     given: |

@@ -1,6 +1,6 @@
 # Slices are not arrays
 
-## Theory
+## Part 1: An array is a value, a slice is a view
 
 This is the day Go stops feeling obvious. Slices are the type you will use constantly,
 they look like a dynamic array from any other language, and they have one behaviour that
@@ -54,6 +54,14 @@ owns its backing array in the eyes of the garbage collector, and it can grow.
 mostly appear as the thing a slice points at, and as fixed-size buffers like `[32]byte`
 for a hash.
 
+### Check yourself
+
+1. `a := [3]int{1,2,3}; b := a; b[0] = 99`. What is `a[0]` afterwards, and what if both had
+   been slices?
+2. What are the three fields of a slice header, and which of them does copying a slice copy?
+
+## Part 2: `len`, `cap` and `append`
+
 ### `len` is what's there, `cap` is what fits
 
 ```go order
@@ -91,6 +99,13 @@ If you know roughly how many elements you'll have, say so and skip the copying:
 ```go
 s := make([]int, 0, 1000)   // len 0, cap 1000
 ```
+
+### Check yourself
+
+1. Why must you write `s = append(s, x)` rather than just `append(s, x)`?
+2. You will append about 1000 items. What does `make([]int, 0, 1000)` save you?
+
+## Part 3: The sub-slice trap
 
 ### The trap
 
@@ -166,17 +181,12 @@ watch the pin let go — clone a 5-byte head of a 41-byte array and the copy rep
 wondered how a Go service leaks memory without a single missing `free`, this is the
 most common answer, along with goroutines that never exit — which is Day 6's problem.
 
-## Quiz
+### Check yourself
 
-1. `a := [3]int{1,2,3}; b := a; b[0] = 99`. What is `a[0]` afterwards, and what if the
-   two had been slices instead?
-2. What are the three fields of a slice header, and which of them does copying a slice
-   copy?
-3. Why must you write `s = append(s, x)` rather than just `append(s, x)`?
-4. `head := full[:2]` where `full` has 5 elements. What is `cap(head)`, and what does
+1. `head := full[:2]` where `full` has five elements. What is `cap(head)`, and what does
    `append(head, 99)` do to `full`?
-5. You read a 500 MB file and keep a 60-byte slice of it in a cache. How much memory stays
-   reachable, and what is the fix?
+2. You keep a 60-byte slice of a 500 MB file in a cache. How much memory stays reachable, and
+   what is the fix?
 
 ## Drill
 

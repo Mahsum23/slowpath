@@ -1,6 +1,7 @@
 lang: go
 challenges:
   - id: pointer-receiver
+    part: 1
     prompt: |
       Define a struct type `Counter` with one `int` field `n`, and a method `Bump` that increments `n` **in place**, so that calling it twice on a `Counter` variable leaves `n` at 2.
     hint: A method that has to change the value it is called on needs a receiver that points at it.
@@ -55,6 +56,7 @@ challenges:
         func (c *Counter) Bump() { c.n++ }
 
   - id: stringer
+    part: 1
     prompt: |
       Define `type Celsius float64` and give it a `String` method so that `fmt.Println(Celsius(36.6))` prints `36.6°C` — one decimal place, then `°C`.
     hint: "`fmt.Println` looks for a method with this exact name and signature, and calls it for you."
@@ -112,6 +114,7 @@ challenges:
         }
 
   - id: interface-decl
+    part: 2
     prompt: |
       Declare an interface `Greeter` with a single method `Greet` that takes no arguments and returns a `string`.
     hint: An interface is a `type` whose underlying type is the keyword `interface` followed by a list of method signatures.
@@ -161,6 +164,7 @@ challenges:
         }
 
   - id: compile-time-check
+    part: 2
     prompt: |
       `English` is meant to satisfy `Greeter`. Write the single package-level line that makes the **build fail** if it ever stops doing so, without keeping a usable variable around.
     given: |
