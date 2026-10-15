@@ -1,6 +1,7 @@
 lang: go
 challenges:
   - id: make-chans
+    part: 2
     prompt: |
       Create two channels: `done`, an **unbuffered** channel of `string`, and `jobs`, a **buffered** channel of `int` with room for 3 values.
     hint: Both come from the same built-in as slices and maps; the optional second argument is the buffer size.
@@ -39,6 +40,7 @@ challenges:
         jobs := make(chan int, 3)
 
   - id: goroutine-send
+    part: 2
     prompt: |
       Start a goroutine that sends `"worker finished"` on `done`, then receive that value in `main` and print it. Use `go` with a function literal.
     given: |
@@ -90,6 +92,7 @@ challenges:
         }()
 
   - id: close-comma-ok
+    part: 2
     prompt: |
       `ch` is a buffered channel that already holds one value. Close it, then receive one value using the form that also reports whether the value was real, and print both on one line.
     given: |
@@ -136,6 +139,7 @@ challenges:
         fmt.Println(v, true)
 
   - id: waitgroup
+    part: 3
     prompt: |
       Use the `sync.WaitGroup` `wg` so that `main` waits for one goroutine that prints `working`. Register the work **before** starting the goroutine, and have the goroutine mark itself finished on the way out.
     given: |
@@ -193,6 +197,7 @@ challenges:
         }()
 
   - id: mutex-defer
+    part: 3
     prompt: |
       Write the two lines that go at the top of a function so that `mu` is held for the rest of it and is released on **every** way out of the function.
     given: |

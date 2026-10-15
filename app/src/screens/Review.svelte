@@ -359,7 +359,11 @@
     // In practice mode nothing is "due", so every card is fair game; `seen` still
     // stops the same one coming round twice in a sitting.
     const on = practice ? '9999-12-31' : today();
-    let next = pickNext(answerable, app.progress.review, on, Math.random, seen, previous, (c) =>
+    // Outside practice, only today's slice is dealt (review.ts todayQueue): a fixed number a
+    // day, most at risk first. Practice is the way to go past it.
+    const slice = new Set(app.dueNow.map((c) => c.id));
+    const pool = practice ? answerable : answerable.filter((c) => slice.has(c.id));
+    let next = pickNext(pool, app.progress.review, on, Math.random, seen, previous, (c) =>
       weightOf(c, app.heats, app.dayById),
     );
     // A card answered on reflex twice running no longer measures anything: deal the same
@@ -908,7 +912,7 @@
       <p class="lbl">{roundDay ? 'Practice round' : 'Review'}</p>
       <p class="ctx">
         {#if roundDay}{roundCtx?.day.title ?? ''}{#if roundCards && !roundDone}{' · '}{Math.min(roundAt + 1, roundCards.length)} of {roundCards.length}{/if}
-        {:else if practice}Practice{:else if remaining > 0}{remaining} due{:else}Nothing due — this one's a bonus{/if}
+        {:else if practice}Practice{:else if remaining > 0}{remaining} left today{:else}Today's review is done{/if}
         {#if app.clearedToday && !roundDay}· {app.clearedToday} cleared today{/if}
       </p>
     </div>
@@ -981,10 +985,15 @@
     </div>
   {:else if !card}
     <div class="empty card">
-      <h2>Deck's clear</h2>
+      <h2>Today's review is done</h2>
       <p>
-        Everything due has been answered. The rest is resting — cards come back on a
-        widening interval, and sooner if you missed them.
+        {#if app.waitingCount}
+          That's the day's slice. Whatever else is due is spread over the next days, the ones
+          you're most likely to forget first — nothing is lost by waiting a day.
+        {:else}
+          Everything due has been answered. The rest is resting — cards come back on a
+          widening interval, and sooner if you missed them.
+        {/if}
       </p>
       <p class="fine">
         You can keep going anyway. Answering early won't push a card further out, so

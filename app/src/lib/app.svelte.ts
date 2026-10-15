@@ -17,7 +17,8 @@ import {
   type Track,
 } from './types';
 import {
-  cardsFor, clearedOn, dueCards, grade, newCard, parseCardId, shouldAmbush, type CardRef, type Grade,
+  cardsFor, clearedOn, DAILY_REVIEW, grade, newCard, parseCardId, shouldAmbush, todayQueue, waiting,
+  type CardRef, type Grade,
 } from './review';
 import * as store from './storage';
 import * as cloud from './cloud';
@@ -191,8 +192,28 @@ class AppStore {
     return heatMap(this.deck, this.progress.review, this.dayById);
   }
 
+  /**
+   * What is left of today's review: a fixed-size slice, most-at-risk first, with a few new
+   * cards (review.ts todayQueue). Not "everything due" — that number only grows, and a
+   * number that only grows reads as a debt.
+   */
   get dueNow(): CardRef[] {
-    return dueCards(this.deck, this.progress.review, today());
+    return todayQueue(this.deck, this.progress.review, new Date(), this.dailyReview);
+  }
+
+  /** Cards due again beyond today's slice. Shown nowhere loudly; they come in later slices. */
+  get waitingCount(): number {
+    return waiting(this.deck, this.progress.review, today());
+  }
+
+  /** The size of a day's review, as set on this device. */
+  get dailyReview(): number {
+    return this.progress.settings.dailyReview ?? DAILY_REVIEW;
+  }
+
+  async setDailyReview(n: number) {
+    this.progress.settings.dailyReview = n;
+    await this.persist();
   }
 
   /** Cards answered today, local date — read off the cards, so sync cannot inflate it. */
@@ -217,7 +238,9 @@ class AppStore {
   ambush = $state(false);
 
   private rollAmbush() {
-    this.ambush = shouldAmbush(this.progress.review, this.deck, today());
+    // Only when today's slice has something in it: a review that is already done for the
+    // day is not worth interrupting a lesson for.
+    this.ambush = shouldAmbush(this.progress.review, this.dueNow, today());
   }
 
   /** Mark the interruption as spent for the day. */

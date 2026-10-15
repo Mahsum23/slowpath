@@ -1,6 +1,7 @@
 # Answer key for Go day 04. Question text lives in the .md; the reasoning lives here.
 questions:
   - id: q1
+    part: 1
     prompt: >
       What is a receiver in Go, and where does it appear in a method declaration?
     options:
@@ -31,6 +32,7 @@ questions:
           the name is the receiver, and it is a syntax Go uses nowhere else.
 
   - id: q2
+    part: 1
     prompt: >
       A Go method with a value receiver increments a field of its receiver. Why does the
       caller's value not change, and why is there no warning?
@@ -68,6 +70,7 @@ questions:
           are still a copy.
 
   - id: q3
+    part: 2
     prompt: >
       What does a Go type have to write in order to implement an interface?
     options:
@@ -102,6 +105,7 @@ questions:
           happens at compile time, at the point where a value is assigned to the interface.
 
   - id: q4
+    part: 2
     prompt: >
       `strings.Builder` never mentions `io.Writer` anywhere, yet `fmt.Fprintf` accepts a
       pointer to one. Explain how, and say who defines the interface in that arrangement.
@@ -137,6 +141,7 @@ questions:
           destroy the property that makes the design worth having.
 
   - id: q5
+    part: 2
     prompt: >
       What does the line `var _ Greeter = English{}` accomplish, given that it stores
       nothing and is never referenced?
@@ -169,3 +174,25 @@ questions:
           Types are not subject to the unused rule — only variables and imports are, and
           only inside function bodies for variables. This line is at package level and is
           there purely for the type check.
+
+  - id: q6
+    part: 1
+    tag: receivers
+    prompt: >
+      `BumpPointer` has a pointer receiver, `func (c *Counter) BumpPointer()`. Why does
+      `c.BumpPointer()` compile when `c` is a plain `Counter` variable, not a `*Counter`?
+    options:
+      - text: "`c` is addressable, so Go inserts the `&` for you: it calls `(&c).BumpPointer()`"
+        correct: true
+        why: >
+          Go drops C++'s `.` versus `->` distinction. For an addressable value the compiler
+          takes the address itself, and the method modifies `c`.
+      - text: Go copies `c` to the heap and calls the method on the copy
+        correct: false
+        why: >
+          No copy: the method gets the address of `c` itself, which is why the change sticks.
+      - text: It compiles, but the change is lost, as with a value receiver
+        correct: false
+        why: >
+          The receiver is a pointer to `c`, so the increment lands on `c`. Only a *value*
+          receiver works on a copy.

@@ -133,7 +133,99 @@ def parts_of(day):
     return [(None, day.get('theoryMarkdown') or '')]
 
 
+# --- Go ---------------------------------------------------------------------------
+# The Go track starts from zero, so nothing is assumed: every package function, builtin
+# and construct a card uses must have appeared in a lesson's code first.
+
+GO_PKGS = {'fmt', 'os', 'errors', 'sync', 'strings', 'io', 'slices', 'atomic', 'time', 'math', 'sort',
+           'bytes', 'strconv', 'bufio', 'net', 'http', 'context', 'runtime', 'unicode', 'maps', 'unsafe'}
+GO_BUILTINS = {'append', 'cap', 'len', 'make', 'new', 'copy', 'delete', 'panic', 'recover', 'close', 'clear', 'min', 'max'}
+GO_WATCHED = [
+    ('defer', r'\bdefer\b'),
+    ('go (a goroutine)', r'\bgo\s+(?:func\b|[\w.]+\()'),
+    ('select', r'\bselect\s*\{'),
+    ('chan', r'\bchan\b'),
+    ('<- (send/receive)', r'<-'),
+    ('goto', r'\bgoto\b'),
+    ('switch', r'\bswitch\b'),
+    ('interface type', r'\binterface\s*\{'),
+    ('struct type', r'\bstruct\s*\{'),
+    ('map type', r'\bmap\['),
+    ('range', r'\brange\b'),
+    ('const', r'\bconst\b'),
+    ('iota', r'\biota\b'),
+    ('method receiver', r'\bfunc\s+\(\s*\w+\s+\*?\w+\s*\)'),
+    ('anonymous function', r'\bfunc\('),
+    ('three-index slice', r'\[[^\[\]:]*:[^\[\]:]*:[^\[\]:]*\]'),
+    ('... (variadic / spread)', r'\.\.\.'),
+    ('%w (wrapping)', r'%w'),
+]
+
+
+def go_constructs(code):
+    found = set()
+    if '%w' in code:
+        found.add('%w (wrapping)')
+    s = re.sub(r'//[^\n]*', ' ', code)
+    s = re.sub(r'`[^`]*`', '""', s)
+    s = re.sub(r'"(?:[^"\\\n]|\\.)*"', '""', s)
+    s = re.sub(r"'(?:[^'\\\n]|\\.)*'", "''", s)
+    for m in re.finditer(r'(?<![\w.])([a-z][a-z0-9]*)\.([A-Z]\w*)', s):
+        if m.group(1) in GO_PKGS:
+            name = f'{m.group(1)}.{m.group(2)}'
+            # Println without the newline is the same lesson, not a new one.
+            found.add({'fmt.Print': 'fmt.Println'}.get(name, name))
+    for m in re.finditer(r'(?<![\w.])([a-z]+)\s*\(', s):
+        if m.group(1) in GO_BUILTINS:
+            found.add(f'{m.group(1)}()')
+    for label, rx in GO_WATCHED:
+        if label != '%w (wrapping)' and re.search(rx, s):
+            found.add(label)
+    return found
+
+
+def go_code_in(md):
+    out = [m.group(2) for m in re.finditer(r'```([^\n]*)\n(.*?)```', md or '', re.S) if m.group(1).split(' ')[0] == 'go']
+    rest = re.sub(r'```[^\n]*\n.*?```', ' ', md or '', flags=re.S)
+    out += re.findall(r'`([^`\n]+)`', rest)
+    return out
+
+
+def check_go():
+    path = os.path.join(ROOT, 'app/public/content/weeks/track-go.json')
+    days = [d for d in json.load(open(path))['days'] if d.get('status') == 'available']
+    taught_before, problems = set(), 0
+    every = lambda xs: set().union(*[go_constructs(x) for x in xs]) if xs else set()
+    for day in days:
+        by_part, acc = {}, set(taught_before)
+        for n, md in parts_of(day):
+            acc |= every(go_code_in(md))
+            by_part[n] = set(acc)
+        taught = lambda part: by_part.get(part, acc) if part is not None else acc
+        items = []
+        for c in (day.get('write') or {}).get('challenges', []):
+            items.append((f"write {c['id']}", c.get('part'), [c['solution']]))
+        for c in ((day.get('practice') or {}).get('write') or {}).get('challenges', []):
+            items.append((f"practice {c['id']}", c.get('part'), [c['solution']]))
+        for kind, steps in (('drill', day.get('drill') or []), ('practice drill', (day.get('practice') or {}).get('drill') or [])):
+            for st in steps:
+                items.append((f"{kind} {st['id']}", st.get('part'), [st.get('code') or ''] + go_code_in(st['prompt']) + go_code_in(next((o['text'] for o in st['options'] if o['correct']), ''))))
+        for q in day.get('quiz') or []:
+            items.append((f"quiz {q['id']}", q.get('part'), go_code_in(q['prompt']) + go_code_in(next((o['text'] for o in q['options'] if o['correct']), ''))))
+        for label, part, code in items:
+            missing = sorted(every(code) - taught(part))
+            if missing:
+                problems += 1
+                where = f' (part {part})' if part is not None else ''
+                print(f"  FAIL  {day['id']}/{label}{where}: uses {', '.join(missing)}, not shown in any lesson up to here")
+        taught_before = acc
+    print(f'\nGo: {len(days)} day(s) checked, {problems} item(s) using something not yet taught')
+    return problems
+
+
 def main():
+    if '--track' in sys.argv and sys.argv[sys.argv.index('--track') + 1] == 'go':
+        sys.exit(1 if check_go() else 0)
     path = os.path.join(ROOT, 'app/public/content/weeks/track-sql.json')
     if not os.path.exists(path):
         sys.exit('No content found. Run: cd app && npm run content')
@@ -175,7 +267,9 @@ def main():
                 where = f' (part {part})' if part is not None else ''
                 print(f"  FAIL  {day['id']}/{label}{where}: uses {', '.join(missing)}, not shown in any lesson up to here")
         taught_before = whole
-    print(f'\n{len(days)} day(s) checked, {problems} item(s) using something not yet taught')
+    print(f'\nSQL: {len(days)} day(s) checked, {problems} item(s) using something not yet taught')
+    if '--track' not in sys.argv:
+        problems += check_go()
     sys.exit(1 if problems else 0)
 
 

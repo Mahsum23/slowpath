@@ -441,6 +441,10 @@ So a day's theory is split into **parts** (`app/src/lib/parts.ts`, tested in
   otherwise), each ending in `### Check yourself` with its questions as text. Every part after
   the first opens with the `SET search_path = dayNN;` reminder, because a part is often read
   on another day in a new session.
+- **Every track is split this way**: SQL days 4–10 and Go days 1–6. Go parts need no
+  `search_path` reminder. `tools/check-syllabus.py` checks Go cards too (`--track go`):
+  package functions, builtins and constructs (`defer`, `chan`, receivers, three-index slices …)
+  a card uses must appear in a lesson's Go code first.
 - **A part added to a published day** carries `added: { N: YYYY-MM-DD }` in `topic.yaml`.
   Someone who read the day before parts existed is credited with its original parts and
   *offered* the added one — Today puts it ahead of anything else, since the day's cards may
@@ -568,6 +572,25 @@ survive the next person who edits the deck:
   so it only ever *changes the question* — it never marks him wrong.
 - **Follow-up and fresh-angle cards say why** ("Fresh angle: … you'd started answering the
   original on reflex"). Nothing silent.
+
+## The review is a daily slice, never a debt
+
+He hit 88 due cards and said he was terrified of having to deal with them. Every finished
+part and practice round adds cards, and a card never answered was due the moment it
+existed, so "everything due" only grew. Now (`review.ts todayQueue`, tested in
+`test-review.mjs`):
+
+- **A day's review is a fixed slice**: 15 cards by default (Settings → Daily review: 10, 15,
+  25, 40), counting what was already answered today. Once it is done, it is done; "Keep
+  practising" is there for more.
+- **At most 6 never-answered cards join per day** (`NEW_PER_DAY`), in path order, always with
+  some room even behind a backlog, so new material keeps arriving. (Anki's answer to the same
+  problem: a limit on new cards and a limit on reviews per day.)
+- **Most-at-risk first**: among cards due again, the lowest recall on the forgetting curve.
+  Leftovers come back in later slices; nothing is lost by waiting a day.
+- **Never show the backlog as a number to be paid off.** Today and the deck say "Today's
+  review · N left" and "about M min". The total waiting exists (`waitingCount`) but is not
+  put in front of him.
 
 ## Motivation comes from seeing progress, not from points
 

@@ -54,6 +54,8 @@
   });
   const stillKnown = $derived(knownNow(app.progress.review));
   const wins = $derived(app.winsToday);
+  /** A review card takes about half a minute, a written one more; this is a fair middle. */
+  const reviewMinutes = $derived(Math.max(1, Math.round(app.dueNow.length * 0.5)));
 
   /** The next part to read: one added to a finished day, or the current day's next. */
   const reading = $derived(app.reading);
@@ -102,7 +104,7 @@
       <span class="lines">
         <strong>Before you start — one from before</strong>
         <em>
-          {#if app.dueNow.length === 1}1 card is due{:else if app.dueNow.length}{app.dueNow.length} cards are due{:else}A surprise one, nothing's actually due{/if}
+          {#if app.dueNow.length}Today's review: {app.dueNow.length} card{app.dueNow.length === 1 ? '' : 's'}, about {reviewMinutes} min{:else}A surprise one, nothing's actually due{/if}
         </em>
       </span>
       <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" /></svg>
@@ -331,12 +333,12 @@
              parked task was the only thing the phone could tell you about. The lab
              queue above says that now, and better, so this one is about review again. -->
         <strong>
-          {#if app.dueNow.length === 1}1 card due{:else if app.dueNow.length}{app.dueNow.length} cards due{:else}Nothing due — practise anyway{/if}
+          {#if app.dueNow.length}Today's review · {app.dueNow.length} left{:else if app.clearedToday}Today's review is done ✓{:else}Nothing due — practise anyway{/if}
         </strong>
         <em>
           {#if app.heats.length}
             Leaning on <b>{app.heats[0].label}</b> — you've been missing it
-          {:else if app.dueNow.length}From days you finished a while ago{:else}Answering early can't push a card further out{/if}
+          {:else if app.dueNow.length}About {reviewMinutes} min · the ones you're most likely to forget first{:else if app.clearedToday}The rest comes round in the next days. Practise more if you like{:else}Answering early can't push a card further out{/if}
         </em>
       </span>
       <svg class="chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" /></svg>

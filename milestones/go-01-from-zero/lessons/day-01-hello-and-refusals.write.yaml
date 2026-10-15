@@ -3,6 +3,7 @@
 lang: go
 challenges:
   - id: hello
+    part: 1
     prompt: |
       Write a complete Go program, from the first line, that prints `hello from Go` and exits.
     hint: A file that builds an executable belongs to one particular package, and something has to be imported before it can print.
@@ -61,6 +62,7 @@ challenges:
         }
 
   - id: silence-var
+    part: 2
     prompt: |
       The build fails with `declared and not used: count`. Add the one line that makes it build *without deleting* the variable and without printing it.
     given: |
@@ -96,6 +98,7 @@ challenges:
       - "// count"
 
   - id: blank-import
+    part: 2
     prompt: |
       Write the import line that pulls in `net/http/pprof` purely for the side effects of its `init` function, so the compiler does not complain that it is unused.
     hint: One character goes where the package's local name would normally go.
@@ -130,6 +133,7 @@ challenges:
       - 'import . "net/http/pprof"'
 
   - id: grouped-imports
+    part: 2
     prompt: |
       Write the *grouped* import declaration that brings in `fmt`, `os` and `strings` with a single `import` keyword.
     hint: The grouped form is the same keyword followed by a parenthesised list, one path per line.

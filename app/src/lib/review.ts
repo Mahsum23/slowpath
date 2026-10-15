@@ -72,6 +72,8 @@ export function grade(
 ): ReviewCard {
   const seen = card.seen + 1;
   const lastAt = now.toISOString();
+  // The first answer ever is what "introduced today" counts (todayQueue).
+  const firstAt = card.firstAt ?? (card.seen === 0 ? lastAt : undefined);
   // A right answer too quick to have read the question is recognition, not recall; any
   // slower or wrong answer clears the count.
   const reflex = result === 'good' && opts.reflex ? (card.reflex ?? 0) + 1 : 0;
@@ -80,7 +82,7 @@ export function grade(
   // Getting it right when you asked for it early is weak evidence — you chose the card
   // and it was still fresh — so it records the attempt and leaves the interval alone.
   // Failing it is strong evidence either way, and still pulls the card back.
-  if (opts.early && result === 'good') return { ...card, seen, lastAt, reflex };
+  if (opts.early && result === 'good') return { ...card, seen, lastAt, reflex, ...(firstAt ? { firstAt } : {}) };
 
   if (result === 'again') {
     return {
@@ -92,6 +94,7 @@ export function grade(
       lapses: card.lapses + 1,
       lastAt,
       reflex: 0,
+      ...(firstAt ? { firstAt } : {}),
     };
   }
 
@@ -108,6 +111,7 @@ export function grade(
     lapses: card.lapses,
     lastAt,
     reflex,
+    ...(firstAt ? { firstAt } : {}),
   };
 }
 
@@ -342,6 +346,82 @@ export const isDue = (card: ReviewCard | undefined, on: string): boolean => !car
 
 export function dueCards(deck: CardRef[], state: ReviewState, on: string): CardRef[] {
   return deck.filter((c) => isDue(state.cards[c.id], on));
+}
+
+// --- the day's review: a slice, not a debt -------------------------------------
+
+/**
+ * How many cards make a day's review, by default. A sitting is meant to fit beside a
+ * lesson in 20–30 minutes, and a write card alone can take two.
+ */
+export const DAILY_REVIEW = 15;
+/** At most this many cards never answered before join the review in one day. */
+export const NEW_PER_DAY = 6;
+
+/** The chance of recalling a card now (FSRS's curve, as motivation.ts uses), 0–1. */
+function recallNow(rc: ReviewCard, now: Date): number {
+  if (!rc.lastAt) return 0;
+  const t = Math.max(0, (now.getTime() - new Date(rc.lastAt).getTime()) / DAY_MS);
+  return 1 / (1 + t / (9 * Math.max(1, rc.interval)));
+}
+
+/**
+ * What today's review is: at most `budget` cards a day, counting the ones already
+ * answered today, of which at most NEW_PER_DAY are cards never answered before.
+ *
+ * This replaced "everything due". Every finished part and every practice round adds cards,
+ * and a card never answered was due the moment it existed, so the count only grew — 88 of
+ * them, at one point, which is a debt, not a review. Anki met the same problem long ago
+ * and solved it the same way: a limit on new cards a day and a limit on reviews a day.
+ *
+ * Among cards due again, the ones most likely to have been forgotten come first (lowest
+ * recall on the forgetting curve): with a backlog, those are the ones a review saves.
+ * New cards come in path order — older days first — and always get some room (a third of
+ * what is left), so a backlog of reviews never stops anything new from being learned.
+ * Cards left over are not lost and not late in any way that matters: they come back in
+ * the next days' slices, most at risk first.
+ */
+export function todayQueue(
+  deck: CardRef[],
+  state: ReviewState,
+  now: Date = new Date(),
+  budget = DAILY_REVIEW,
+  newPerDay = NEW_PER_DAY,
+): CardRef[] {
+  const on = today(now);
+  let answered = 0;
+  let introduced = 0;
+  for (const rc of Object.values(state.cards)) {
+    if (rc.lastAt && localDateOf(rc.lastAt) === on) answered++;
+    if (rc.firstAt && localDateOf(rc.firstAt) === on) introduced++;
+  }
+  const room = Math.max(0, budget - answered);
+  if (!room) return [];
+
+  const fresh: CardRef[] = [];
+  const again: { c: CardRef; r: number }[] = [];
+  for (const c of deck) {
+    const rc = state.cards[c.id];
+    if (!rc || rc.seen === 0) fresh.push(c);
+    else if (rc.due <= on) again.push({ c, r: recallNow(rc, now) });
+  }
+  again.sort((a, b) => a.r - b.r);
+
+  const newRoom = Math.min(Math.max(0, newPerDay - introduced), fresh.length);
+  // New cards are guaranteed a third of the room (at least one); reviews take the rest,
+  // and either side's unused room goes to the other.
+  const newShare = Math.min(newRoom, Math.max(1, Math.ceil(room / 3)));
+  const reviews = again.slice(0, room - newShare).map((x) => x.c);
+  const news = fresh.slice(0, Math.min(newRoom, room - reviews.length));
+  return [...reviews, ...news];
+}
+
+/** Cards due again (answered before, and due today or earlier) — the backlog, not today's slice. */
+export function waiting(deck: CardRef[], state: ReviewState, on: string): number {
+  return deck.filter((c) => {
+    const rc = state.cards[c.id];
+    return rc && rc.seen > 0 && rc.due <= on;
+  }).length;
 }
 
 /**

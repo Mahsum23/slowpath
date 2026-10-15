@@ -1,6 +1,7 @@
 # Answer key for Go day 02. Question text lives in the .md; the reasoning lives here.
 questions:
   - id: q1
+    part: 1
     prompt: >
       In Go, what is the value of `var count int` before you assign anything to it, and
       how does that differ from `int count;` inside a function in C?
@@ -34,6 +35,7 @@ questions:
           raise is for a variable you never *use*, which is a different rule.
 
   - id: q2
+    part: 1
     prompt: >
       Name two zero values deliberately chosen so the zero value is immediately usable,
       and say what you can do with them without initialising anything.
@@ -72,6 +74,7 @@ questions:
           genuinely exploited in some select-loop idioms.
 
   - id: q3
+    part: 2
     prompt: >
       You write `count := 2` inside an `if` block when `count` already exists outside it.
       What happens to the outer variable, and what is this mistake called?
@@ -104,6 +107,7 @@ questions:
           can hold.
 
   - id: q4
+    part: 3
     prompt: >
       Go refuses to compile `a + b` where `a` is `int` and `b` is `int64`, even on a
       machine where both are 64 bits wide. Why, and what class of C bug does it prevent?
@@ -141,6 +145,7 @@ questions:
           exceptions to remember.
 
   - id: q5
+    part: 3
     prompt: >
       Why can `const huge = (1 << 62) * 4` compile in Go when no Go integer type can hold
       that value?
@@ -174,3 +179,26 @@ questions:
           `uint64`'s maximum is 18446744073709551615, one less than this value — so even
           the widest integer type does not hold it, and that is exactly what makes the
           example worth showing.
+
+  - id: q6
+    part: 2
+    tag: declaring
+    prompt: >
+      `limit := 10` written at package level, outside any function, fails with
+      `syntax error: non-declaration statement outside function body`. Why, and what do
+      you write instead?
+    options:
+      - text: "`:=` is only allowed inside a function body; at package level you write `var limit = 10`"
+        correct: true
+        why: >
+          The short declaration is a statement, and package level only accepts declarations
+          (`var`, `const`, `type`, `func`). `var limit = 10` infers the type just the same.
+      - text: Package-level variables must be constants, so it has to be `const limit = 10`
+        correct: false
+        why: >
+          Package-level variables are fine and common. `const` would work here only because
+          10 never changes — it is not the rule.
+      - text: "`:=` needs an explicit type at package level: `limit := int(10)`"
+        correct: false
+        why: >
+          The problem is not the type. `:=` is not allowed outside a function at all.

@@ -1,6 +1,7 @@
 # Answer key for Go day 03. Question text lives in the .md; the reasoning lives here.
 questions:
   - id: q1
+    part: 1
     prompt: >
       `a := [3]int{1,2,3}; b := a; b[0] = 99`. What is `a[0]` afterwards, and what would
       have happened if both had been slices instead?
@@ -35,6 +36,7 @@ questions:
           Copy semantics are the same on the stack and the heap.
 
   - id: q2
+    part: 1
     prompt: >
       What are the three fields of a Go slice header, and which of them does copying a
       slice copy?
@@ -67,6 +69,7 @@ questions:
           a large slice to a function costs three words, not the data.
 
   - id: q3
+    part: 2
     prompt: >
       Why must you write `s = append(s, x)` in Go rather than just `append(s, x)`?
     options:
@@ -100,6 +103,7 @@ questions:
           only if allocation itself fails, which takes the process with it.
 
   - id: q4
+    part: 3
     prompt: >
       `head := full[:2]` where `full` has five elements. What is `cap(head)`, and what
       does `append(head, 99)` do to `full`?
@@ -134,6 +138,7 @@ questions:
           Indexing past length panics; appending past it does not.
 
   - id: q5
+    part: 3
     prompt: >
       You read a 500 MB file into memory and keep a 60-byte slice of it in a cache. How
       much memory stays reachable, and what is the fix?
@@ -168,3 +173,29 @@ questions:
         why: >
           Slicing never copies; that is the property that makes it cheap. Copying is the
           thing you have to ask for explicitly, which is what the fix does.
+
+  - id: q6
+    part: 2
+    tag: len and cap
+    prompt: >
+      You know a slice will end up holding about 1000 items. What does creating it with
+      `make([]int, 0, 1000)` instead of `var s []int` save you?
+    options:
+      - text: >
+          The repeated grow-and-copy: `append` fills the spare capacity instead of
+          allocating a bigger array and copying everything each time it runs out
+        correct: true
+        why: >
+          Without capacity, `append` doubles its way up — about ten allocations and copies
+          to reach 1000. With `cap` 1000 up front, none. Length is still 0, so `append`
+          starts at the beginning.
+      - text: It pre-fills the slice with 1000 zeros, so `s[999]` can be assigned directly
+        correct: false
+        why: >
+          That is `make([]int, 1000)`: length 1000. With length 0 the elements exist in the
+          array but are not part of the slice yet; `s[0]` would panic.
+      - text: Nothing — `append` always allocates a new array anyway
+        correct: false
+        why: >
+          `append` only allocates when it runs out of capacity. That is exactly why `cap`
+          exists, and why sub-slices can share an array.

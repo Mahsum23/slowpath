@@ -331,6 +331,8 @@ export type MentorProvider = 'gemini' | 'anthropic';
 export interface Settings {
   theme: 'system' | 'light' | 'dark';
   peekAhead: boolean;
+  /** How many review cards make a day's review (review.ts todayQueue). Absent = the default. */
+  dailyReview?: number;
   mentorProvider: MentorProvider;
   /**
    * A plain string, not a union of known ids. Gemini's model list is fetched from
@@ -389,6 +391,8 @@ export interface ReviewCard {
    * recall, and it stops being dealt as itself (see isWorn in review.ts).
    */
   reflex?: number;
+  /** When it was first answered. Absent on cards from before this existed (see todayQueue). */
+  firstAt?: string | null;
 }
 
 export interface ReviewState {

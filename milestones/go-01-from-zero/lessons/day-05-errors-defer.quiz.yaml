@@ -1,6 +1,7 @@
 # Answer key for Go day 05. Question text lives in the .md; the reasoning lives here.
 questions:
   - id: q1
+    part: 1
     prompt: >
       What is the `error` type in Go, exactly — what makes a value an error?
     options:
@@ -34,6 +35,7 @@ questions:
           `Error()` method, the same way it calls `String()` on a `fmt.Stringer`.
 
   - id: q2
+    part: 1
     prompt: >
       What is the difference between wrapping an error with `%w` and formatting it with
       `%v`, and what does the difference make possible for a caller?
@@ -69,6 +71,7 @@ questions:
           but `errors.Is` returns true through one and false through the other.
 
   - id: q3
+    part: 2
     prompt: >
       When exactly does a deferred call run in Go, and in what order relative to other
       defers in the same function?
@@ -107,6 +110,7 @@ questions:
           function.
 
   - id: q4
+    part: 2
     prompt: >
       `i := 1; defer fmt.Println(i); i = 99`. What does the deferred line print when the
       function returns, and why?
@@ -141,6 +145,7 @@ questions:
           evaluated. The rule is the same in both cases.
 
   - id: q5
+    part: 2
     prompt: >
       When is `panic` the right choice in Go rather than returning an error, and where is
       `recover` legitimately used?
@@ -177,3 +182,27 @@ questions:
           Too strong. The runtime itself panics on nil dereference and out-of-range
           indexing, and boundary recovery in servers is standard practice — `net/http`
           does it for every handler it runs.
+
+  - id: q6
+    part: 1
+    tag: errors are values
+    prompt: >
+      `os.Open` returns two values, a file and an error. Which of these compiles with no
+      complaint, even though it throws the error away?
+    options:
+      - text: "`f, _ := os.Open(path)`"
+        correct: true
+        why: >
+          The blank identifier accepts the error and discards it, and nothing warns. That is
+          the honest cost of errors as values: unlike an exception, an error is trivially
+          ignorable.
+      - text: "`f := os.Open(path)`"
+        correct: false
+        why: >
+          Two values cannot be assigned to one variable — the compiler rejects it
+          (`assignment mismatch`). Go makes you at least *write* the `_`.
+      - text: Neither; Go refuses to compile any discarded error
+        correct: false
+        why: >
+          Go refuses unused *variables* and imports, not discarded values. `_` is allowed
+          anywhere, errors included.

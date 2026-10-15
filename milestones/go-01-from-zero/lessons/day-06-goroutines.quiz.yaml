@@ -1,6 +1,7 @@
 # Answer key for Go day 06. Question text lives in the .md; the reasoning lives here.
 questions:
   - id: q1
+    part: 1
     prompt: >
       What is a goroutine, and how does it differ from an OS thread in cost and in what
       schedules it?
@@ -40,6 +41,7 @@ questions:
           must be reserved large up front.
 
   - id: q2
+    part: 2
     prompt: >
       What is the difference between an unbuffered and a buffered Go channel, and what
       synchronisation does an unbuffered one give you for free?
@@ -74,6 +76,7 @@ questions:
           point of the type. Neither needs an external lock.
 
   - id: q3
+    part: 2
     prompt: >
       In Go, who is supposed to close a channel, and what happens if you send on one that
       is already closed?
@@ -109,6 +112,7 @@ questions:
           leak is a goroutine blocked forever on a channel, not an unclosed channel.
 
   - id: q4
+    part: 3
     prompt: >
       The Go runtime reports `all goroutines are asleep - deadlock!`. What condition
       triggers that, and which very common concurrency bug does it fail to catch?
@@ -145,6 +149,7 @@ questions:
           channel operations are exactly what the scheduler tracks.
 
   - id: q5
+    part: 3
     prompt: >
       A Go program with 1000 goroutines each doing `total++` on a shared variable prints a
       different wrong number every run and never crashes. What is happening, and what
@@ -183,3 +188,29 @@ questions:
           Disabling optimisation changes nothing here: the race is between goroutines, not
           an artefact of codegen. The fixes are a mutex, an atomic add, or sending each
           contribution down a channel and summing in one place.
+
+  - id: q6
+    part: 1
+    tag: goroutines
+    prompt: >
+      A goroutine starts with a stack of about 2 KB. What happens when a call needs more
+      stack than that, and why can't a C thread do the same?
+    options:
+      - text: >
+          The runtime allocates a bigger stack, copies the frames across and fixes up the
+          pointers; C can't, because a pointer to a local must stay valid at a fixed address
+        correct: true
+        why: >
+          Go's runtime knows where every pointer into the stack is, so it can move the stack.
+          C cannot move a stack under live pointers, so its stacks are reserved large (8 MB
+          by default for a pthread) up front.
+      - text: The goroutine crashes with a stack overflow; 2 KB is a hard limit
+        correct: false
+        why: >
+          2 KB is where it starts, not where it ends. Deep recursion works; the stack grows
+          (up to a much larger maximum).
+      - text: It borrows stack from other goroutines on the same OS thread
+        correct: false
+        why: >
+          Stacks are never shared between goroutines. A growing one gets a new, larger
+          allocation of its own.

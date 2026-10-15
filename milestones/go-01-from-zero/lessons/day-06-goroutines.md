@@ -1,6 +1,6 @@
 # Goroutines and channels
 
-## Theory
+## Part 1: `go` in front of a call
 
 This is the day Go earns its reputation. Concurrency is not a library here — it is
 syntax, it is cheap enough to be boring, and the runtime will tell you when you have
@@ -45,7 +45,14 @@ would overflow it, it allocates a bigger stack, copies the frames across and fix
 pointers. You cannot do that in C, where a pointer to a local must stay valid at a fixed
 address — which is exactly why C stacks must be reserved large and up front.
 
-### Channels: a typed pipe with a lock built in
+### Check yourself
+
+1. What is a goroutine, and how does it differ from an OS thread in cost and in what
+   schedules it?
+2. A goroutine starts with a 2 KB stack. What happens when a call needs more, and why can't
+   C do the same?
+
+## Part 2: Channels
 
 ```go
 ch := make(chan int)      // unbuffered
@@ -84,6 +91,14 @@ that **the sender closes**, never the receiver.
 > a rule that you must never use a mutex — the standard library is full of them, and
 > `sync.Mutex` is often the simpler answer for guarding one counter. It is a claim about
 > which model to reach for first.
+
+### Check yourself
+
+1. What is the difference between an unbuffered and a buffered channel, and what does an
+   unbuffered one give you for free?
+2. Who is supposed to close a channel, and what happens if you send on a closed one?
+
+## Part 3: Deadlocks, groups and races
 
 ### The runtime notices when everyone is asleep
 
@@ -167,17 +182,12 @@ you do, not how long the program runs.
 The fixes here are a `sync.Mutex` around the increment, `atomic.AddInt64`, or having each
 goroutine send its result down a channel and summing in one place.
 
-## Quiz
+### Check yourself
 
-1. What is a goroutine, and how does it differ from an OS thread in cost and in what
-   schedules it?
-2. What is the difference between an unbuffered and a buffered channel, and what
-   synchronisation do you get for free from an unbuffered one?
-3. Who is supposed to close a channel, and what happens if you send on a closed one?
-4. Go reports `all goroutines are asleep - deadlock!`. What condition triggers that, and
-   which very common concurrency bug does it NOT catch?
-5. A program with 1000 goroutines doing `total++` prints a different wrong number each
-   run and never crashes. What is happening, and what tool finds it?
+1. The runtime reports `all goroutines are asleep - deadlock!`. What triggers that, and which
+   common bug does it not catch?
+2. A thousand goroutines doing `total++` print a different wrong number every run. What is
+   happening, and how do you find it?
 
 ## Drill
 

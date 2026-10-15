@@ -866,6 +866,21 @@ Secret modes are device-local (`localStorage`). The cabinet appears on Stats onl
 first find and never shows what is left. Contents are deliberately not listed here — read
 `eggs.ts`. Verified: `test-eggs.mjs`, Chromium run of each trigger kind.
 
+## 8.15 A daily review slice, and Go in parts (2026-10-15)
+
+- `todayQueue(deck, state, now, budget, newPerDay)` replaces "everything due" everywhere
+  (`app.dueNow`, the Today strip, the ambush, the deck's dealing outside practice mode):
+  `budget` minus what was answered today; at most `NEW_PER_DAY` first-time cards, counted by
+  the new `ReviewCard.firstAt` (stamped by `grade`, merged by earliest), and guaranteed a third
+  of the room; due reviews sorted by recall ascending. `waiting()` counts the backlog.
+  `settings.dailyReview` (device-local) sets the budget.
+- Go days 1–6 split into 2–3 parts each (6 new questions so every part has two or three);
+  `check-syllabus.py --track go` (no database needed) found 4 items using untaught things —
+  `errors.New` now taught on day 5, one prompt reworded, `fmt.Print` treated as `fmt.Println`.
+- Verified: `test-review.mjs` (slice cases), both syllabus checks, shape cards on real
+  toolchains, Chromium with a seeded backlog (31 due → "15 left", 14 after one answer,
+  25 after changing the setting).
+
 ## 9. Offline & local storage
 
 - **Content cache:** Cache API / IndexedDB — loaded weeks fully offline.

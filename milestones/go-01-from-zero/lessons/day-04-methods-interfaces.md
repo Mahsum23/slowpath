@@ -1,6 +1,6 @@
 # Methods, and interfaces you never declare
 
-## Theory
+## Part 1: Methods, and which receiver
 
 Go has no classes, no inheritance, no `virtual`, no constructors and no `this`. It has
 structs, functions attached to types, and one of the better ideas in mainstream language
@@ -55,7 +55,13 @@ addressable, Go inserts the `&` for you. That is why `c.BumpPointer()` compiles 
 is a `Counter` and not a `*Counter`. C++ makes you pick `.` or `->`; Go decided that
 distinction never carried information and removed it.
 
-### Interfaces: satisfied by accident, on purpose
+### Check yourself
+
+1. What is a receiver in Go, and where does it appear in a method declaration?
+2. A method with a value receiver increments a field. Why does the caller's value not change?
+3. `c` is a `Counter`, not a `*Counter`, yet `c.BumpPointer()` compiles. Why?
+
+## Part 2: Interfaces, satisfied without asking
 
 ```go
 type Greeter interface {
@@ -148,16 +154,12 @@ variable declaration: Broken does not implement Greeter (missing method Greet)
 ``` You will find this line near the top of a great many real Go files, and
 it is one of those things that looks like line noise until someone explains it once.
 
-## Quiz
+### Check yourself
 
-1. What is a receiver, and where does it appear in a Go method declaration?
-2. A method with a value receiver increments a field of its receiver. Why does the
-   caller's value not change, and why is there no warning?
-3. What does a Go type have to write in order to implement an interface?
-4. `strings.Builder` never mentions `io.Writer`, yet `fmt.Fprintf` accepts a pointer to
-   one. Explain how, and say who gets to define the interface in that arrangement.
-5. What does the line `var _ Greeter = English{}` accomplish, given that it stores nothing
-   and is never referenced?
+1. What does a Go type have to write in order to implement an interface?
+2. `strings.Builder` never mentions `io.Writer`, yet `fmt.Fprintf` accepts a pointer to one.
+   How?
+3. What does `var _ Greeter = English{}` accomplish?
 
 ## Drill
 

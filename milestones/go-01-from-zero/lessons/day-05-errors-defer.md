@@ -1,6 +1,6 @@
 # Errors are values, and defer is your destructor
 
-## Theory
+## Part 1: Errors are values
 
 Go has no exceptions. None. No `try`, no `catch`, no `throw`, no stack unwinding you can
 hook into. This is the single most argued-about decision in the language, and today is
@@ -35,6 +35,14 @@ type error interface {
 
 That is the entire type. Anything with an `Error() string` method is an error, which
 means you write your own error types the same way you write anything else.
+
+The quickest way to make one is `errors.New`. A package usually keeps the errors callers
+need to recognise in package-level variables — *sentinel* errors, like the standard
+library's `os.ErrNotExist`:
+
+```go
+var ErrEmpty = errors.New("empty input")
+```
 
 Yes, you will type `if err != nil` a great deal. Roughly one line in twenty of real Go is
 that line. People find this either honest or unbearable and there is not much middle
@@ -79,6 +87,15 @@ Same message text either way — only the machine-readable link differs. Use `%w
 caller might reasonably want to inspect the cause; use plain `%v` when you are
 deliberately hiding the internals. Wrapping everything makes your internal error
 types part of your public API, which is a real cost.
+
+### Check yourself
+
+1. What is the `error` type in Go, exactly — what makes a value an error?
+2. What is the difference between wrapping with `%w` and formatting with `%v`?
+3. Which of these compiles with no complaint even though it throws an error away:
+   `f, _ := os.Open(p)` or `f := os.Open(p)`?
+
+## Part 2: defer, and when it runs
 
 ### defer: run this on the way out, whatever happens
 
@@ -143,16 +160,12 @@ invariant you thought was impossible. A library that panics on a bad input is co
 badly behaved; it should return an error. The main legitimate use of `recover` is at the
 top of a server's request handler, so one broken request doesn't take down the process.
 
-## Quiz
+### Check yourself
 
-1. What is the `error` type in Go, exactly — what makes something an error?
-2. What is the difference between wrapping an error with `%w` and formatting it with
-   `%v`, and what becomes possible for the caller?
-3. When exactly does a deferred call run, and in what order relative to other defers in
-   the same function?
-4. `i := 1; defer fmt.Println(i); i = 99`. What prints, and why?
-5. When is `panic` the right choice rather than returning an error, and where is
-   `recover` legitimately used?
+1. When exactly does a deferred call run, and in what order relative to other defers?
+2. `i := 1; defer fmt.Println(i); i = 99`. What does the deferred line print, and why?
+3. When is `panic` the right choice rather than returning an error, and where is `recover`
+   legitimately used?
 
 ## Drill
 
