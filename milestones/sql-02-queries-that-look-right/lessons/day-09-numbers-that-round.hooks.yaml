@@ -1,0 +1,54 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: magnet-and-gravity
+    part: 1
+    glyph: 🧲
+    remember: "PostgreSQL integer division truncates toward zero (-7/2 = -3); Python's `//` floors (-4)."
+    hook: >
+      Postgres divides with a **magnet at zero**: −3.5 is pulled *toward zero*, to −3. Python's
+      `//` divides with **gravity**: −3.5 falls *down*, to −4. On positive numbers both land in
+      the same place, which is why code ported between them passes every test until the first
+      refund.
+    tags: [integer division]
+    cards: [q1, d1]
+  - id: disguised-literal
+    part: 2
+    glyph: 🥸
+    remember: "In PostgreSQL a literal like `0.1` is `numeric`, so `0.1 + 0.2 = 0.3` is true at the prompt but false for `float8` values."
+    hook: >
+      At the psql prompt, `0.1` arrives in a **disguise**: it is `numeric`, exact decimal. So
+      `0.1 + 0.2 = 0.3` says true, and you go home happy. Your `float8` column holds the binary
+      cousin, whose 0.1 is really 0.1000000000000000055…, and the same test says false. Test
+      with the column's real type: `0.1::float8 + 0.2::float8`.
+    tags: [floating point]
+    cards: [q2, d2]
+  - id: school-and-bank
+    part: 3
+    glyph: 🏦
+    remember: "`round(2.5)` on numeric is 3 (half away from zero); on float8 it is 2 (half to even)."
+    hook: >
+      Two teachers. `numeric` went to **school**: halves round away from zero, 2.5 is 3.
+      `float8` went to the **bank**: halves round to the even neighbour, 2.5 is 2 and 3.5 is 4,
+      so that rounding a million amounts does not drift the books upward. Same 2.5, different
+      answer, depending on a type you may never have chosen.
+    cards: [q3, q4]
+  - id: twenty-thirty-eight
+    part: 4
+    glyph: 💥
+    remember: "`int` tops out at 2,147,483,647 and PostgreSQL errors on overflow; use `bigint` for ids."
+    hook: >
+      2,147,483,647 is a famous ceiling: it is also the second at which 32-bit Unix time runs
+      out, on **19 January 2038**. Postgres does not wrap round to negative like C hardware; it
+      **refuses loudly**. Loud is good, but not at the 2,147,483,648th insert: Basecamp's `int`
+      id hit it in 2018 and the app went read-only for about five hours. Ids are `bigint`.
+    tags: [overflow]
+  - id: money-jar
+    part: 4
+    glyph: 🪙
+    remember: Store money as `numeric` with a scale, or as an integer count of the smallest unit; never float8, and not the `money` type.
+    hook: >
+      Money goes in one of two jars: a **decimal jar** (`numeric(12,2)` beside a currency column)
+      or a **coin jar** (an integer count of cents, as Stripe's API does, and of whole yen for
+      JPY). Never a float, which cannot even hold 0.10 exactly, and never `money`, whose output
+      depends on the server's locale.
+    cards: [q5, d3]

@@ -530,6 +530,55 @@ function loadPractice(path, dayId, write, drill) {
   return total ? { write: w, drill: d ?? [] } : null;
 }
 
+/**
+ * `day-NN-<slug>.hooks.yaml`: vivid associations for the facts that will not stay put on
+ * their own (src/lib/hooks.ts).
+ *
+ *   hooks:
+ *     - id: clause-order        unique within the day
+ *       part: 1                 on a day read in parts
+ *       glyph: 🍳               one emoji, the image's anchor
+ *       remember: …             the fact, in a line
+ *       hook: …                 the picture or story, carrying the reason as well
+ *       tags: [running order]   themes it covers: a miss on any brings it back
+ *       cards: [q-order]        card ids it covers, for items without a tag
+ *
+ * A hook that links to nothing (no tag or card that exists, and no part to fall back on)
+ * can never come back after a miss, so the build says so.
+ */
+function loadHooks(path, dayId, { parts, items }) {
+  if (!existsSync(path)) return null;
+  const doc = parseYaml(readFileSync(path, 'utf8')) ?? {};
+  const hooks = doc.hooks ?? [];
+  const ids = new Set();
+  const tags = new Set(items.map((x) => x.tag).filter(Boolean));
+  const cardIds = new Set(items.map((x) => x.id));
+  const out = hooks.map((h, i) => {
+    const where = `${dayId} hook ${h.id ?? i + 1}`;
+    for (const k of ['id', 'glyph', 'remember', 'hook']) if (!String(h[k] ?? '').trim()) fail(`${where}: missing "${k}"`);
+    if (ids.has(h.id)) fail(`${where}: id repeats within the day`);
+    ids.add(h.id);
+    if (parts && !h.part) warn(`${where}: the day is in parts, so the hook needs "part: N"`);
+    if (h.part && parts && h.part > parts) warn(`${where}: part ${h.part}, but the day has ${parts}`);
+    for (const t of h.tags ?? []) if (!tags.has(t)) warn(`${where}: tag "${t}" is on no card of this day`);
+    for (const c of h.cards ?? []) if (!cardIds.has(c)) warn(`${where}: card "${c}" is not one of this day's`);
+    const linked = (h.tags ?? []).some((t) => tags.has(t)) || (h.cards ?? []).some((c) => cardIds.has(c)) || parts;
+    if (!linked) warn(`${where}: links to no card, so a miss can never bring it back`);
+    if ([...String(h.glyph)].length > 4) warn(`${where}: the glyph is one emoji, not text`);
+    if (String(h.hook).trim().split(/\s+/).length > 110) warn(`${where}: over 110 words — a hook is read in a glance`);
+    return {
+      id: h.id,
+      part: h.part ?? null,
+      glyph: String(h.glyph).trim(),
+      remember: String(h.remember).trim(),
+      hook: String(h.hook).trim(),
+      tags: h.tags ?? null,
+      cards: h.cards ?? null,
+    };
+  });
+  return out.length ? out : null;
+}
+
 function buildTopic(milestone) {
   const lessonsDir = join(milestonesDir, milestone, 'lessons');
   const topicYaml = join(lessonsDir, 'topic.yaml');
@@ -570,6 +619,10 @@ function buildTopic(milestone) {
 
     const raw = readFileSync(join(lessonsDir, mdName), 'utf8');
     const parts = parseParts(raw, d.id, mdName, d.added);
+    const hooks = loadHooks(join(lessonsDir, mdName.replace(/\.md$/, '.hooks.yaml')), d.id, {
+      parts: parts.length,
+      items: [...(quiz ?? []), ...(drill ?? []), ...(write?.challenges ?? []), ...(practice?.write?.challenges ?? []), ...(practice?.drill ?? [])],
+    });
     if (parts.length && sections.theory) warn(`${d.id}: ${mdName} has both "## Theory" and "## Part" sections — a day is read one way or the other`);
     if (!parts.length && !sections.theory) warn(`${d.id}: ${mdName} has no "## Theory" section`);
     for (const p of parts.length ? parts : [{ markdown: sections.theory }]) checkOrderMarkers(d.id, mdName, p.markdown, warn);
@@ -609,6 +662,7 @@ function buildTopic(milestone) {
       write,
       practice,
       quiz,
+      ...(hooks ? { hooks } : {}),
       task: parseTask(sections.task),
     };
   });

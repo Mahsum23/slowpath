@@ -33,6 +33,7 @@ import { bankCards, emptyPractice, finishRound, needsPractice, recordFirst } fro
 import { allPartsDone, nextPart, partDone, partsOf } from './parts';
 import type { DayPart } from './types';
 import { heatMap, themeKey, themeLabel, type Heat } from './focus';
+import { hookKey } from './hooks';
 import {
   activityScores, conceptStrength, freshStart, knownNow, lastActiveBefore, logAnswer, type ConceptStrength,
 } from './motivation';
@@ -346,6 +347,12 @@ class AppStore {
   /** Something typed into a write card. */
   async noticeAnswer(text: string, lang: string) {
     if (this.findEgg(answerEgg(text, lang))) await this.persist();
+  }
+
+  /** His own hook for one of a day's facts; an empty text clears it (hooks.ts). */
+  async saveOwnHook(dayId: string, hookId: string, text: string) {
+    this.progress.hooks = { ...(this.progress.hooks ?? {}), [hookKey(dayId, hookId)]: { text: text.trim(), at: new Date().toISOString() } };
+    await this.persist();
   }
 
   /** A secret mode switched on or off. The first time is the find. */

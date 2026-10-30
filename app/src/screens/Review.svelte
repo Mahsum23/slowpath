@@ -41,6 +41,8 @@
   } from '../lib/mentor';
   import { TRACKS, type Day, type DrillStep, type QuizQuestion, type Track, type Week, type WriteChallenge, type WriteSet } from '../lib/types';
   import { inlineHtml } from '../lib/inline';
+  import HookCard from '../components/HookCard.svelte';
+  import { hookForCard } from '../lib/hooks';
 
   /**
    * What a miss pulls in next (focus.ts): the cards queued behind it, the idea they are
@@ -49,6 +51,8 @@
    */
   let pending = $state<CardRef[]>([]);
   let justMissed = $state<string | null>(null);
+  /** The card on screen was answered wrong (any kind), so its hook, if any, is shown. */
+  let missedNow = $state(false);
   let followsDealt = $state(0);
   /** What has been asked this sitting, per day, so a generated follow-up does not repeat it. */
   let askedBy = $state<Record<string, string[]>>({});
@@ -283,6 +287,7 @@
     graded && !verdict && turns.filter((t) => t.role === 'user').length === MAX_REVIEW_MESSAGES - 1,
   );
 
+  const missedHook = $derived(card && context ? hookForCard(context.day, card) : null);
   const answered = $derived(picked !== null || verdict !== null || checked || solved || revealed);
 
   /**
@@ -332,6 +337,7 @@
     writeGraded = false;
     shapeTries = [];
     justMissed = null;
+    missedNow = false;
     order = [];
   }
 
@@ -764,6 +770,7 @@
     // "Early" is a property of the card, not of the mode: a practice run can still
     // turn up something that was genuinely due, and that one counts in full.
     const early = !isDue(app.progress.review.cards[card.id], today());
+    missedNow = result === 'again';
     seen = new Set([...seen, card.id]);
     // A question the model wrote about a miss is a one-off: it has no schedule of its own,
     // and the miss it is about has already been scheduled.
@@ -1286,6 +1293,12 @@
         <p>{error}</p>
         <button class="link" onclick={() => (card?.kind === 'write' ? void setAside(card) : void skip())}>Skip this card</button>
       </div>
+    {/if}
+
+    <!-- A miss is the moment a hook is worth most: the idea just failed to come back, and
+         here is something to hang it on. Never before answering, where it would be a hint. -->
+    {#if answered && missedNow && missedHook && context}
+      <HookCard day={context.day} hook={missedHook} reason="Something to hang it on" />
     {/if}
 
     {#if answered && justMissed && pending.length}

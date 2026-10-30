@@ -1,0 +1,35 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: next-in-line
+    glyph: 🧍
+    remember: While a blocking server talks to one client, new clients finish the handshake and wait in the accept queue.
+    hook: >
+      A blocking server is a **barber with one chair**. While client A is in the chair, client B
+      has already walked in and shaken hands (the kernel completed the handshake) and sits in the
+      waiting room, the accept queue, until the barber calls `accept()` again. Close each
+      client's fd when they leave; never the door.
+    cards: [q1, q2]
+  - id: number-on-the-way-out
+    glyph: 🎲
+    remember: A client that never calls `bind()` gets a local port from the ephemeral range when `connect()` runs.
+    hook: >
+      A client never asks for a number, yet it has one: `connect()` does an **implicit bind**,
+      drawing a port from the ephemeral range (`/proc/sys/net/ipv4/ip_local_port_range`). It is a
+      raffle ticket, valid for this one conversation.
+    cards: [q3]
+  - id: done-talking
+    glyph: 🤐
+    remember: "`shutdown(fd, SHUT_WR)` sends FIN but keeps receiving; `close()` ends both directions."
+    hook: >
+      `close()` **hangs up the phone**. `shutdown(fd, SHUT_WR)` says **"I'm done talking, still
+      listening"**: it sends FIN so the server knows the request is complete, and the line stays
+      open for the answer. Send, `SHUT_WR`, then `recv` until 0.
+    cards: [q4]
+  - id: shout-or-silence
+    glyph: 🔔
+    remember: ECONNREFUSED at once means the host answered with RST (nothing listening); a long hang means no answer at all (down host or a dropping firewall).
+    hook: >
+      Knock on a door. **Someone shouts "go away"** at once: the host is up and sent an RST,
+      nobody is listening on that port, `ECONNREFUSED`. **Silence**: the host is down, or a
+      firewall eats your SYN without a word, and you stand there while the retries time out.
+    cards: [q5]

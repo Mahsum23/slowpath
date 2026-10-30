@@ -1,0 +1,37 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: egg-war
+    glyph: 🥚
+    remember: Network byte order is big-endian; `htons`/`htonl` convert to it, and are no-ops on big-endian hosts.
+    hook: >
+      Lilliput went to war over **which end of an egg to crack**, and Danny Cohen borrowed the
+      words in 1980 for CPUs: big-endian, little-endian. The network picked the **big end**.
+      `htons` is "**h**ost **to** **n**etwork **s**hort". On a big-endian machine it does
+      nothing, which is exactly why a forgotten `htons` survives there and only bites on x86.
+    cards: [q1, q3]
+  - id: suitcase-padding
+    glyph: 🧳
+    remember: "`sin_zero` pads `sockaddr_in` to the size of the generic `sockaddr`; zero the whole struct."
+    hook: >
+      `sockaddr_in` is a suitcase that has to fit the **generic `sockaddr` shelf**, 16 bytes. The
+      family, port and address fill 8, and `sin_zero` is **8 bytes of packing foam** for the
+      rest. Leave the foam dirty and some systems compare it. `sockaddr_in addr{}` starts the
+      whole case clean.
+    cards: [q2]
+  - id: any-door
+    glyph: 🌐
+    remember: "Binding to `INADDR_ANY` (0.0.0.0) accepts connections on every interface of the machine."
+    hook: >
+      `INADDR_ANY` is a shop sign saying **"use any door"**: 0.0.0.0 tells the kernel to accept
+      a connection on whichever interface it arrives at, loopback, Wi-Fi or Ethernet. Bind to
+      `127.0.0.1` instead and only the **back door** from your own machine is open.
+    cards: [q4]
+  - id: whiteboard
+    glyph: 📝
+    remember: "`inet_ntoa` returns a pointer into one static buffer, overwritten by the next call; use `inet_ntop` with your own buffer."
+    hook: >
+      `inet_ntoa` writes its answer on the **library's one whiteboard**. Call it twice in one
+      `printf` and both pointers show the second address, because the first was wiped. Bring
+      your own notebook: `inet_ntop(AF_INET, &addr.sin_addr, text, sizeof text)` writes into a
+      buffer you own.
+    cards: [q5]

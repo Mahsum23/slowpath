@@ -660,3 +660,12 @@ contrasts, one-line closers, staged run-ups and inflated claims ("the single mos
 rewritten, and leftovers like "yesterday" and "last week" pointed at day numbers instead,
 since a day is no longer read the day after the previous one. Code, output blocks and facts
 are unchanged (checked with the lesson, write-card and syllabus checkers).
+
+**Memory hooks (2026-10-30).** He said the material doesn't hold in his mind and asked for
+colourful, funny, unusual associations for the important parts. Every day now has 3–5 hooks
+(107 so far: SQL 53, Go 23, C++ 31), each an emoji, the fact, and a picture or story that
+carries the reason: frogs in a kitchen for clause order, two bouncers for WHERE/HAVING,
+Ariadne's thread for keyset paging, a hermit crab for `append`. They close each part ("Make
+it stick"), come back under a card he just missed, and live in a gallery (Stats → Memory
+hooks) with a "cover the facts" mode. He can replace any with his own, which then wins:
+made-up-by-you holds better than read.

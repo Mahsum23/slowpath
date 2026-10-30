@@ -248,6 +248,53 @@
           ]
         }
       ],
+      "hooks": [
+        {
+          "id": "coat-check",
+          "part": null,
+          "glyph": "🎟️",
+          "remember": "A file descriptor is a small integer handle to a kernel object: the lowest free slot, -1 on failure, and finite.",
+          "hook": "An fd is a **coat-check ticket**. The kernel keeps the coat (the socket object) and hands you the lowest free number. Tickets 0, 1 and 2 already went to stdin, stdout and stderr, so your first socket is usually **3**. A ticket of **−1** means \"no coat taken\", and `errno` says why. Never hand tickets back (`close`) and the cloakroom fills: `RLIMIT_NOFILE`, then `EMFILE`.",
+          "tags": null,
+          "cards": [
+            "q1",
+            "q3"
+          ]
+        },
+        {
+          "id": "phone-without-number",
+          "part": null,
+          "glyph": "📱",
+          "remember": "A new socket has no address; `bind()` gives it one, and `connect()` picks one for you.",
+          "hook": "`socket()` hands you a **phone with no number**. It exists and it works, but nothing can ring it and it has dialled nobody. `bind()` assigns it a number; `listen()` switches the ringer on; `connect()` dials out, and the kernel picks a number for you on the way.",
+          "tags": null,
+          "cards": [
+            "q2"
+          ]
+        },
+        {
+          "id": "slam-the-door",
+          "part": null,
+          "glyph": "🏃",
+          "remember": "`SOCK_CLOEXEC` sets close-on-exec atomically; a separate `fcntl()` leaves a window where another thread can fork and exec.",
+          "hook": "Between `socket()` and a later `fcntl(FD_CLOEXEC)` there is an **open doorway**, and in a threaded program another thread can sprint through it: `fork` and `exec`, and the child program walks off holding your socket. `SOCK_CLOEXEC` **slams the door in the same syscall**, so there is no moment when it is open.",
+          "tags": null,
+          "cards": [
+            "q4"
+          ]
+        },
+        {
+          "id": "costume",
+          "part": null,
+          "glyph": "🎭",
+          "remember": "Async libraries such as Asio still call `recv()` on an fd from `socket()`; they add scheduling, not a new mechanism.",
+          "hook": "`co_await socket.async_read_some(…)` is the same old fd **in a costume**. Peel it off and underneath is `recv()` on a descriptor that `socket()` returned. What the library adds is the waiting: it asks the kernel which fds are ready (epoll on Linux) and resumes your coroutine when yours is.",
+          "tags": null,
+          "cards": [
+            "q5"
+          ]
+        }
+      ],
       "task": {
         "markdown": "Write a program that:\n\n1. Calls `socket(AF_INET, SOCK_STREAM, 0)`\n2. Checks the return value — on failure, print `strerror(errno)` and exit non-zero\n3. On success, prints the fd\n4. Calls `close(fd)` before exiting — `int close(int fd);`, and it can fail, so check it\n\nThat's the whole program. No address, no `bind()`, no network activity yet.\n\nThen, before you close it, find your socket in the fd table. Add a\n`std::getchar();` right before the `close()` so the process waits, run it, and in\nanother terminal:\n\n```console\n$ ls -l /proc/$(pgrep -n day1)/fd\n```\n\nYou should see your fd pointing at `socket:[...]`. Predict the fd number before you\nlook. Then take the `getchar()` back out.\n\n- You'll need `<unistd.h>` for `close()`, `<cstring>` for `strerror`, and\n  `<cerrno>` for `errno`, alongside `<sys/socket.h>`",
         "files": [
@@ -529,6 +576,53 @@
           ]
         }
       ],
+      "hooks": [
+        {
+          "id": "egg-war",
+          "part": null,
+          "glyph": "🥚",
+          "remember": "Network byte order is big-endian; `htons`/`htonl` convert to it, and are no-ops on big-endian hosts.",
+          "hook": "Lilliput went to war over **which end of an egg to crack**, and Danny Cohen borrowed the words in 1980 for CPUs: big-endian, little-endian. The network picked the **big end**. `htons` is \"**h**ost **to** **n**etwork **s**hort\". On a big-endian machine it does nothing, which is exactly why a forgotten `htons` survives there and only bites on x86.",
+          "tags": null,
+          "cards": [
+            "q1",
+            "q3"
+          ]
+        },
+        {
+          "id": "suitcase-padding",
+          "part": null,
+          "glyph": "🧳",
+          "remember": "`sin_zero` pads `sockaddr_in` to the size of the generic `sockaddr`; zero the whole struct.",
+          "hook": "`sockaddr_in` is a suitcase that has to fit the **generic `sockaddr` shelf**, 16 bytes. The family, port and address fill 8, and `sin_zero` is **8 bytes of packing foam** for the rest. Leave the foam dirty and some systems compare it. `sockaddr_in addr{}` starts the whole case clean.",
+          "tags": null,
+          "cards": [
+            "q2"
+          ]
+        },
+        {
+          "id": "any-door",
+          "part": null,
+          "glyph": "🌐",
+          "remember": "Binding to `INADDR_ANY` (0.0.0.0) accepts connections on every interface of the machine.",
+          "hook": "`INADDR_ANY` is a shop sign saying **\"use any door\"**: 0.0.0.0 tells the kernel to accept a connection on whichever interface it arrives at, loopback, Wi-Fi or Ethernet. Bind to `127.0.0.1` instead and only the **back door** from your own machine is open.",
+          "tags": null,
+          "cards": [
+            "q4"
+          ]
+        },
+        {
+          "id": "whiteboard",
+          "part": null,
+          "glyph": "📝",
+          "remember": "`inet_ntoa` returns a pointer into one static buffer, overwritten by the next call; use `inet_ntop` with your own buffer.",
+          "hook": "`inet_ntoa` writes its answer on the **library's one whiteboard**. Call it twice in one `printf` and both pointers show the second address, because the first was wiped. Bring your own notebook: `inet_ntop(AF_INET, &addr.sin_addr, text, sizeof text)` writes into a buffer you own.",
+          "tags": null,
+          "cards": [
+            "q5"
+          ]
+        }
+      ],
       "task": {
         "markdown": "Extend Day 1's program:\n\n1. Build a `sockaddr_in` for port `9000`, address `INADDR_ANY`. Set `sin_family`,\n   `sin_port` (through `htons`), `sin_addr.s_addr` (through `htonl`, or directly —\n   `INADDR_ANY` is `0` either way, but write the conversion so the pattern is there for\n   the next literal address you use). Zero `sin_zero` explicitly rather than relying on\n   it being zeroed for you — `memset` the whole struct to `0` before filling it in is\n   the idiom you'll see everywhere, and it also means you don't have to think about\n   `sin_zero` again.\n2. Print `sin_port` **twice**: once as the raw stored value, once run back through\n   `ntohs()`. On a little-endian machine (almost certainly what you're on) those two\n   numbers should look different, and the second one should read `9000`.\n3. Dump the whole struct byte-by-byte: cast a pointer to it as\n   `unsigned char *` and print each byte in hex, in memory order. Find the two bytes\n   that hold the port and confirm which one is `0x23` and which is `0x28` — that's\n   `9000` in big-endian, sitting right there in memory, regardless of what your CPU's\n   own native order is.\n4. As a two-line aside — not part of the checklist, just worth seeing once — detect\n   your own machine's endianness at runtime: put a 4-byte `int` with the value `1` in\n   memory, look at its first byte through an `unsigned char *`. `1` if little-endian,\n   `0` if big-endian. This is the same trick `htons()` is built on internally.\n\nKeep the `socket()`/`close()` scaffolding from Day 1 around it — this program still\ndoesn't call `bind()` yet, that's Day 3.\n\n- You'll need `<netinet/in.h>` for `sockaddr_in`/`htons`/`htonl`, `<cstring>` for\n  `memset`, in addition to what Day 1 already pulled in",
         "files": [
@@ -748,6 +842,43 @@
               "correct": false,
               "why": "That's SO_REUSEADDR's job — the option you're already using. The names being one letter apart is exactly why these get confused, but they solve unrelated problems."
             }
+          ]
+        }
+      ],
+      "hooks": [
+        {
+          "id": "waiting-room",
+          "part": null,
+          "glyph": "🪑",
+          "remember": "The listen backlog is a queue of connections whose handshake is complete, waiting for `accept()`; Linux clamps it to `somaxconn`.",
+          "hook": "The backlog is a **waiting room** for guests who have already shaken hands (the TCP handshake is done) and are waiting for you to call `accept()`. Ask for 4096 chairs and Linux **quietly** gives you `net.core.somaxconn` of them. `ss -ltn` shows how many chairs you actually got.",
+          "tags": null,
+          "cards": [
+            "q1",
+            "q2"
+          ]
+        },
+        {
+          "id": "haunted-port",
+          "part": null,
+          "glyph": "👻",
+          "remember": "`EADDRINUSE` with nothing running is usually a connection in TIME_WAIT still holding the port.",
+          "hook": "Nothing is running, yet the port is taken: it is **haunted**. The ghost of the last connection, in TIME_WAIT, lingers there so stray packets from the dead conversation cannot wander into a new one that happens to reuse the same addresses.",
+          "tags": null,
+          "cards": [
+            "q3"
+          ]
+        },
+        {
+          "id": "one-letter",
+          "part": null,
+          "glyph": "🔑",
+          "remember": "`SO_REUSEADDR` (set before `bind`) lets you bind past a TIME_WAIT socket; `SO_REUSEPORT` lets several sockets share a port.",
+          "hook": "One letter, two house rules. `SO_REUSEADDR` says **\"let me move in, the ghost can stay\"**: bind even though TIME_WAIT is lingering, and it only helps if set *before* `bind`. `SO_REUSEPORT` says **\"let roommates share\"**: several processes bind the same port and the kernel deals connections out between them.",
+          "tags": null,
+          "cards": [
+            "q4",
+            "q5"
           ]
         }
       ],
@@ -1000,6 +1131,52 @@
               "correct": false,
               "why": "The CPU cost is genuinely near zero, but \"completely free\" is the trap. Each blocked thread still holds its stack (commonly 8 MB of reserved address space) and adds scheduler bookkeeping — which is precisely why thread-per-connection collapses long before readiness-based designs do."
             }
+          ]
+        }
+      ],
+      "hooks": [
+        {
+          "id": "receptionist",
+          "part": null,
+          "glyph": "🛎️",
+          "remember": "`accept()` returns a new fd per connection; the listening socket stays in LISTEN, and closing it stops the server taking clients.",
+          "hook": "The listening socket is the **receptionist**. `accept()` does not hand you the receptionist; it hands you a **private line** to one guest (a new fd). When the guest leaves, hang up that line. Close the receptionist instead and nobody new gets in, ever.",
+          "tags": null,
+          "cards": [
+            "q1"
+          ]
+        },
+        {
+          "id": "four-tuple",
+          "part": null,
+          "glyph": "🧾",
+          "remember": "Connections to the same port are told apart by the four-tuple (local IP, local port, remote IP, remote port).",
+          "hook": "Three clients on port 9000 look identical from your side of the counter. What tells them apart is the **full receipt**: local IP, local port, *remote* IP, *remote* port. Your half is the same on all three; their half differs, and that is enough.",
+          "tags": null,
+          "cards": [
+            "q2"
+          ]
+        },
+        {
+          "id": "tape-measure",
+          "part": null,
+          "glyph": "📏",
+          "remember": "The `socklen_t*` argument is value-result: you pass your buffer's size in, the kernel writes the real size back.",
+          "hook": "The `socklen_t*` is a **tape measure you lend the kernel**. Going in, it says how big your box is. Coming back, it says how much the kernel actually put in. That is why it is a pointer, and why it must be set to `sizeof peer` before every call.",
+          "tags": null,
+          "cards": [
+            "q3"
+          ]
+        },
+        {
+          "id": "sleeping-guard",
+          "part": null,
+          "glyph": "💤",
+          "remember": "A process blocked in `accept()` uses no CPU; the kernel deschedules it until a connection arrives.",
+          "hook": "A server blocked in `accept()` is a **guard asleep on a pressure mat**. It burns no CPU at all: the kernel takes it off the run queue and wakes it the instant a completed connection steps on the mat.",
+          "tags": null,
+          "cards": [
+            "q5"
           ]
         }
       ],
@@ -1271,6 +1448,53 @@
               "correct": false,
               "why": "Real, but not the dangerous part. Printing binary as text is ugly; writing past the end of the buffer is memory corruption, which is a different class of problem entirely."
             }
+          ]
+        }
+      ],
+      "hooks": [
+        {
+          "id": "polite-door",
+          "part": null,
+          "glyph": "🚪",
+          "remember": "`recv()` returning 0 is an orderly shutdown (the peer sent FIN); -1 is an error, with `errno`.",
+          "hook": "`recv() == 0` is the **door closing politely**: the peer sent FIN and has said everything it will ever say. `-1` is the **door jamming**: something went wrong, read `errno`. Treat the polite close as an error and you log noise forever; treat the jam as a goodbye and you hide real failures.",
+          "tags": null,
+          "cards": [
+            "q1"
+          ]
+        },
+        {
+          "id": "spoon",
+          "part": null,
+          "glyph": "🥄",
+          "remember": "`recv(fd, buf, 1024, 0)` returns whatever is buffered, from 1 to 1024 bytes, with no message boundaries.",
+          "hook": "`recv(…, 1024)` is a **spoon, not a pot**. It gives you whatever is in the kernel's bowl at this moment, anywhere from 1 to 1024 bytes, and says nothing about where the sender's messages began or ended. 4000 bytes sent means several spoonfuls, of no promised size.",
+          "tags": null,
+          "cards": [
+            "q2",
+            "q4"
+          ]
+        },
+        {
+          "id": "postbox",
+          "part": null,
+          "glyph": "📮",
+          "remember": "`send()` returning n means n bytes were copied into the kernel's send buffer, not that the peer received them.",
+          "hook": "`send()` returning 512 means the letter is **in the postbox**: 512 bytes copied into the kernel's send buffer, which is now the kernel's problem. It says nothing about whether the letter has left the building, let alone reached the other side.",
+          "tags": null,
+          "cards": [
+            "q3"
+          ]
+        },
+        {
+          "id": "room-for-the-full-stop",
+          "part": null,
+          "glyph": "🔚",
+          "remember": "`buf[n] = '\\0'` overflows when `recv` filled the whole buffer; receive at most `sizeof buf - 1`.",
+          "hook": "A string needs **room for its full stop**. If `recv` filled all 1024 bytes, `buf[1024]` is one past the end, and the `'\\0'` lands on whatever lives next door. Ask for `sizeof buf - 1` and there is always room for it.",
+          "tags": null,
+          "cards": [
+            "q5"
           ]
         }
       ],
@@ -1573,6 +1797,53 @@
           ]
         }
       ],
+      "hooks": [
+        {
+          "id": "hose",
+          "part": null,
+          "glyph": "🌊",
+          "remember": "TCP is a byte stream with no message boundaries; a protocol must frame its own messages.",
+          "hook": "TCP is a **garden hose, not the post office**. Pour in \"HELLO\" then \"WORLD\" and out comes `HELLOWORLD`, or `HEL` and `LOWORLD`, in any slicing that keeps the order. Where one message ends is your job: a length prefix, a delimiter, or closing the connection.",
+          "tags": null,
+          "cards": [
+            "q1",
+            "q2"
+          ]
+        },
+        {
+          "id": "keep-pouring",
+          "part": null,
+          "glyph": "🔁",
+          "remember": "A short `send()` means only part fit in the send buffer; loop until every byte is sent.",
+          "hook": "`send()` returning less than you asked is a **full bucket**: only that much fit in the kernel's send buffer. Nothing is lost, nothing is wrong. Move the pointer forward and **keep pouring** the rest until the count reaches zero.",
+          "tags": null,
+          "cards": [
+            "q3"
+          ]
+        },
+        {
+          "id": "silent-death",
+          "part": null,
+          "glyph": "💀",
+          "remember": "Writing to a socket whose peer has closed raises SIGPIPE, which kills the process by default; use `MSG_NOSIGNAL` or ignore SIGPIPE.",
+          "hook": "Write into a connection the other side has hung up, and the kernel sends **SIGPIPE**, whose default action is to kill you, without a single log line. Your server just *stops*. Turn it into an ordinary error instead: `send(…, MSG_NOSIGNAL)` or `std::signal(SIGPIPE, SIG_IGN)`, then handle `EPIPE`.",
+          "tags": null,
+          "cards": [
+            "q4"
+          ]
+        },
+        {
+          "id": "nagle",
+          "part": null,
+          "glyph": "🐢",
+          "remember": "Nagle's algorithm (1984) holds small writes while earlier data is unacknowledged; `TCP_NODELAY` turns it off.",
+          "hook": "In 1984 telnet sent a **41-byte packet for every keystroke**: one byte of data, forty of headers. John Nagle's fix makes a socket hold small writes while earlier data is still unacknowledged, so they travel together. Lovely for typing, a 40 ms stall for chatty request/response. `TCP_NODELAY = 1` means \"do not delay\": Nagle **off**.",
+          "tags": null,
+          "cards": [
+            "q5"
+          ]
+        }
+      ],
       "task": {
         "markdown": "Turn Day 5's single exchange into a loop:\n\n1. Loop: `recv()` into a buffer, and echo back exactly the bytes that arrived.\n2. Exit the loop cleanly when `recv()` returns `0` (peer hung up), and on error report\n   `strerror(errno)` — but retry rather than bail on `EINTR`.\n3. Write the send loop properly, so a short write can't truncate your echo. Even though\n   you're unlikely to see one today, write it as if you will.\n4. Suppress `SIGPIPE` by whichever of the three methods you prefer, and handle `EPIPE`\n   as a normal end-of-connection.\n5. Close the connected socket when the loop ends. Leave the listening socket alone —\n   Day 4's rule.\n\nTwo experiments:\n\n**Kill the server with SIGPIPE, then fix it.** First *without* any SIGPIPE handling:\nconnect with `nc`, then kill `nc` abruptly (Ctrl-C) while your server is mid-echo, and\nwatch your server die. Confirm what killed it — a process terminated by SIGPIPE exits\nwith status 141:\n\n```console\n$ ./day6; echo \"exit=$?\"\n```\n\nThen add the suppression and confirm you get `EPIPE` as a return value instead, and the\nserver survives.\n\n**Prove the byte stream has no boundaries.** Paste a large blob into `nc` in one go, with\na deliberately small server buffer (64 bytes is plenty):\n\n```console\n$ head -c 4000 /dev/urandom | base64 | tr -d '\\n' | nc 127.0.0.1 9000\n```\n\nCount how many `recv()` calls it takes. One `send()` on the client became many reads on\nthe server, and the sizes are whatever the network felt like.\n\n**See the backpressure that causes short writes.** A short write needs a peer that has\nstopped reading, which you can arrange: connect a client whose output is blocked, so it\nnever drains what your server echoes back.\n\n```console\n$ nc 127.0.0.1 9000 < /dev/zero | (sleep 60; cat)     # connects, sends, but reads nothing for a minute\n```\n\nNow your server is echoing into a socket nobody is draining. Watch both sides:\n\n```console\n$ ss -tan | grep 9000\n```\n\nThe server's `Send-Q` climbs into the megabytes and the client's `Recv-Q` fills behind\nit — that's TCP flow control refusing to let your server outrun a peer that isn't\nreading. (A real capture of exactly this: the server's send queue sat at `0x2F0625`,\nabout 3 MB, while the frozen client held half a megabyte it hadn't read.)\n\nBe warned about what you'll *see* at the boundary, though: on a **blocking** socket,\nonce the send buffer is full `send()` normally just blocks rather than returning a\npartial count, so the short write you're defending against can be genuinely hard to\nprovoke this way. It shows up reliably on non-blocking sockets, and occasionally on\nblocking ones when a very large single `send()` is partially satisfiable or a signal\ninterrupts it. Write the loop anyway — milestone 02 makes every socket non-blocking, at\nwhich point partial writes stop being a curiosity and become the normal case.\n\n- You'll need `<netinet/tcp.h>` if you experiment with `TCP_NODELAY`, `<csignal>` for\n  the signal approach",
         "files": [
@@ -1833,6 +2104,53 @@
           ]
         }
       ],
+      "hooks": [
+        {
+          "id": "next-in-line",
+          "part": null,
+          "glyph": "🧍",
+          "remember": "While a blocking server talks to one client, new clients finish the handshake and wait in the accept queue.",
+          "hook": "A blocking server is a **barber with one chair**. While client A is in the chair, client B has already walked in and shaken hands (the kernel completed the handshake) and sits in the waiting room, the accept queue, until the barber calls `accept()` again. Close each client's fd when they leave; never the door.",
+          "tags": null,
+          "cards": [
+            "q1",
+            "q2"
+          ]
+        },
+        {
+          "id": "number-on-the-way-out",
+          "part": null,
+          "glyph": "🎲",
+          "remember": "A client that never calls `bind()` gets a local port from the ephemeral range when `connect()` runs.",
+          "hook": "A client never asks for a number, yet it has one: `connect()` does an **implicit bind**, drawing a port from the ephemeral range (`/proc/sys/net/ipv4/ip_local_port_range`). It is a raffle ticket, valid for this one conversation.",
+          "tags": null,
+          "cards": [
+            "q3"
+          ]
+        },
+        {
+          "id": "done-talking",
+          "part": null,
+          "glyph": "🤐",
+          "remember": "`shutdown(fd, SHUT_WR)` sends FIN but keeps receiving; `close()` ends both directions.",
+          "hook": "`close()` **hangs up the phone**. `shutdown(fd, SHUT_WR)` says **\"I'm done talking, still listening\"**: it sends FIN so the server knows the request is complete, and the line stays open for the answer. Send, `SHUT_WR`, then `recv` until 0.",
+          "tags": null,
+          "cards": [
+            "q4"
+          ]
+        },
+        {
+          "id": "shout-or-silence",
+          "part": null,
+          "glyph": "🔔",
+          "remember": "ECONNREFUSED at once means the host answered with RST (nothing listening); a long hang means no answer at all (down host or a dropping firewall).",
+          "hook": "Knock on a door. **Someone shouts \"go away\"** at once: the host is up and sent an RST, nobody is listening on that port, `ECONNREFUSED`. **Silence**: the host is down, or a firewall eats your SYN without a word, and you stand there while the retries time out.",
+          "tags": null,
+          "cards": [
+            "q5"
+          ]
+        }
+      ],
       "task": {
         "markdown": "Two programs. This is the day the pieces become the milestone's deliverable.\n\n**`src/server.cpp`** — take Day 6 and wrap `accept()` in an outer loop:\n\n1. `accept()`, serve the client with Day 6's echo loop, `close()` the connected socket,\n   then loop back to `accept()`.\n2. Print a line when each client connects and disconnects, with their address, so you can\n   watch the cycle.\n3. The server should never exit on its own. A client disconnecting is a normal event.\n\n**`src/client.cpp`** — the mirror image:\n\n1. `socket()`, then `connect()` to `127.0.0.1:9000` using `inet_pton()`.\n2. Read lines from stdin. Send each one, `recv()` the echo, print it.\n3. On EOF (Ctrl-D), `shutdown(fd, SHUT_WR)`, drain any remaining reply, then `close()`\n   and exit cleanly.\n4. Check every return value, including `connect()`.\n\nExperiments:\n\n**Prove the outer loop works.** Connect, disconnect, connect again, several times. The\nserver must survive every one. Then connect two clients at once and watch the second one\nsit there getting nothing until the first disconnects — that's the accept queue holding\nit, and it's the limitation milestone 02 removes.\n\n**See ECONNREFUSED.** Run the client with no server running. Note how fast it fails,\nand what `strerror(errno)` says.\n\n**Watch your ephemeral port change.** Run the client several times, and each time have\nthe server print the client's port. It's different every run — that's the kernel's\nimplicit bind picking from the ephemeral range.\n\n**See the four-tuple do its job.** Start the server, then open *two* clients at once\n(the second will wait, which is fine — it's still connected). In a third terminal:\n\n```console\n$ ss -tan | grep 9000\n```\n\nYou should see one `LISTEN` row and two `ESTAB` rows whose local address is identical —\nsame IP, same port 9000 — and whose remote ports differ. That's Day 4's claim made\nconcrete: the server's port isn't consumed or divided, and the only thing telling the\ntwo conversations apart is the remote half of the tuple.\n\n**Find out who ends up in TIME_WAIT.** Day 3 said it's whoever closes first, and now you\nown both ends, so you can settle it. Exit the client with Ctrl-D so *it* closes first,\nthen immediately:\n\n```console\n$ ss -tan state time-wait | grep 9000\n```\n\nThe lingering socket's local port is the client's ephemeral one, not 9000 — the client\npaid the wait. Now make the server close first instead (drop the connection right after\nthe first echo) and repeat: this time port 9000 is the one sitting in `TIME_WAIT`, which\nis exactly the situation that made Day 3's restart fail.\n\n- Files: `src/server.cpp`, `src/client.cpp`",
         "files": [],
@@ -2053,6 +2371,53 @@
               "correct": false,
               "why": "That's TIME_WAIT, which does expire on its own. CLOSE_WAIT has no timer whatsoever — it persists until your process closes the fd or dies, which is what makes the pile-up unbounded."
             }
+          ]
+        }
+      ],
+      "hooks": [
+        {
+          "id": "last-words",
+          "part": null,
+          "glyph": "🕵️",
+          "remember": "For a hung process, strace's last line is the syscall it is blocked in.",
+          "hook": "Attach `strace` to a hung server and read its **last words**: the final line is the syscall it is sitting in right now. `accept(` means waiting for a client, `recv(` waiting for data, `futex(` waiting on another thread. The hang has told you what it is waiting for.",
+          "tags": null,
+          "cards": [
+            "q1"
+          ]
+        },
+        {
+          "id": "vigil",
+          "part": null,
+          "glyph": "🕯️",
+          "remember": "Whichever side closes first enters TIME_WAIT, so late duplicates die out and the last ACK can be resent.",
+          "hook": "**Whoever hangs up first keeps the vigil.** The side that closes first sits in TIME_WAIT for about a minute: long enough for stray duplicate packets to die, and to resend the final ACK if it was lost. A server that closes its own connections keeps the vigil for every client it ever had.",
+          "tags": null,
+          "cards": [
+            "q2",
+            "q3"
+          ]
+        },
+        {
+          "id": "unread-goodbye",
+          "part": null,
+          "glyph": "🗑️",
+          "remember": "CLOSE_WAIT means the peer has closed and your code has not; a pile of them is a leak in your program.",
+          "hook": "CLOSE_WAIT is a **goodbye you never answered**: the peer sent FIN, the kernel told you (`recv` returned 0), and your code never called `close()`. The kernel waits on *you*. A growing pile is never the network's fault: it is a leak in your program.",
+          "tags": null,
+          "cards": [
+            "q5"
+          ]
+        },
+        {
+          "id": "last-chance",
+          "part": null,
+          "glyph": "📉",
+          "remember": "`close()` can fail, and a failure can mean buffered data was not delivered; ignoring it hides data loss.",
+          "hook": "`close()` is the **last chance to hear bad news**. Its error can mean data you thought you had sent never made it, and after `close()` there is no fd left to ask. Ignore it and the loss is silent; check it and at least you can say so.",
+          "tags": null,
+          "cards": [
+            "q4"
           ]
         }
       ],

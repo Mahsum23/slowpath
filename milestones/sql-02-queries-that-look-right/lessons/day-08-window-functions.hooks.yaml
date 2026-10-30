@@ -1,0 +1,53 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: juicer-window
+    part: 1
+    glyph: 🪟
+    remember: GROUP BY collapses rows into one per group; a window function (OVER) keeps every row and adds a value computed over related rows.
+    hook: >
+      `GROUP BY` is a **juicer**: seven oranges in, two glasses out, and the oranges are gone.
+      `OVER` is a **window** you hold up beside each orange: the orange stays on the table, and
+      through the window you can see the total of its whole crate written next to it.
+    tags: [what a window is]
+  - id: podium
+    part: 2
+    glyph: 🏅
+    remember: "On a tie for first: `row_number` gives 1, 2; `rank` gives 1, 1, then 3; `dense_rank` gives 1, 1, then 2."
+    hook: >
+      An Olympic final with two golds. **rank** follows the real rule: two golds, **no
+      silver**, next is bronze (1, 1, 3). **dense_rank** is the kind uncle who hands out a silver
+      anyway (1, 1, 2). **row_number** tosses a coin and lines them up 1, 2, 3, so add a
+      tiebreaker to the window's `ORDER BY` if you want the same coin every time.
+    cards: [q4, d2]
+  - id: too-late-for-where
+    part: 2
+    glyph: ⌛
+    remember: Window functions are computed in the SELECT step, after WHERE, so filter on them from an outer query.
+    hook: >
+      Window functions are cooked at step 5, `SELECT`. `WHERE` is step 2 and **has already gone
+      home**, so `WHERE rank() OVER (…) = 1` is a note left for someone who left. Put the
+      ranking in an inner query and filter it in an outer one. (Some engines added a `QUALIFY`
+      clause for this; Postgres reads that word as a table alias.)
+    cards: [q2]
+  - id: twins
+    part: 3
+    glyph: 👯
+    remember: An OVER with ORDER BY defaults to RANGE … CURRENT ROW, which includes the current row's peers; write ROWS for a row-by-row running total.
+    hook: >
+      The default frame is **"everything up to me, and my twins"**: `RANGE` treats rows equal
+      on the `ORDER BY` key as peers. Two sales on the same day are twins, so each sees the
+      other and the running total **jumps**. `ROWS` counts physical rows instead. The same
+      default is why `last_value` keeps returning *you* (or your last twin): the frame ends
+      with you.
+    cards: [q3, q5, d1]
+  - id: behind-the-bouncer
+    part: 4
+    glyph: 🕰️
+    remember: "`lag` reads the previous row in the window (NULL on the first), and a window only sees rows WHERE kept."
+    hook: >
+      `lag` **looks over its shoulder** at the row behind it, and the first in the queue sees
+      nobody: NULL. And `OVER ()` means "all rows", but only those **the bouncer let in**: the
+      window opens onto the room after `WHERE`. For a share of the *whole* table, compute the
+      window in a subquery and filter outside it.
+    tags: [lag and lead, windows after WHERE]
+    cards: [d3]

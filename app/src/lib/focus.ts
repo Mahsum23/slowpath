@@ -36,6 +36,8 @@ export interface ItemInfo {
   tag: string | null;
   /** What it asks, for telling the model what to avoid repeating. */
   prompt: string;
+  /** The part of the day it checks, on a day read in parts. */
+  part: number | null;
 }
 
 /** Find the content behind a card, whichever file it came from. */
@@ -44,15 +46,15 @@ export function itemOf(day: Day, card: Pick<CardRef, 'kind' | 'questionId'>): It
   if (!id) return null;
   if (card.kind === 'quiz') {
     const q = day.quiz?.find((x) => x.id === id);
-    return q ? { tag: q.tag ?? null, prompt: q.prompt } : null;
+    return q ? { tag: q.tag ?? null, prompt: q.prompt, part: q.part ?? null } : null;
   }
   if (card.kind === 'drill') {
     const q = day.drill?.find((x) => x.id === id) ?? day.practice?.drill.find((x) => x.id === id);
-    return q ? { tag: q.tag ?? null, prompt: q.prompt } : null;
+    return q ? { tag: q.tag ?? null, prompt: q.prompt, part: q.part ?? null } : null;
   }
   if (card.kind === 'write') {
     const c = day.write?.challenges.find((x) => x.id === id) ?? day.practice?.write?.challenges.find((x) => x.id === id);
-    return c ? { tag: c.tag ?? null, prompt: c.prompt } : null;
+    return c ? { tag: c.tag ?? null, prompt: c.prompt, part: c.part ?? null } : null;
   }
   return null;
 }

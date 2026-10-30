@@ -1,0 +1,36 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: hose
+    glyph: 🌊
+    remember: TCP is a byte stream with no message boundaries; a protocol must frame its own messages.
+    hook: >
+      TCP is a **garden hose, not the post office**. Pour in "HELLO" then "WORLD" and out comes
+      `HELLOWORLD`, or `HEL` and `LOWORLD`, in any slicing that keeps the order. Where one message
+      ends is your job: a length prefix, a delimiter, or closing the connection.
+    cards: [q1, q2]
+  - id: keep-pouring
+    glyph: 🔁
+    remember: A short `send()` means only part fit in the send buffer; loop until every byte is sent.
+    hook: >
+      `send()` returning less than you asked is a **full bucket**: only that much fit in the
+      kernel's send buffer. Nothing is lost, nothing is wrong. Move the pointer forward and
+      **keep pouring** the rest until the count reaches zero.
+    cards: [q3]
+  - id: silent-death
+    glyph: 💀
+    remember: Writing to a socket whose peer has closed raises SIGPIPE, which kills the process by default; use `MSG_NOSIGNAL` or ignore SIGPIPE.
+    hook: >
+      Write into a connection the other side has hung up, and the kernel sends **SIGPIPE**,
+      whose default action is to kill you, without a single log line. Your server just *stops*.
+      Turn it into an ordinary error instead: `send(…, MSG_NOSIGNAL)` or
+      `std::signal(SIGPIPE, SIG_IGN)`, then handle `EPIPE`.
+    cards: [q4]
+  - id: nagle
+    glyph: 🐢
+    remember: Nagle's algorithm (1984) holds small writes while earlier data is unacknowledged; `TCP_NODELAY` turns it off.
+    hook: >
+      In 1984 telnet sent a **41-byte packet for every keystroke**: one byte of data, forty of
+      headers. John Nagle's fix makes a socket hold small writes while earlier data is still
+      unacknowledged, so they travel together. Lovely for typing, a 40 ms stall for chatty
+      request/response. `TCP_NODELAY = 1` means "do not delay": Nagle **off**.
+    cards: [q5]

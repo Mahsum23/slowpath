@@ -1,0 +1,35 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: polite-door
+    glyph: 🚪
+    remember: "`recv()` returning 0 is an orderly shutdown (the peer sent FIN); -1 is an error, with `errno`."
+    hook: >
+      `recv() == 0` is the **door closing politely**: the peer sent FIN and has said everything
+      it will ever say. `-1` is the **door jamming**: something went wrong, read `errno`. Treat
+      the polite close as an error and you log noise forever; treat the jam as a goodbye and you
+      hide real failures.
+    cards: [q1]
+  - id: spoon
+    glyph: 🥄
+    remember: "`recv(fd, buf, 1024, 0)` returns whatever is buffered, from 1 to 1024 bytes, with no message boundaries."
+    hook: >
+      `recv(…, 1024)` is a **spoon, not a pot**. It gives you whatever is in the kernel's bowl
+      at this moment, anywhere from 1 to 1024 bytes, and says nothing about where the sender's
+      messages began or ended. 4000 bytes sent means several spoonfuls, of no promised size.
+    cards: [q2, q4]
+  - id: postbox
+    glyph: 📮
+    remember: "`send()` returning n means n bytes were copied into the kernel's send buffer, not that the peer received them."
+    hook: >
+      `send()` returning 512 means the letter is **in the postbox**: 512 bytes copied into the
+      kernel's send buffer, which is now the kernel's problem. It says nothing about whether the
+      letter has left the building, let alone reached the other side.
+    cards: [q3]
+  - id: room-for-the-full-stop
+    glyph: 🔚
+    remember: "`buf[n] = '\\0'` overflows when `recv` filled the whole buffer; receive at most `sizeof buf - 1`."
+    hook: >
+      A string needs **room for its full stop**. If `recv` filled all 1024 bytes, `buf[1024]` is
+      one past the end, and the `'\0'` lands on whatever lives next door. Ask for
+      `sizeof buf - 1` and there is always room for it.
+    cards: [q5]

@@ -1,0 +1,55 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: slot-machine
+    part: 1
+    glyph: 🎰
+    remember: Without ORDER BY, row order is whatever the scan meets; an UPDATE alone can change it.
+    hook: >
+      A query without `ORDER BY` is a **slot machine** that has paid out "insertion order" a
+      thousand times in a row, so everyone thinks it is rigged that way. It is not. One `UPDATE`
+      writes the row's new version into a new slot, the scan meets it last, and the machine pays
+      out something else. **No ORDER BY, no order.**
+    tags: [no order without ORDER BY]
+    cards: [d3]
+  - id: photo-finish
+    part: 2
+    glyph: 🤝
+    remember: ORDER BY says nothing about ties; end it with a unique column, or use FETCH FIRST … WITH TIES.
+    hook: >
+      Two runners cross the line at 90 points, and `ORDER BY score` has **no photo-finish
+      camera**: a sort might name one winner and an index walk the other. Install the camera,
+      a unique last key (`ORDER BY score DESC, id`), so no two rows can ever tie. Or, when a
+      tie *should* share the podium, `FETCH FIRST 3 ROWS WITH TIES` lets everyone on it.
+    tags: [ties and stable order]
+    cards: [d1]
+  - id: sisyphus
+    part: 3
+    glyph: 🪨
+    remember: OFFSET n must read and discard n rows, and shifts when rows are inserted or deleted.
+    hook: >
+      `OFFSET 90000` is **Sisyphus counting stones**: there is no shortcut to "stone number
+      90,001", so the database counts every one, then throws them away, on every page load. And
+      if somebody drops a new stone at the front while you are reading, the count shifts by one
+      and page 2 shows you a stone you already saw.
+  - id: ariadne
+    part: 4
+    glyph: 🧵
+    remember: "Keyset pagination remembers the last row and asks for what comes after it: `(created_at, id) < (x, y)`."
+    hook: >
+      Ariadne did not tell Theseus "turn left 4,812 times". She gave him a **thread tied to
+      where he had been**. Keyset paging is the thread: remember the last row's
+      `(created_at, id)` and ask for what lies beyond it, **as a pair**. Two separate `<` cut
+      the thread: posts sharing the timestamp, or with a larger id, are lost in the labyrinth.
+    tags: [keyset pagination]
+    cards: [d2]
+  - id: moving-train
+    part: 5
+    glyph: 🚂
+    remember: Synchronized sequential scans let a new scan of a big table start where a running one is, so LIMIT without ORDER BY can begin mid-table.
+    hook: >
+      A seq scan of a big table is a **train already going round a loop line**. A second query
+      does not wait for a fresh train: it hops on wherever this one is (say, near row 100,000),
+      rides to the end of the line and round to the start. So "the first three rows" are
+      whatever is outside the window when you board.
+    tags: [no order without ORDER BY]
+    cards: [q9, q10]

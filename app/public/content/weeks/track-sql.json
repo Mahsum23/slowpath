@@ -227,6 +227,53 @@
           ]
         }
       ],
+      "hooks": [
+        {
+          "id": "page-box",
+          "part": null,
+          "glyph": "📦",
+          "remember": "PostgreSQL reads and writes in 8 kB pages, never single rows.",
+          "hook": "The table is a warehouse that only lends out **whole boxes**, 8 kB each. Want one row? You carry out the entire box it sits in. A `Seq Scan` is a forklift hauling every box in the building to find one sock, which is why \"rows read\" matters less than \"pages touched\".",
+          "tags": null,
+          "cards": [
+            "q1"
+          ]
+        },
+        {
+          "id": "ctid-hotel",
+          "part": null,
+          "glyph": "🏨",
+          "remember": "`ctid` is a physical address, `(page, slot)`, and an UPDATE moves the row to a new one.",
+          "hook": "Every row is a guest at Hotel Postgres, and `ctid` is the room number: floor and door, `(page, slot)`. An `UPDATE` never redecorates. The guest checks into a **new room** with the change, and the old room keeps a ghost until housekeeping comes. So a `ctid` is where somebody is sleeping tonight, never who they are.",
+          "tags": null,
+          "cards": [
+            "q2",
+            "q4"
+          ]
+        },
+        {
+          "id": "birth-death",
+          "part": null,
+          "glyph": "🪦",
+          "remember": "`xmin` is the transaction that created a row version, `xmax` the one that ended it.",
+          "hook": "Each row version carries two certificates: a **birth** certificate (`xmin`, the transaction that wrote it) and, once replaced or deleted, a **death** certificate (`xmax`). A reader never asks a writer for permission. It reads the dates against its own snapshot: born before I looked, not dead yet? Visible. That is how readers and writers avoid waiting for each other.",
+          "tags": null,
+          "cards": [
+            "q5"
+          ]
+        },
+        {
+          "id": "janitor",
+          "part": null,
+          "glyph": "🧹",
+          "remember": "Plain VACUUM makes dead space reusable but does not shrink the file; VACUUM FULL rewrites it under a lock.",
+          "hook": "`VACUUM` is a janitor: it sweeps the ghost rooms and hangs **\"vacant\"** signs on the doors for this table's next guests. The building stays 4 GB. To shrink it you need `VACUUM FULL`, which builds a whole new hotel next door, moves everyone in, and keeps the front door **locked** the entire time.",
+          "tags": null,
+          "cards": [
+            "q3"
+          ]
+        }
+      ],
       "task": {
         "markdown": "Get a PostgreSQL server in front of you and make it show you its own pages. Do not take\nany of the numbers above on trust; produce them yourself.\n\nIf you have no Postgres to hand, `docker run --rm -e POSTGRES_PASSWORD=x -p 5432:5432\npostgres:16` and `psql -h localhost -U postgres` is a 30-second setup.\n\n1. Confirm `block_size`, then create a table and check `pg_relation_size` before and\n   after inserting a couple of thousand rows. Record where the page count jumps.\n2. Select `ctid` alongside your own columns and work out how many rows are landing per\n   page.\n3. Update one row. Select its `ctid` again. Explain the number you get.\n4. Update *every* row three times, then compare `pg_relation_size` and `count(*)`.\n5. Run `VACUUM`, measure again, then `VACUUM FULL`, and measure again. Only one of them\n   changes the file size. Record both numbers.\n\nWrite every number you saw into the file as a comment beside the query that produced it.\nThose comments are your record of what the engine actually did.",
         "files": [
@@ -1057,6 +1104,72 @@
           ]
         }
       ],
+      "hooks": [
+        {
+          "id": "naked-column",
+          "part": null,
+          "glyph": "🧤",
+          "remember": "An index on `email` cannot serve `WHERE lower(email) = …`; keep the column bare, or index the expression.",
+          "hook": "The index is a phone book sorted by `email` **exactly as stored**. Wrap the column in a glove (`lower(email)`) and you are asking for a book sorted by something else, which does not exist, so Postgres reads every page. Two cures: put the function on the *other* side (`email = lower($1)`), or print the book you want: `CREATE INDEX ON users (lower(email))`.",
+          "tags": [
+            "keeping the column bare",
+            "expression indexes"
+          ],
+          "cards": [
+            "q4"
+          ]
+        },
+        {
+          "id": "surname-first",
+          "part": null,
+          "glyph": "📞",
+          "remember": "A composite index on `(a, b)` helps queries on `a`, or `a` and `b`, but not on `b` alone.",
+          "hook": "An index on `(last_name, first_name)` is the old phone book. \"Smith\"? Instant. \"Smith, Anna\"? Instant. \"Everyone called Anna\"? The Annas are scattered across every surname, so the book is just a heavy brick. **Leftmost column first**, always.",
+          "tags": [
+            "composite index order"
+          ],
+          "cards": null
+        },
+        {
+          "id": "crossword",
+          "part": null,
+          "glyph": "✂️",
+          "remember": "`LIKE 'abc%'` can use a B-tree index; `LIKE '%abc'` cannot.",
+          "hook": "A sorted index is a **dictionary**: words that *start* with \"abc\" sit together on one page. Words that *end* in \"abc\" are a **crossword** clue, and the only way to solve it is to read the whole dictionary. A leading `%` throws the sort away. (For endings, a trigram index, `pg_trgm`, is the tool.)",
+          "tags": [
+            "prefix searches"
+          ],
+          "cards": null
+        },
+        {
+          "id": "knock-knock",
+          "part": null,
+          "glyph": "🚪",
+          "remember": "An Index Only Scan still visits the table for pages the visibility map has not marked all-visible (`Heap Fetches`).",
+          "hook": "The index knows values but not who is **alive**: life and death live in the heap's `xmin`/`xmax`. The visibility map is a list of pages where \"everyone here is alive\". For any page not on the list, Postgres must walk over and **knock on the heap's door**. Every knock is a `Heap Fetch`. VACUUM is what adds pages to the list.",
+          "tags": [
+            "covering indexes"
+          ],
+          "cards": [
+            "q3"
+          ]
+        },
+        {
+          "id": "census",
+          "part": null,
+          "glyph": "🎲",
+          "remember": "The planner chooses from estimates (statistics sampled by ANALYZE), and fetching many rows through an index can cost more than a Seq Scan.",
+          "hook": "The planner never reads your data. It reads the **census** `ANALYZE` last took, and bets. After a bulk load the census is stale, and it bets on a town of 3 people that now holds 40,000. And even with a fresh census: fetching a big share of the table through an index is one courier trip **per row**. Past a few percent, driving the truck down every aisle (`Seq Scan`) is cheaper.",
+          "tags": [
+            "when the planner skips an index",
+            "reading plans"
+          ],
+          "cards": [
+            "q2",
+            "q5"
+          ]
+        }
+      ],
       "task": {
         "markdown": "Prove each of these to yourself rather than taking the lesson's word for it. Use enough\nrows that the planner has a real decision to make: 50,000 is plenty, and\n`generate_series` will produce them in one statement.\n\n1. `EXPLAIN` an equality filter with no index. Record the plan and its cost.\n2. Add the index, `ANALYZE`, run it again, and record how both changed.\n3. Wrap the column in `lower()` and watch it fall back to a sequential scan.\n4. Add an expression index and watch it recover.\n5. Get one query to report `Index Only Scan`, then change it so the same index gives you\n   a plain `Index Scan`, and work out what you changed.\n6. Build a column where one value is rare and one is common, index it, and find the query\n   where Postgres uses the index and the query where it refuses. Use `EXPLAIN ANALYZE` and\n   compare the execution times. The refusal should be the faster one.\n\nWrite every plan you saw into the file as a comment beside the query that produced it.\nThose comments are your record of what the planner actually did.",
         "files": [
@@ -1287,6 +1400,53 @@
               "correct": false,
               "why": "Right about the acceptance, out of date on the remedy. NOT NULL is one answer, but `UNIQUE NULLS NOT DISTINCT` (PostgreSQL 15+) forbids the duplicate NULL while still permitting a single one, and a partial unique index solved it before that."
             }
+          ]
+        }
+      ],
+      "hooks": [
+        {
+          "id": "sealed-envelope",
+          "part": null,
+          "glyph": "✉️",
+          "remember": "`NULL = NULL` is unknown, not true, and `WHERE` keeps only rows whose condition is true.",
+          "hook": "NULL is a **sealed envelope**. Is this envelope equal to that one? Nobody knows: unknown. *Not* equal? Also unknown. Only `IS NULL` asks a question with an answer: \"is this an envelope?\". And `WHERE` is a bouncer who admits only a definite **yes**. Unknown is thrown out with false, without a word.",
+          "tags": null,
+          "cards": [
+            "q1"
+          ]
+        },
+        {
+          "id": "poisoned-well",
+          "part": null,
+          "glyph": "🧪",
+          "remember": "One NULL in the list makes `x NOT IN (…)` return no rows for every `x`; use `NOT EXISTS`.",
+          "hook": "`x NOT IN (1, 2, NULL)` is `x <> 1 AND x <> 2 AND x <> NULL`. That last term is an envelope, so the whole `AND` can never become true. **One drop of NULL poisons the well**, and every row, for every possible `x`, is turned away. The antidote is `NOT EXISTS`, which asks about *rows*, and a row either exists or it does not.",
+          "tags": null,
+          "cards": [
+            "q2"
+          ]
+        },
+        {
+          "id": "polite-aggregates",
+          "part": null,
+          "glyph": "🙈",
+          "remember": "Aggregates skip NULLs: `count(*)` counts rows, `count(v)` non-NULL values, `avg` divides by the latter.",
+          "hook": "Aggregates are terribly polite: they pretend NULLs are **not in the room**. `count(*)` counts the people. `count(v)` counts the people who answered. `avg` divides by those who answered, so 1, 2 and a NULL average to **1.5**, not 1. Whether that is right depends on what the silence meant, and the database cannot ask.",
+          "tags": null,
+          "cards": [
+            "q3"
+          ]
+        },
+        {
+          "id": "two-faced",
+          "part": null,
+          "glyph": "🎭",
+          "remember": "Two NULLs are unequal in WHERE but grouped together by GROUP BY and DISTINCT, and UNIQUE lets any number in.",
+          "hook": "NULL is two-faced, and this sentence sorts its faces: **W**here **W**on't match, **G**roup **G**athers, **U**nique is **U**nlimited, **O**rder puts them **O**ut last (ascending). `UNIQUE` admits a hundred NULLs because its rule is \"same value?\", and envelopes are never the same. `UNIQUE NULLS NOT DISTINCT` (PostgreSQL 15) tells it: one envelope only.",
+          "tags": null,
+          "cards": [
+            "q4",
+            "q5"
           ]
         }
       ],
@@ -2552,6 +2712,96 @@
           ]
         }
       ],
+      "hooks": [
+        {
+          "id": "frogs-wear-gold-hats",
+          "part": 1,
+          "glyph": "🐸",
+          "remember": "Running order: FROM, WHERE, GROUP BY, HAVING, SELECT, DISTINCT, ORDER BY, LIMIT.",
+          "hook": "**F**rogs **W**ear **G**old **H**ats; **S**ome **D**ance, **O**thers **L**eap. Picture it: a frog kitchen. **F**ROM, fetch the ingredients. **W**HERE, bin the rotten ones. **G**ROUP BY, sort them into bowls. **H**AVING, bin the bowls that are too small. **S**ELECT, plate the dish and *name it*. **D**ISTINCT, drop duplicate plates. **O**RDER BY, line them up. **L**IMIT, serve the first few.",
+          "tags": [
+            "running order"
+          ],
+          "cards": null
+        },
+        {
+          "id": "name-tag",
+          "part": 2,
+          "glyph": "🏷️",
+          "remember": "An alias exists from SELECT on, so WHERE and HAVING cannot use it; ORDER BY can, but only on its own.",
+          "hook": "An alias is a **name tag printed at step 5**. `WHERE` (step 2) and `HAVING` (step 4) worked the room before the printer ran, so they have never heard of `doubled`. `ORDER BY` comes after and reads the tag, but only when the tag is the whole thing: `ORDER BY gross` reads it, while `ORDER BY gross + 0` goes rummaging in the fridge for an ingredient called gross.",
+          "tags": [
+            "what a clause can see"
+          ],
+          "cards": null
+        },
+        {
+          "id": "two-bouncers",
+          "part": 3,
+          "glyph": "🚪",
+          "remember": "Conditions on one row go in WHERE, conditions on a group go in HAVING.",
+          "hook": "Two bouncers. **WHERE** stands at the club door and checks each person. **HAVING** walks the tables afterwards and checks each *party*. The cancelled order has to be stopped at the door: once it is sitting at the table, its 500 is already in the bill that HAVING reads.",
+          "tags": [
+            "WHERE vs HAVING"
+          ],
+          "cards": null
+        },
+        {
+          "id": "basket-label",
+          "part": 4,
+          "glyph": "🧺",
+          "remember": "After GROUP BY, every selected column must be grouped on or aggregated (a primary key makes its table's columns safe).",
+          "hook": "A group is a **basket of rows**, and SELECT writes the basket's label. A label can only say what is true of the whole basket (the grouped column) or a summary (`count`, `sum`). \"The status of a basket holding one paid and one cancelled order\" does not exist. For years MySQL just read whichever apple was on top. Group by a customer's **primary key** and everything else about that customer is the same throughout the basket, so it may go on the label.",
+          "tags": [
+            "GROUP BY rules"
+          ],
+          "cards": null
+        },
+        {
+          "id": "empty-bag",
+          "part": 5,
+          "glyph": "🕳️",
+          "remember": "`count` of no rows is 0, `sum` of no rows is NULL; without GROUP BY you get one row, with it none.",
+          "hook": "Turn an **empty bag** upside down. `count` says \"0 things fell out\". `sum` says nothing, because it added nothing: **NULL**. Without `GROUP BY` there is always one bag, even an empty one, so you get one row. With `GROUP BY` there is one row per bag, and no rows means no bags means **no rows at all**. `coalesce(sum(x), 0)` when you mean zero.",
+          "tags": [
+            "aggregates over nothing"
+          ],
+          "cards": null
+        },
+        {
+          "id": "calendar-page",
+          "part": 6,
+          "glyph": "🗓️",
+          "remember": "`date_trunc('month', d)` keeps the year (a timeline); `extract(month FROM d)` is just 1 to 12 and merges years.",
+          "hook": "`date_trunc` **trims** the date back to the first of its month but leaves the year on: a point on a timeline. `extract(month …)` **tears off the calendar page** and keeps only the big number, so every January that ever happened lands in one pile. Timeline? Trim. \"Which month sells best\"? Tear. And `date_trunc` hands back a timestamp: add `::date`.",
+          "tags": [
+            "grouping by a computed value"
+          ],
+          "cards": null
+        },
+        {
+          "id": "whole-pizzas",
+          "part": 6,
+          "glyph": "🍕",
+          "remember": "Integer divided by integer is an integer, rounded toward zero: `3 / 12` is 0.",
+          "hook": "Integer division is a pizzeria that only sells **whole pizzas**. Three pizzas between twelve people? Everybody gets **0**, and the leftovers are thrown away. Let one side be `numeric` (`100.0 * 3 / 12`, or `3::numeric / 12`) and the shop starts selling slices.",
+          "tags": [
+            "integer division"
+          ],
+          "cards": null
+        },
+        {
+          "id": "zero-is-something",
+          "part": 7,
+          "glyph": "🎯",
+          "remember": "`count` counts every non-NULL value, so `count(CASE … ELSE 0 END)` counts all rows; use `FILTER (WHERE …)`.",
+          "hook": "To `count`, **0 is a perfectly good something**. It only skips NULL. So `count(CASE WHEN paid THEN 1 ELSE 0 END)` counts every row, paid or not, with a straight face. Drop the `ELSE` (the missing branch is NULL) or say what you mean: `count(*) FILTER (WHERE status = 'paid')`, which gives that one aggregate its own bouncer.",
+          "tags": [
+            "aggregate filters"
+          ],
+          "cards": null
+        }
+      ],
       "task": {
         "markdown": "Trigger the pipeline's rules on purpose, then read the pipeline in a real plan.\n\n1. Start the file with the day's setup block (schema, `orders` table, rows) from the\n   lesson, so it runs on its own.\n2. Write a query that uses a `SELECT` alias in `WHERE`, run it, and record the error.\n   Then fix it twice: once by repeating the expression in `WHERE`, once by wrapping the\n   query in a subquery and filtering the alias outside it.\n3. Write the \"customers whose **paid** orders total more than 150\" report correctly, and\n   next to it the version without the status filter. Record both results and which\n   customer differs.\n4. Run `EXPLAIN (COSTS OFF)` on the correct report and, in a comment, label each plan\n   node with the clause it implements (FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT).\n5. Show `sum()` returning one NULL row over an empty input, and the `GROUP BY` version\n   returning zero rows. Then make the first one return 0.\n6. Reproduce the `GROUP BY` / `ORDER BY` name disagreement with an alias that reuses an\n   input column's name, and fix it.\n\n`psql -f` keeps going after an error, so leave the failing queries in. They are part of\nthe record. Write what each query printed as a comment beside it.",
         "files": [
@@ -3028,6 +3278,77 @@
           ]
         }
       ],
+      "hooks": [
+        {
+          "id": "ghost-partner",
+          "part": 1,
+          "glyph": "👻",
+          "remember": "A LEFT JOIN keeps every left row; with no match it pairs the row with a right side of NULLs (a NULL-extended row).",
+          "hook": "`LEFT JOIN` is a dance where every left row is **promised a partner**. Anyone left standing alone at the end is handed a **ghost**: a partner made entirely of NULLs. That ghost is the NULL-extended row, and every condition after the join decides whether it survives the night.",
+          "tags": [
+            "what a LEFT JOIN keeps"
+          ],
+          "cards": null
+        },
+        {
+          "id": "ghost-hunter",
+          "part": 2,
+          "glyph": "🔫",
+          "remember": "A WHERE condition on the right table discards the NULL-extended rows, turning the LEFT JOIN into an inner join.",
+          "hook": "`WHERE o.status = 'paid'` walks up to each ghost and asks \"are you paid?\". A ghost can only answer NULL, and WHERE shoots anyone who does not say yes. **All the ghosts die**, and your left join is an inner join wearing a disguise. Postgres sees through it and plans an inner join: **no `Left` in the plan means your ghosts are dead.**",
+          "tags": null,
+          "cards": null
+        },
+        {
+          "id": "who-may-dance",
+          "part": 3,
+          "glyph": "💃",
+          "remember": "Right-table conditions belong in ON; left-table conditions belong in WHERE, because ON can never remove a left row.",
+          "hook": "`ON` decides **who counts as a partner**, before ghosts are handed out. `WHERE` judges everyone afterwards. \"Only paid orders may dance\" goes in `ON`. A condition on the *left* table goes in `WHERE`, because in `ON` it only stops partners turning up: every left row still gets its seat. And `OR o.status IS NULL` revives the ghosts but not `bo`, whose real (refunded) partner was shot by the WHERE.",
+          "tags": [
+            "ON vs WHERE"
+          ],
+          "cards": [
+            "d1"
+          ]
+        },
+        {
+          "id": "count-the-living",
+          "part": 4,
+          "glyph": "🧮",
+          "remember": "After an outer join, `count(*)` counts the NULL-extended row; count the right table's key instead.",
+          "hook": "`count(*)` counts heads, and a **ghost has a head**: the customer who never ordered \"has 1 order\". Count something only a living partner carries, `count(o.id)`. And to find the lonely ones on purpose, keep only the ghosts: `WHERE o.id IS NULL`, testing the right table's key, which a real row never has as NULL.",
+          "tags": [
+            "anti-join"
+          ],
+          "cards": [
+            "d2",
+            "d3"
+          ]
+        },
+        {
+          "id": "natural-bomb",
+          "part": 5,
+          "glyph": "💣",
+          "remember": "NATURAL JOIN joins on every column the two tables share a name with, so an unrelated migration can change it.",
+          "hook": "`NATURAL JOIN` is a **time bomb whose fuse is made of column names**. It joins on every name the tables share. The day a migration adds `note` to both, the join silently becomes `… AND a.note = b.note`, and with NULL notes every row vanishes. Nobody touched the query. Write `ON`, every time.",
+          "tags": [
+            "NATURAL JOIN"
+          ],
+          "cards": null
+        },
+        {
+          "id": "vanishing-join",
+          "part": 5,
+          "glyph": "🪄",
+          "remember": "PostgreSQL removes a LEFT JOIN when the right side is unique on the join key and none of its columns are used.",
+          "hook": "A magic trick: you wrote a join and it **vanished from the plan**. The planner proved two things: each left row matches at most one right row (a unique key), so no rows can be added, and you never use a right-side column, so nothing would change. A join that cannot change the answer is deleted. Select `p.bio` and it reappears.",
+          "tags": [
+            "join removal"
+          ],
+          "cards": null
+        }
+      ],
       "task": {
         "markdown": "Lose customers with one misplaced condition, prove it from the plan, and fix it.\n\n1. Start the file with the day's setup block from the lesson.\n2. Write \"every customer with their paid orders\" with the status condition in `WHERE`.\n   Record the result and name each customer who is missing.\n3. Run `EXPLAIN (COSTS OFF)` on it and record the join node. Explain in a comment why it\n   is not a left join.\n4. Move the condition into `ON`. Record the result and the new plan's join node.\n5. Try `WHERE o.status = 'paid' OR o.status IS NULL`, record which customer is still\n   missing, and explain why in a comment.\n6. Write \"orders per customer\" with `count(*)` and with `count(o.id)`, and record the row\n   where they disagree.\n7. Write \"customers who have never ordered\" as an anti-join, both as `LEFT JOIN … IS NULL`\n   and as `NOT EXISTS`.\n\nRecord what each query printed as a comment beside it.",
         "files": [
@@ -3449,6 +3770,53 @@
               "why": "An assumption the schema does not enforce is a guess. The query finds the orders that break it; the constraint makes the database refuse the second payment, and only then is it safe to rely on."
             }
           ]
+        }
+      ],
+      "hooks": [
+        {
+          "id": "rabbits",
+          "part": 1,
+          "glyph": "🐇",
+          "remember": "A join repeats the \"one\" side once per match; two independent \"many\" sides multiply.",
+          "hook": "Joins breed like **rabbits**. An order joined to its 3 items becomes 3 copies of the order. Add its 2 payments in the same query and every item pairs with every payment: **3 × 2 = 6** copies, each carrying the full 100.00. Revenue looks fantastic, and nobody files a bug when revenue goes up.",
+          "tags": null,
+          "cards": [
+            "d1",
+            "d2"
+          ]
+        },
+        {
+          "id": "grain",
+          "part": 2,
+          "glyph": "🌾",
+          "remember": "Decide the grain (what one row means) first, and bring every table to it before joining.",
+          "hook": "**Grain** is the answer to \"what does one row stand for?\". Orders are one per order, items one per line, payments one per payment. Stir them together and you get flour of **one row per (line, payment)**, which is nobody's report. Name the report's grain out loud (\"one row per customer\") before you write a single join.",
+          "tags": null,
+          "cards": null
+        },
+        {
+          "id": "boil-down",
+          "part": 3,
+          "glyph": "🥣",
+          "remember": "Aggregate each \"many\" table to the report's grain before joining; `sum(DISTINCT)` is not a fix.",
+          "hook": "**Boil each \"many\" table down** to one row per order first, then join one-to-one and nothing can multiply. Do not reach for `sum(DISTINCT amount)`: two honest payments of 50 look like *one* 50 to DISTINCT, which removes equal **values**, not duplicate **rows**. Rows are told apart by keys, not by what they happen to contain.",
+          "tags": [
+            "aggregate first"
+          ],
+          "cards": [
+            "d3"
+          ]
+        },
+        {
+          "id": "smoke-alarm",
+          "part": 4,
+          "glyph": "🚨",
+          "remember": "Before summing over a join, compare `count(*)` with `count(DISTINCT key)` at the grain you meant.",
+          "hook": "A two-number **smoke alarm**: `count(*)` and `count(DISTINCT o.id)` over the join you are about to sum. Same number? Quiet. Different? Something is breeding. And \"each order has one payment\" is a belief until a `GROUP BY order_id HAVING count(*) > 1` finds the order that disagrees, or a `UNIQUE` constraint makes it law.",
+          "tags": [
+            "detecting fan-out"
+          ],
+          "cards": null
         }
       ],
       "task": {
@@ -3914,6 +4282,70 @@
           ]
         }
       ],
+      "hooks": [
+        {
+          "id": "slot-machine",
+          "part": 1,
+          "glyph": "🎰",
+          "remember": "Without ORDER BY, row order is whatever the scan meets; an UPDATE alone can change it.",
+          "hook": "A query without `ORDER BY` is a **slot machine** that has paid out \"insertion order\" a thousand times in a row, so everyone thinks it is rigged that way. It is not. One `UPDATE` writes the row's new version into a new slot, the scan meets it last, and the machine pays out something else. **No ORDER BY, no order.**",
+          "tags": [
+            "no order without ORDER BY"
+          ],
+          "cards": [
+            "d3"
+          ]
+        },
+        {
+          "id": "photo-finish",
+          "part": 2,
+          "glyph": "🤝",
+          "remember": "ORDER BY says nothing about ties; end it with a unique column, or use FETCH FIRST … WITH TIES.",
+          "hook": "Two runners cross the line at 90 points, and `ORDER BY score` has **no photo-finish camera**: a sort might name one winner and an index walk the other. Install the camera, a unique last key (`ORDER BY score DESC, id`), so no two rows can ever tie. Or, when a tie *should* share the podium, `FETCH FIRST 3 ROWS WITH TIES` lets everyone on it.",
+          "tags": [
+            "ties and stable order"
+          ],
+          "cards": [
+            "d1"
+          ]
+        },
+        {
+          "id": "sisyphus",
+          "part": 3,
+          "glyph": "🪨",
+          "remember": "OFFSET n must read and discard n rows, and shifts when rows are inserted or deleted.",
+          "hook": "`OFFSET 90000` is **Sisyphus counting stones**: there is no shortcut to \"stone number 90,001\", so the database counts every one, then throws them away, on every page load. And if somebody drops a new stone at the front while you are reading, the count shifts by one and page 2 shows you a stone you already saw.",
+          "tags": null,
+          "cards": null
+        },
+        {
+          "id": "ariadne",
+          "part": 4,
+          "glyph": "🧵",
+          "remember": "Keyset pagination remembers the last row and asks for what comes after it: `(created_at, id) < (x, y)`.",
+          "hook": "Ariadne did not tell Theseus \"turn left 4,812 times\". She gave him a **thread tied to where he had been**. Keyset paging is the thread: remember the last row's `(created_at, id)` and ask for what lies beyond it, **as a pair**. Two separate `<` cut the thread: posts sharing the timestamp, or with a larger id, are lost in the labyrinth.",
+          "tags": [
+            "keyset pagination"
+          ],
+          "cards": [
+            "d2"
+          ]
+        },
+        {
+          "id": "moving-train",
+          "part": 5,
+          "glyph": "🚂",
+          "remember": "Synchronized sequential scans let a new scan of a big table start where a running one is, so LIMIT without ORDER BY can begin mid-table.",
+          "hook": "A seq scan of a big table is a **train already going round a loop line**. A second query does not wait for a fresh train: it hops on wherever this one is (say, near row 100,000), rides to the end of the line and round to the start. So \"the first three rows\" are whatever is outside the window when you board.",
+          "tags": [
+            "no order without ORDER BY"
+          ],
+          "cards": [
+            "q9",
+            "q10"
+          ]
+        }
+      ],
       "task": {
         "markdown": "Make order fail three ways, then build pagination that cannot.\n\n1. Start the file with the day's setup block from the lesson.\n2. Show a row moving to the end of an unordered `SELECT` after an `UPDATE`, with `ctid`\n   before and after.\n3. Show `ORDER BY score DESC LIMIT 2` returning different tied winners under two plans,\n   then make it stable with a tiebreaker.\n4. Reproduce the duplicated row on page 2 with `OFFSET`, by inserting between the two\n   page queries.\n5. Record `EXPLAIN (ANALYZE, BUFFERS)` for a deep `OFFSET` page and for the equivalent\n   keyset page, and write down the rows and buffers each one touched.\n6. On a table where `id` and `created_at` disagree, show the two-comparison keyset\n   skipping rows and the row-comparison keyset returning them.\n\nRecord what each query printed as a comment beside it.",
         "files": [
@@ -4351,6 +4783,69 @@
           ]
         }
       ],
+      "hooks": [
+        {
+          "id": "juicer-window",
+          "part": 1,
+          "glyph": "🪟",
+          "remember": "GROUP BY collapses rows into one per group; a window function (OVER) keeps every row and adds a value computed over related rows.",
+          "hook": "`GROUP BY` is a **juicer**: seven oranges in, two glasses out, and the oranges are gone. `OVER` is a **window** you hold up beside each orange: the orange stays on the table, and through the window you can see the total of its whole crate written next to it.",
+          "tags": [
+            "what a window is"
+          ],
+          "cards": null
+        },
+        {
+          "id": "podium",
+          "part": 2,
+          "glyph": "🏅",
+          "remember": "On a tie for first: `row_number` gives 1, 2; `rank` gives 1, 1, then 3; `dense_rank` gives 1, 1, then 2.",
+          "hook": "An Olympic final with two golds. **rank** follows the real rule: two golds, **no silver**, next is bronze (1, 1, 3). **dense_rank** is the kind uncle who hands out a silver anyway (1, 1, 2). **row_number** tosses a coin and lines them up 1, 2, 3, so add a tiebreaker to the window's `ORDER BY` if you want the same coin every time.",
+          "tags": null,
+          "cards": [
+            "q4",
+            "d2"
+          ]
+        },
+        {
+          "id": "too-late-for-where",
+          "part": 2,
+          "glyph": "⌛",
+          "remember": "Window functions are computed in the SELECT step, after WHERE, so filter on them from an outer query.",
+          "hook": "Window functions are cooked at step 5, `SELECT`. `WHERE` is step 2 and **has already gone home**, so `WHERE rank() OVER (…) = 1` is a note left for someone who left. Put the ranking in an inner query and filter it in an outer one. (Some engines added a `QUALIFY` clause for this; Postgres reads that word as a table alias.)",
+          "tags": null,
+          "cards": [
+            "q2"
+          ]
+        },
+        {
+          "id": "twins",
+          "part": 3,
+          "glyph": "👯",
+          "remember": "An OVER with ORDER BY defaults to RANGE … CURRENT ROW, which includes the current row's peers; write ROWS for a row-by-row running total.",
+          "hook": "The default frame is **\"everything up to me, and my twins\"**: `RANGE` treats rows equal on the `ORDER BY` key as peers. Two sales on the same day are twins, so each sees the other and the running total **jumps**. `ROWS` counts physical rows instead. The same default is why `last_value` keeps returning *you* (or your last twin): the frame ends with you.",
+          "tags": null,
+          "cards": [
+            "q3",
+            "q5",
+            "d1"
+          ]
+        },
+        {
+          "id": "behind-the-bouncer",
+          "part": 4,
+          "glyph": "🕰️",
+          "remember": "`lag` reads the previous row in the window (NULL on the first), and a window only sees rows WHERE kept.",
+          "hook": "`lag` **looks over its shoulder** at the row behind it, and the first in the queue sees nobody: NULL. And `OVER ()` means \"all rows\", but only those **the bouncer let in**: the window opens onto the room after `WHERE`. For a share of the *whole* table, compute the window in a subquery and filter outside it.",
+          "tags": [
+            "lag and lead",
+            "windows after WHERE"
+          ],
+          "cards": [
+            "d3"
+          ]
+        }
+      ],
       "task": {
         "markdown": "Rebuild three classic reports with windows, and catch the default frame in the act.\n\n1. Start the file with the day's setup block from the lesson.\n2. For every sale, show its region's total and its percentage of that total, without\n   `GROUP BY` in the outer query.\n3. Show `row_number`, `rank` and `dense_rank` side by side and explain, in a comment, each\n   difference on the tied rows.\n4. Get each region's top sale three ways: a subquery over `rank`, a subquery over\n   `row_number` with a tiebreaker, and `DISTINCT ON`. Record how the three differ for\n   `south`.\n5. Write a running total for `north` with the default frame and record the wrong row.\n   Fix it with `ROWS` and a tiebreaker.\n6. Show `last_value` returning the current row, then fix it.\n\nRecord what each query printed as a comment beside it.",
         "files": [
@@ -4771,6 +5266,71 @@
               "correct": true,
               "why": "PostgreSQL refuses to overflow rather than wrapping round, which is loud and right, but a table that cannot take inserts is an outage: Basecamp 3 went read-only for hours this way in 2018. `bigint` costs 4 bytes more per row."
             }
+          ]
+        }
+      ],
+      "hooks": [
+        {
+          "id": "magnet-and-gravity",
+          "part": 1,
+          "glyph": "🧲",
+          "remember": "PostgreSQL integer division truncates toward zero (-7/2 = -3); Python's `//` floors (-4).",
+          "hook": "Postgres divides with a **magnet at zero**: −3.5 is pulled *toward zero*, to −3. Python's `//` divides with **gravity**: −3.5 falls *down*, to −4. On positive numbers both land in the same place, which is why code ported between them passes every test until the first refund.",
+          "tags": [
+            "integer division"
+          ],
+          "cards": [
+            "q1",
+            "d1"
+          ]
+        },
+        {
+          "id": "disguised-literal",
+          "part": 2,
+          "glyph": "🥸",
+          "remember": "In PostgreSQL a literal like `0.1` is `numeric`, so `0.1 + 0.2 = 0.3` is true at the prompt but false for `float8` values.",
+          "hook": "At the psql prompt, `0.1` arrives in a **disguise**: it is `numeric`, exact decimal. So `0.1 + 0.2 = 0.3` says true, and you go home happy. Your `float8` column holds the binary cousin, whose 0.1 is really 0.1000000000000000055…, and the same test says false. Test with the column's real type: `0.1::float8 + 0.2::float8`.",
+          "tags": [
+            "floating point"
+          ],
+          "cards": [
+            "q2",
+            "d2"
+          ]
+        },
+        {
+          "id": "school-and-bank",
+          "part": 3,
+          "glyph": "🏦",
+          "remember": "`round(2.5)` on numeric is 3 (half away from zero); on float8 it is 2 (half to even).",
+          "hook": "Two teachers. `numeric` went to **school**: halves round away from zero, 2.5 is 3. `float8` went to the **bank**: halves round to the even neighbour, 2.5 is 2 and 3.5 is 4, so that rounding a million amounts does not drift the books upward. Same 2.5, different answer, depending on a type you may never have chosen.",
+          "tags": null,
+          "cards": [
+            "q3",
+            "q4"
+          ]
+        },
+        {
+          "id": "twenty-thirty-eight",
+          "part": 4,
+          "glyph": "💥",
+          "remember": "`int` tops out at 2,147,483,647 and PostgreSQL errors on overflow; use `bigint` for ids.",
+          "hook": "2,147,483,647 is a famous ceiling: it is also the second at which 32-bit Unix time runs out, on **19 January 2038**. Postgres does not wrap round to negative like C hardware; it **refuses loudly**. Loud is good, but not at the 2,147,483,648th insert: Basecamp's `int` id hit it in 2018 and the app went read-only for about five hours. Ids are `bigint`.",
+          "tags": [
+            "overflow"
+          ],
+          "cards": null
+        },
+        {
+          "id": "money-jar",
+          "part": 4,
+          "glyph": "🪙",
+          "remember": "Store money as `numeric` with a scale, or as an integer count of the smallest unit; never float8, and not the `money` type.",
+          "hook": "Money goes in one of two jars: a **decimal jar** (`numeric(12,2)` beside a currency column) or a **coin jar** (an integer count of cents, as Stripe's API does, and of whole yen for JPY). Never a float, which cannot even hold 0.10 exactly, and never `money`, whose output depends on the server's locale.",
+          "tags": null,
+          "cards": [
+            "q5",
+            "d3"
           ]
         }
       ],
@@ -5218,6 +5778,89 @@
               "why": "`now()` is the transaction's start time and does not move until it ends, so one unit of work has one logical moment. `clock_timestamp()` is the one that keeps ticking."
             }
           ]
+        }
+      ],
+      "hooks": [
+        {
+          "id": "pin-on-the-timeline",
+          "part": 1,
+          "glyph": "📍",
+          "remember": "`timestamptz` stores an instant and no zone; the session's TimeZone converts on the way in and out.",
+          "hook": "A `timestamptz` is a **pin stuck in the world's one timeline**, 8 bytes, with no room for a note saying where. The \"time zone\" in its name is the **interpreter at the door**: it reads your `'12:00'` in the session's zone on the way in, and speaks the session's zone on the way out. Change the interpreter and the same pin is read out differently.",
+          "tags": null,
+          "cards": [
+            "q1",
+            "q2"
+          ]
+        },
+        {
+          "id": "revolving-door",
+          "part": 2,
+          "glyph": "🔄",
+          "remember": "`timestamptz AT TIME ZONE z` gives the wall-clock `timestamp` there; `timestamp AT TIME ZONE z` gives the instant.",
+          "hook": "`AT TIME ZONE` is a **revolving door**, and what comes out is always the other type. An instant goes in, a wall-clock reading comes out (\"what did the clocks say *there*?\"). A wall-clock reading goes in, an instant comes out (\"this local time, *there*, was when?\").",
+          "tags": [
+            "AT TIME ZONE"
+          ],
+          "cards": null
+        },
+        {
+          "id": "upside-down",
+          "part": 2,
+          "glyph": "🙃",
+          "remember": "`'UTC+5'` is a POSIX zone, five hours behind UTC; `'+05'` is ISO, five hours ahead.",
+          "hook": "POSIX hangs its map **upside down**: positive means *west* of Greenwich. That is why New York is `EST5EDT`, with a plus-five meaning five hours *behind*. So `'12:00 UTC+5'` is 17:00 UTC, while ISO's `'12:00+05'` is 07:00 UTC: ten hours apart. Write zone names (`Asia/Tashkent`), never `UTC+n`.",
+          "tags": [
+            "time zone names"
+          ],
+          "cards": null
+        },
+        {
+          "id": "rubber-calendar",
+          "part": 3,
+          "glyph": "🗓️",
+          "remember": "`interval '1 day'` keeps the wall-clock time, `'24 hours'` adds 86,400 s; adding a month clamps to the month's last day.",
+          "hook": "The calendar is **rubber**. A day stretches to 25 hours or shrinks to 23 on the clock-change days, so `'1 day'` (same time tomorrow) and `'24 hours'` (86,400 seconds) part company. Months shrink too: 31 January plus a month is 28 February, and a subscription renewed from its *previous* date is **stuck on the 28th forever**. Count from the start date.",
+          "tags": [
+            "calendar arithmetic"
+          ],
+          "cards": [
+            "d1"
+          ]
+        },
+        {
+          "id": "bricks",
+          "part": 4,
+          "glyph": "🧱",
+          "remember": "For time ranges use `>= start AND < end`; `BETWEEN` includes both ends and a date bound means midnight.",
+          "hook": "`BETWEEN '06-01' AND '06-07'` stops at the **first second** of 7 June, losing the whole day; stretch it to the 8th and midnight lands in two weeks. Time ranges are **bricks**: `>= start AND < end`. Bricks laid end to end leave no gap and no overlap, at any precision.",
+          "tags": null,
+          "cards": [
+            "q3",
+            "d2"
+          ]
+        },
+        {
+          "id": "whose-midnight",
+          "part": 4,
+          "glyph": "🌍",
+          "remember": "`date_trunc('day', ts)` on a timestamptz cuts at midnight in the session's zone; pass the zone explicitly.",
+          "hook": "\"Today\" is a **question with a passport**: whose midnight? `date_trunc('day', created_at)` answers in the zone of whoever happens to be connected: the dashboard server, the analyst's laptop, the cron job. Same data, different daily totals. Give it the zone yourself as the third argument and the answer stops depending on who asks.",
+          "tags": null,
+          "cards": [
+            "q5"
+          ]
+        },
+        {
+          "id": "photo-not-video",
+          "part": 4,
+          "glyph": "🧊",
+          "remember": "`now()` is fixed at the start of the transaction; `clock_timestamp()` keeps moving.",
+          "hook": "`now()` is a **photograph** taken the moment the transaction began. Every row inserted during that transaction gets the same photo, a minute later or an hour later. `clock_timestamp()` is the **live video**: use it when you need to know how long something really took.",
+          "tags": [
+            "now() in a transaction"
+          ],
+          "cards": null
         }
       ],
       "task": {

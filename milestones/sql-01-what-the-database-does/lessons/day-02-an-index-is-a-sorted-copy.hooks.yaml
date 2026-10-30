@@ -1,0 +1,50 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: naked-column
+    glyph: 🧤
+    remember: An index on `email` cannot serve `WHERE lower(email) = …`; keep the column bare, or index the expression.
+    hook: >
+      The index is a phone book sorted by `email` **exactly as stored**. Wrap the column in a
+      glove (`lower(email)`) and you are asking for a book sorted by something else, which does
+      not exist, so Postgres reads every page. Two cures: put the function on the *other* side
+      (`email = lower($1)`), or print the book you want: `CREATE INDEX ON users (lower(email))`.
+    tags: [keeping the column bare, expression indexes]
+    cards: [q4]
+  - id: surname-first
+    glyph: 📞
+    remember: A composite index on `(a, b)` helps queries on `a`, or `a` and `b`, but not on `b` alone.
+    hook: >
+      An index on `(last_name, first_name)` is the old phone book. "Smith"? Instant. "Smith,
+      Anna"? Instant. "Everyone called Anna"? The Annas are scattered across every surname, so
+      the book is just a heavy brick. **Leftmost column first**, always.
+    tags: [composite index order]
+  - id: crossword
+    glyph: ✂️
+    remember: "`LIKE 'abc%'` can use a B-tree index; `LIKE '%abc'` cannot."
+    hook: >
+      A sorted index is a **dictionary**: words that *start* with "abc" sit together on one
+      page. Words that *end* in "abc" are a **crossword** clue, and the only way to solve it is to
+      read the whole dictionary. A leading `%` throws the sort away. (For endings, a trigram
+      index, `pg_trgm`, is the tool.)
+    tags: [prefix searches]
+  - id: knock-knock
+    glyph: 🚪
+    remember: An Index Only Scan still visits the table for pages the visibility map has not marked all-visible (`Heap Fetches`).
+    hook: >
+      The index knows values but not who is **alive**: life and death live in the heap's
+      `xmin`/`xmax`. The visibility map is a list of pages where "everyone here is alive". For
+      any page not on the list, Postgres must walk over and **knock on the heap's door**. Every
+      knock is a `Heap Fetch`. VACUUM is what adds pages to the list.
+    tags: [covering indexes]
+    cards: [q3]
+  - id: census
+    glyph: 🎲
+    remember: The planner chooses from estimates (statistics sampled by ANALYZE), and fetching many rows through an index can cost more than a Seq Scan.
+    hook: >
+      The planner never reads your data. It reads the **census** `ANALYZE` last took, and bets.
+      After a bulk load the census is stale, and it bets on a town of 3 people that now holds
+      40,000. And even with a fresh census: fetching a big share of the table through an index is
+      one courier trip **per row**. Past a few percent, driving the truck down every aisle
+      (`Seq Scan`) is cheaper.
+    tags: [when the planner skips an index, reading plans]
+    cards: [q2, q5]

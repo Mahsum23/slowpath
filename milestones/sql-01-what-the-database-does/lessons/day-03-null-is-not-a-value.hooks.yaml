@@ -1,0 +1,38 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: sealed-envelope
+    glyph: ✉️
+    remember: "`NULL = NULL` is unknown, not true, and `WHERE` keeps only rows whose condition is true."
+    hook: >
+      NULL is a **sealed envelope**. Is this envelope equal to that one? Nobody knows: unknown.
+      *Not* equal? Also unknown. Only `IS NULL` asks a question with an answer: "is this an
+      envelope?". And `WHERE` is a bouncer who admits only a definite **yes**. Unknown is thrown
+      out with false, without a word.
+    cards: [q1]
+  - id: poisoned-well
+    glyph: 🧪
+    remember: One NULL in the list makes `x NOT IN (…)` return no rows for every `x`; use `NOT EXISTS`.
+    hook: >
+      `x NOT IN (1, 2, NULL)` is `x <> 1 AND x <> 2 AND x <> NULL`. That last term is an
+      envelope, so the whole `AND` can never become true. **One drop of NULL poisons the
+      well**, and every row, for every possible `x`, is turned away. The antidote is `NOT
+      EXISTS`, which asks about *rows*, and a row either exists or it does not.
+    cards: [q2]
+  - id: polite-aggregates
+    glyph: 🙈
+    remember: "Aggregates skip NULLs: `count(*)` counts rows, `count(v)` non-NULL values, `avg` divides by the latter."
+    hook: >
+      Aggregates are terribly polite: they pretend NULLs are **not in the room**. `count(*)`
+      counts the people. `count(v)` counts the people who answered. `avg` divides by those who
+      answered, so 1, 2 and a NULL average to **1.5**, not 1. Whether that is right depends on
+      what the silence meant, and the database cannot ask.
+    cards: [q3]
+  - id: two-faced
+    glyph: 🎭
+    remember: Two NULLs are unequal in WHERE but grouped together by GROUP BY and DISTINCT, and UNIQUE lets any number in.
+    hook: >
+      NULL is two-faced, and this sentence sorts its faces: **W**here **W**on't match,
+      **G**roup **G**athers, **U**nique is **U**nlimited, **O**rder puts them **O**ut last (ascending).
+      `UNIQUE` admits a hundred NULLs because its rule is "same value?", and envelopes are never
+      the same. `UNIQUE NULLS NOT DISTINCT` (PostgreSQL 15) tells it: one envelope only.
+    cards: [q4, q5]
