@@ -23,7 +23,7 @@ steps:
         why: >
           That is `+ interval '2 months'` added in one step. Added one month at a time,
           the clamp to the 28th carries forward.
-      - text: "`2026-03-03 00:00:00` — February overflows into March"
+      - text: "`2026-03-03 00:00:00`: February overflows into March"
         correct: false
         why: >
           Some languages' date libraries roll an invalid February 31st over into March.
@@ -64,7 +64,7 @@ steps:
         why: >
           Those are each inside only one range. Double-counting needs an instant that
           both ranges include.
-      - text: None — the totals differ because of time-zone conversion
+      - text: "None: the totals differ because of time-zone conversion"
         correct: false
         why: >
           The literals are read in the session's zone, consistently in both queries. The
@@ -85,7 +85,7 @@ steps:
           A payment is an instant that happened, which is what timestamptz is for. "09:00
           wherever the shop is" is a wall-clock time, deliberately not an instant. A future
           local-time event is an intention: storing the local time and zone name keeps it
-          at 10:00 there even if the zone's rules change before it happens — Jon Skeet's
+          at 10:00 there even if the zone's rules change before it happens: Jon Skeet's
           argument in "Storing UTC is not a silver bullet".
       - text: "`timestamptz` for all three"
         correct: false
@@ -100,5 +100,5 @@ steps:
       - text: "`text` for all three, formatted as ISO 8601"
         correct: false
         why: >
-          Text sorts, compares and calculates badly, and validates nothing — '2025-02-29'
+          Text sorts, compares and calculates badly, and validates nothing: '2025-02-29'
           would be accepted. Use the types that know what a date is.

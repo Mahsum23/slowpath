@@ -114,14 +114,14 @@ wiki's "Don't Do This" page puts it as plainly as anything there: don't use `tim
 `timestamp` is right for wall-clock values that are deliberately not instants, like "the
 shop opens at 09:00", which is 09:00 in every branch whatever the zone.
 
-The honest complication is **future** events. Jon Skeet, who maintains the Noda Time
+The complication is **future** events. Jon Skeet, who maintains the Noda Time
 library, wrote *Storing UTC is not a silver bullet* in 2019, as the EU debated abolishing
 seasonal clock changes. His argument: a conference "at 09:00 in a European city next year",
 stored as a UTC instant, becomes the wrong local time if the zone's rules change before it
 happens, and rules change several times a year somewhere in the world. For future
 local-time events he stores the local time *and* the zone name, and works out the instant
-when it is needed. Past events are facts; future ones are intentions, and an intention
-can be stored more faithfully than as an instant.
+when it is needed. So: past events as instants, future local-time events as a local time
+plus a zone name.
 
 ### Check yourself
 
@@ -133,7 +133,7 @@ can be stored more faithfully than as an instant.
 
 ## Part 2: AT TIME ZONE, both ways
 
-Starting a new psql session? Run `SET search_path = day10;` first — the tables
+Starting a new psql session? Run `SET search_path = day10;` first. The tables
 are still there, but the setting lasts only for the session.
 
 `AT TIME ZONE` converts between the two types. Applied to a `timestamptz` it answers
@@ -151,8 +151,8 @@ SELECT timestamptz '2026-03-29 12:00:00+00' AT TIME ZONE 'Asia/Tashkent' AS wall
 ```
 
 Applied to a plain `timestamp`, it does the reverse: "this wall-clock time, read in that
-place, was which instant?", and returns a `timestamptz`. Same keywords, opposite types.
-That is the most common way people get it backwards.
+place, was which instant?", and returns a `timestamptz`. Same keywords, opposite types,
+which makes it easy to get backwards.
 
 ### Worth knowing: 'UTC+5' is five hours behind UTC
 
@@ -182,7 +182,7 @@ behind UTC, which is 17:00 UTC. Use zone names (`Asia/Tashkent`) or ISO offsets
 
 ## Part 3: Days and months are not fixed lengths
 
-Starting a new psql session? Run `SET search_path = day10;` first — the tables
+Starting a new psql session? Run `SET search_path = day10;` first. The tables
 are still there, but the setting lasts only for the session.
 
 On 29 March 2026, Berlin's clocks jump from 02:00 straight to 03:00. 02:30 does not exist
@@ -281,7 +281,7 @@ Interval arithmetic knows about calendars. String surgery on a date does not.
 
 ## Part 4: Ranges, and whose today
 
-Starting a new psql session? Run `SET search_path = day10;` first — the tables
+Starting a new psql session? Run `SET search_path = day10;` first. The tables
 are still there, but the setting lasts only for the session.
 
 ```sql

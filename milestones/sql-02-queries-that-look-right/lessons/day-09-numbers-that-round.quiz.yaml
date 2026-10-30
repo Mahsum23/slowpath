@@ -55,12 +55,12 @@ questions:
       - text: Both are float8, but the second one is rounded for display before comparing
         correct: false
         why: >
-          The second one is not float8 at all — Postgres reads `0.1` as numeric.
+          The second one is not float8 at all: Postgres reads `0.1` as numeric.
           Comparisons never use display rounding.
       - text: The `=` operator is not defined for float8
         correct: false
         why: >
-          It is defined, and it compares the exact stored values — which is why it says
+          It is defined, and it compares the exact stored values, which is why it says
           false.
 
   - id: q3
@@ -165,7 +165,7 @@ questions:
         correct: true
         why: >
           Both discard the fraction, but in different directions for negative numbers.
-          Code moved between the two agrees on every positive input and quietly disagrees
+          Code moved between the two agrees on every positive input and disagrees
           on negative ones.
       - text: "`-3.5`: PostgreSQL keeps the fraction when the result is negative"
         correct: false
@@ -198,7 +198,7 @@ questions:
         why: >
           The comparison happens in the server, on the values themselves. The display has
           nothing to do with it.
-      - text: It is not misleading — PostgreSQL corrects float rounding errors in comparisons
+      - text: "It is not misleading: PostgreSQL corrects float rounding errors in comparisons"
         correct: false
         why: >
           It does not: a `float8` column holding `0.1::float8 + 0.2::float8` does not match
@@ -216,7 +216,7 @@ questions:
         correct: true
         why: >
           PostgreSQL refuses to overflow rather than wrapping round, which is loud and right,
-          but a table that cannot take inserts is an outage — Basecamp 3 went read-only for
+          but a table that cannot take inserts is an outage: Basecamp 3 went read-only for
           hours this way in 2018. `bigint` costs 4 bytes more per row.
       - text: The id wraps round to −2,147,483,648 and inserts carry on
         correct: false

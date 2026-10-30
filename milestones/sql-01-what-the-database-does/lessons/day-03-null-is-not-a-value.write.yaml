@@ -26,7 +26,7 @@ challenges:
 
   - id: is-distinct
     prompt: >
-      Return every row of `n` whose `v` is not 1 — **including** the row where `v` is
+      Return every row of `n` whose `v` is not 1: **including** the row where `v` is
       NULL. `v <> 1` drops it.
     hint: There is a comparison operator that treats unknowns as comparable.
     solution: |

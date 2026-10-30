@@ -13,9 +13,9 @@ intro: >
   SQL almost never fails loudly. A misplaced filter, a join that multiplies rows or an
   integer division does not throw an error. It returns a plausible, well-formatted, wrong
   answer, and that answer ends up in a dashboard or an invoice. These days take the
-  fundamentals everyone believes they already know — the order a query runs in, what a
-  LEFT JOIN promises, what ORDER BY guarantees, what a number or a timestamp really holds
-  — and find the exact place where that belief and the engine disagree. Same setup as
+  fundamentals everyone believes they already know (the order a query runs in, what a
+  LEFT JOIN promises, what ORDER BY guarantees, what a number or a timestamp really holds)
+  and find the exact place where that belief and the engine disagree. Same setup as
   before: PostgreSQL 16 in a container and a psql prompt.
 
 days:
@@ -84,7 +84,7 @@ days:
     day: 9
     title: Numbers that round, truncate and overflow
     estMinutes: 25
-    teaser: Add 0.1 a million times, get 100,958 — and a conversion rate that was 0% for a year
+    teaser: "Add 0.1 a million times, get 100,958, and a conversion rate that was 0% for a year"
     teachBack: >
       Explain why a conversion rate written as `converted / total * 100` comes out as 0
       in PostgreSQL, why `0.1::float8 + 0.2::float8 = 0.3` is false while

@@ -15,10 +15,10 @@ questions:
         correct: true
         why: >
           Without ORDER BY you get whatever order the chosen plan meets the rows in. Writes
-          move rows physically — an updated row is a new version in a new slot — and plan
+          move rows physically (an updated row is a new version in a new slot) and plan
           changes alter the path through them. Synchronized scans can even start halfway
           through a big table. None of it needs a code change.
-      - text: Nothing — Postgres guarantees insertion order for tables with a primary key
+      - text: "Nothing: Postgres guarantees insertion order for tables with a primary key"
         correct: false
         why: >
           No such guarantee exists. A primary key is an index beside the heap; it does not
@@ -41,7 +41,7 @@ questions:
       which one is returned, and how do you make the answer stable?
     options:
       - text: >
-          Either — the order among ties is unspecified and can change with the plan; add a
+          Either: the order among ties is unspecified and can change with the plan; add a
           unique column as the last sort key, e.g. `ORDER BY score DESC, id`
         correct: true
         why: >
@@ -60,7 +60,7 @@ questions:
         why: >
           Only if you write the key into ORDER BY. Postgres never adds a tiebreaker for
           you.
-      - text: Both — LIMIT 1 returns every row tied for first place
+      - text: "Both: LIMIT 1 returns every row tied for first place"
         correct: false
         why: >
           That is what `FETCH FIRST 1 ROW WITH TIES` does. Plain LIMIT cuts at exactly
@@ -88,7 +88,7 @@ questions:
       - text: The new post at the top of page 2
         correct: false
         why: >
-          The new post is newest, so it is at position 1 — on page 1, which the reader has
+          The new post is newest, so it is at position 1, on page 1, which the reader has
           already loaded. What page 2 gets is the row that was pushed off page 1.
       - text: An error, because the result set changed between queries
         correct: false
@@ -114,7 +114,7 @@ questions:
       - text: Postgres ignores indexes whenever OFFSET is present
         correct: false
         why: >
-          The plan uses the index — EXPLAIN shows an Index Scan. The cost is the counting,
+          The plan uses the index: EXPLAIN shows an Index Scan. The cost is the counting,
           not the access path.
       - text: The rows are sorted in memory before the offset is applied
         correct: false
@@ -154,7 +154,7 @@ questions:
       - text: Postgres does not support comparing columns with `AND` in a `WHERE`
         correct: false
         why: >
-          It supports it fine — the query runs and returns the wrong rows, silently.
+          It supports it fine: the query runs and returns the wrong rows, silently.
 
   - id: q6
     part: 1
@@ -204,7 +204,7 @@ questions:
       - text: It is a bug in older versions; it should return exactly three
         correct: false
         why: >
-          Returning more than three on a tie is the whole point of `WITH TIES`. `LIMIT 3`
+          Returning more than three on a tie is what `WITH TIES` is for. `LIMIT 3`
           is the form that returns exactly three.
 
   - id: q8
@@ -221,7 +221,7 @@ questions:
         why: >
           Each page asks for the rows after that position, which an index can find directly
           and which a new row cannot shift. The price is that "page 37" has no position to
-          start from — fine for feeds, exports and APIs.
+          start from: fine for feeds, exports and APIs.
       - text: The number of rows already shown; it cannot go backwards
         correct: false
         why: >

@@ -15,7 +15,7 @@ questions:
         why: >
           Those are the two standing costs, and neither is small. Two single-column
           indexes on a three-column 50,000-row table came to 1544 kB each against a
-          4552 kB table — two thirds of the table's size, for two columns. And in
+          4552 kB table: two thirds of the table's size, for two columns. And in
           PostgreSQL the write cost is worse than it first looks: because index entries
           hold a physical row location, an UPDATE that moves a row must touch every index
           on the table, not just the ones on columns you changed.
@@ -29,7 +29,7 @@ questions:
         correct: false
         why: >
           Reading through an index takes no special lock. There is a locking cost to
-          *building* one — which is why CREATE INDEX CONCURRENTLY exists — but that is a
+          *building* one, which is why CREATE INDEX CONCURRENTLY exists, but that is a
           one-off, not a cost of having the index.
       - text: Queries that do not use the index have to skip past it while scanning
         correct: false
@@ -49,7 +49,7 @@ questions:
         correct: true
         why: >
           Two entirely different failures that produce the identical symptom. The first
-          is a correctness limit — an index on `name` is sorted by `name`, so it can say
+          is a correctness limit: an index on `name` is sorted by `name`, so it can say
           nothing about `lower(name)`. The second is the planner being right: fetching
           198,000 of 200,000 rows through an index means 198,000 random heap jumps, and
           reading the table straight through beat it by more than 10x in the lesson's
@@ -61,18 +61,18 @@ questions:
         why: >
           An unfinished CREATE INDEX is simply not visible to the planner yet, so this is
           not really a case of an index being ignored. And no row-count threshold governs
-          whether an index can exist — small tables just rarely benefit.
+          whether an index can exist: small tables just rarely benefit.
       - text: >
           The column is nullable, and PostgreSQL cannot index columns that contain NULLs
         correct: false
         why: >
           PostgreSQL B-trees do index NULLs, and `WHERE col IS NULL` can use an index.
-          (This is a real difference between engines — Oracle's B-trees famously omit
-          all-NULL keys — but it is not why Postgres would choose a Seq Scan.)
+          (This is a real difference between engines (Oracle's B-trees famously omit
+          all-NULL keys) but it is not why Postgres would choose a Seq Scan.)
       - text: The statistics are stale, which makes the index physically unusable
         correct: false
         why: >
-          Stale statistics are a genuine and very common cause of a bad plan — but they
+          Stale statistics are a genuine and very common cause of a bad plan, but they
           mislead the planner's *estimate*, they do not make an index unusable. Run
           ANALYZE and the same index may suddenly be chosen for the same query.
 
@@ -83,14 +83,14 @@ questions:
     options:
       - text: >
           The index carried every column the query needed, so the heap lookup was
-          skipped — except for pages the visibility map has not marked all-visible
+          skipped: except for pages the visibility map has not marked all-visible
         correct: true
         why: >
           The saving is the second lookup: index entry to row. The catch is that an index
           holds no visibility information, so Postgres must still establish that each row
           is visible to your transaction. It uses the visibility map, one bit per page,
           and any page not marked forces a heap fetch after all. EXPLAIN ANALYZE prints
-          `Heap Fetches:` — a large number there usually means the table wants vacuuming.
+          `Heap Fetches:`, and a large number there usually means the table wants vacuuming.
       - text: The whole index was loaded into memory, so no disk reads were needed
         correct: false
         why: >
@@ -125,19 +125,19 @@ questions:
           The first two follow from the index being sorted by `email` and nothing else.
           The third is the subtle one: turning `LIKE 'a%'` into the range `>= 'a' AND
           < 'b'` is only valid if the sort order is bytewise. A locale-aware collation
-          may interleave strings so that the prefix matches are not contiguous — and
+          may interleave strings so that the prefix matches are not contiguous, and
           `C.UTF-8` counts as locale-aware, despite the name.
       - text: All three, since all three mention only the indexed column
         correct: false
         why: >
           Mentioning the column is not the test. The test is whether the query's condition
-          can be expressed as a range over the *order the index is sorted in* — which
+          can be expressed as a range over the *order the index is sorted in*, which
           `lower(email)` cannot be, at any collation.
       - text: >
           Only the equality one; B-trees answer equality and nothing else
         correct: false
         why: >
-          B-trees are excellent at ranges — that is what being sorted buys you. `>`, `<`,
+          B-trees are excellent at ranges: that is what being sorted buys you. `>`, `<`,
           `BETWEEN` and `ORDER BY` all use them, and a prefix `LIKE` is a range in
           disguise when the collation permits.
       - text: >
@@ -156,7 +156,7 @@ questions:
       estimate?
     options:
       - text: >
-          The statistics are stale or unrepresentative — and since the estimate is what
+          The statistics are stale or unrepresentative, and since the estimate is what
           chooses the plan, a wrong one picks a plan suited to a query that does not exist
         correct: true
         why: >
@@ -164,8 +164,8 @@ questions:
           for EXPLAIN ANALYZE rather than EXPLAIN. Believing three rows, the planner
           happily picks an index scan or a nested loop; at 40,000 rows those become
           40,000 random jumps or 40,000 inner scans. ANALYZE after a bulk load is the
-          first thing to try, and correlated columns — where the planner assumes
-          independence and is wrong — are the next suspect.
+          first thing to try, and correlated columns, where the planner assumes
+          independence and is wrong, are the next suspect.
       - text: >
           Nothing is wrong; `EXPLAIN` reports rows examined and `EXPLAIN ANALYZE` reports
           rows returned

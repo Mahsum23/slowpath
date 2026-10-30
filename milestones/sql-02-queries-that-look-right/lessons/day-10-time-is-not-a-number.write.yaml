@@ -10,9 +10,9 @@ challenges:
   - id: whole-week
     part: 4
     prompt: >
-      The ids of the logins in the week of 1–7 June, **including everything on the 7th**
+      The ids of the logins in the week of 1 to 7 June, **including everything on the 7th**
       and nothing from the 8th. Ordered by id. `BETWEEN` can't express this.
-    hint: Inclusive start, exclusive end — the end is the start of the next day.
+    hint: "Inclusive start, exclusive end: the end is the start of the next day."
     solution: |
       SELECT id FROM logins
       WHERE at >= '2026-06-01' AND at < '2026-06-08'
@@ -39,7 +39,7 @@ challenges:
   - id: month-clamp
     part: 3
     prompt: >
-      The date one month after 31 January 2026, returned as a `date` — not a timestamp.
+      The date one month after 31 January 2026, returned as a `date`, not a timestamp.
     hint: Add an interval, then cast the result back down.
     solution: |
       SELECT (date '2026-01-31' + interval '1 month')::date AS next_month;

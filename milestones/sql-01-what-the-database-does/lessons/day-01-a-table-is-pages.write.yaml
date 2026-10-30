@@ -17,7 +17,7 @@ challenges:
   - id: moved
     prompt: >
       Change the `note` of row 1 to `'changed'`, then return that row's location. It
-      should be the *new* one — an UPDATE writes a new version of the row.
+      should be the *new* one: an UPDATE writes a new version of the row.
     hint: Two statements. The second one is the same system column as before.
     solution: |
       UPDATE t SET note = 'changed' WHERE id = 1;

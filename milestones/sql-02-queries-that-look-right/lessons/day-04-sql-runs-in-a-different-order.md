@@ -77,7 +77,7 @@ future, and you should *read* every query in the running order anyway.
 
 ## Part 2: Every one of these errors is the pipeline showing through
 
-Starting a new psql session? Run `SET search_path = day04;` first — the tables are still
+Starting a new psql session? Run `SET search_path = day04;` first. The tables are still
 there, but the setting lasts only for the session.
 
 An alias is created in step 5. `WHERE` is step 2, so the alias does not exist yet:
@@ -180,7 +180,7 @@ Five errors with five messages, and all of them come from the same one rule.
 
 ## Part 3: WHERE and HAVING answer different questions
 
-Starting a new psql session? Run `SET search_path = day04;` first — the tables are still
+Starting a new psql session? Run `SET search_path = day04;` first. The tables are still
 there, but the setting lasts only for the session.
 
 The errors are the cheap part, because they stop you. The expensive version runs fine.
@@ -250,7 +250,7 @@ customer so equal customers are adjacent, then aggregate them (**GROUP BY**), wi
 on each group (**HAVING**). Sort by the total (**ORDER BY**), then stop after one row
 (**LIMIT**). Your query, run in exactly the order the table above promised. Note that the
 `WHERE` filter is attached to the scan and the `HAVING` filter is attached to the
-aggregate. That is the whole difference between them, made physical.
+aggregate.
 
 ### Check yourself
 
@@ -262,7 +262,7 @@ aggregate. That is the whole difference between them, made physical.
 
 ## Part 4: One value per group
 
-Starting a new psql session? Run `SET search_path = day04;` first — the tables are still
+Starting a new psql session? Run `SET search_path = day04;` first. The tables are still
 there, but the setting lasts only for the session.
 
 After `GROUP BY customer`, each output row stands for several input rows. So what could
@@ -362,12 +362,12 @@ to never reuse an input column's name as an alias, or to group by position
 1. `SELECT customer, status, sum(amount) FROM orders GROUP BY customer` is rejected, but
    grouping by a table's primary key lets you select its other columns. What is the
    principle behind both?
-2. `SELECT lower(customer) AS customer, count(*) FROM orders GROUP BY customer` — which
+2. `SELECT lower(customer) AS customer, count(*) FROM orders GROUP BY customer`: which
    `customer` does the `GROUP BY` use, and what does that do to the result?
 
 ## Part 5: The empty group that isn't empty
 
-Starting a new psql session? Run `SET search_path = day04;` first — the tables are still
+Starting a new psql session? Run `SET search_path = day04;` first. The tables are still
 there, but the setting lasts only for the session.
 
 One more consequence, and it bites people writing totals for dashboards. An aggregate
@@ -385,7 +385,7 @@ SELECT count(*), sum(amount) FROM orders WHERE customer = 'zed';
 ```
 
 `count` says 0, as you would hope. `sum` of no rows is NULL, not 0, and every NULL rule
-from last week applies to it from here on: `total + sum(...)` is now NULL. Write
+from day 3 applies to it from here on: `total + sum(...)` is now NULL. Write
 `coalesce(sum(amount), 0)` when you mean zero. Add a `GROUP BY` and the same filter returns
 **no rows at all**, because there are no groups to report:
 
@@ -805,7 +805,7 @@ where you have it.
 
 1. A per-customer report needs all attempts and the paid ones in the same row. Why does
    adding `WHERE status = 'paid'` break it, beyond the attempts column?
-2. `count(CASE WHEN status = 'paid' THEN 1 ELSE 0 END)` — what does it actually count?
+2. `count(CASE WHEN status = 'paid' THEN 1 ELSE 0 END)`: what does it actually count?
 3. A customer with no paid payments: what does `sum(amount) FILTER (WHERE status = 'paid')`
    return for them, and why?
 

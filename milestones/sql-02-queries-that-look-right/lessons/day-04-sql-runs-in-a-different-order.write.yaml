@@ -62,7 +62,7 @@ challenges:
     tag: aggregates over nothing
     prompt: >
       Return the total amount of orders over 1000, as a single value that is `0` when
-      there are none — not NULL.
+      there are none, not NULL.
     hint: The sum of no rows is NULL. Something returns its first non-NULL argument.
     solution: |
       SELECT coalesce(sum(amount), 0) AS total FROM orders WHERE amount > 1000;

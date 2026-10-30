@@ -11,7 +11,7 @@ title: What the Database Does
 track: sql
 intro: >
   If you write SQL that works but have never looked at what the engine does with it, this
-  is the layer underneath. Everything runs against PostgreSQL 16 — the engine most likely
+  is the layer underneath. Everything runs against PostgreSQL 16: the engine most likely
   to be under whatever you build next, and one of the few that will hand you a raw page
   and tell you what is on it. A container and a psql prompt is the whole setup.
 
@@ -24,14 +24,14 @@ days:
     teachBack: >
       A page is the unit of I/O, and an UPDATE writes a new version of the row rather
       than editing it. Put those two facts together and explain why a table can triple in
-      size while its row count stays flat — and what plain VACUUM does about it, given
+      size while its row count stays flat, and what plain VACUUM does about it, given
       that it does not shrink the file.
 
   - id: sql-day-02
     day: 2
     title: An index is a sorted copy
     estMinutes: 30
-    teaser: Same index, same query, one word different — and the planner refuses it
+    teaser: "Same index, same query, one word different, and the planner refuses it"
     teachBack: >
       An index is a second sorted tree, not an annotation on the table. Use that to
       explain both why `WHERE lower(email) = ?` cannot use an index on `email`, and why a
@@ -46,4 +46,4 @@ days:
     teachBack: >
       Walk through why `x NOT IN (1, 2, NULL)` returns nothing for every possible `x`.
       Expand the expression, say what each term evaluates to, and explain why `WHERE`
-      then drops the row — including why it drops it silently rather than erroring.
+      then drops the row, including why it drops it silently rather than erroring.

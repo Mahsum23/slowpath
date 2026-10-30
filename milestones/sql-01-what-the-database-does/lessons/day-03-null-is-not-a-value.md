@@ -6,10 +6,11 @@ Two lessons about where bytes live. This one is about a single value that isn't 
 the class of bug it produces: queries that are syntactically perfect, throw no error, log
 nothing, and return the wrong answer for years.
 
-### It is not zero, and it is not empty
+### NULL means unknown
 
-`NULL` means *unknown*. Not absent, not blank, not a default — unknown. Once you take
-that literally, everything else follows, including the parts that look broken.
+`NULL` means *unknown*. It is neither zero nor an empty string, and it is not a default
+either. Once you take that literally, everything else follows, including the parts that
+look broken.
 
 If a value is unknown, then any comparison with it is also unknown:
 
@@ -23,25 +24,22 @@ SELECT NULL = NULL AS "null = null", NULL <> NULL AS "null <> null", NULL IS NUL
              |              | t
 ```
 
-The first two came back **blank — which is psql printing NULL**, not false. `NULL = NULL`
-is not false; it is unknown, because two unknown quantities may or may not be equal and
-SQL declines to guess. This is why `IS NULL` exists as separate syntax: it is the only
+The first two came back blank, which is how psql prints NULL. `NULL = NULL` is unknown,
+because two unknown quantities may or may not be equal and SQL declines to guess. This is why `IS NULL` exists as separate syntax: it is the only
 operator that asks about the unknown-ness itself rather than about the value.
 
-So SQL does not run on booleans. It runs on **three-valued logic**: true, false, unknown.
-And the rule that turns that from trivia into production bugs is one line long:
+So SQL conditions have three possible results: true, false and unknown. This is called
+**three-valued logic**, and one rule turns it into production bugs:
 
 > `WHERE` keeps a row only when the condition is **true**. Unknown is discarded, exactly
 > like false.
 
-Silently. That is the whole failure mode.
+Nothing warns you when that happens.
 
 ### The query that returns nothing, forever
 
-Here is the shape, and it is in more codebases than anyone would like:
-
-Three users, and one of the two orders has a NULL `user_id` — a returns row, a deleted
-account, a legacy import, whatever your schema permits:
+Three users, and one of the two orders has a NULL `user_id` (a returns row, a deleted
+account, a legacy import, whatever your schema permits):
 
 ```sql
 CREATE TABLE users(id int, name text);
@@ -72,11 +70,11 @@ Expand it for user 2. `2 NOT IN (1, NULL)` means `2 <> 1 AND 2 <> NULL`:
  f   |        |
 ```
 
-`2 <> 1` is true. `2 <> NULL` is **unknown**. And `true AND unknown` is unknown — not
-true — so `WHERE` drops the row. Now notice that nothing about this depended on the
+`2 <> 1` is true. `2 <> NULL` is **unknown**. And `true AND unknown` is unknown, so
+`WHERE` drops the row. Now notice that nothing about this depended on the
 number 2. Whatever value you test, the second term stays unknown, so the whole `NOT IN`
-is at best unknown and the row is always dropped. **A single NULL anywhere in the list
-makes `NOT IN` return nothing for every possible input.**
+is at best unknown and the row is always dropped. A single NULL anywhere in the list
+makes `NOT IN` return nothing for every possible input.
 
 `IN` is not symmetric with it: `2 IN (1, NULL)` is also unknown and also drops the row,
 but at least it can return true when there *is* a match, so the bug hides only the misses.
@@ -96,9 +94,8 @@ SELECT name FROM users WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id 
  cy
 ```
 
-Postgres will also usually plan `NOT EXISTS` better — as an anti-join rather than as a
-filter — so the correct version is generally the faster one too. That is rare enough to
-be worth enjoying.
+Postgres will also usually plan `NOT EXISTS` better (as an anti-join rather than as a
+filter), so here the correct version is generally the faster one too.
 
 ### It is contagious
 
@@ -114,13 +111,13 @@ SELECT 'a' || NULL AS concat, 1 + NULL AS arith, coalesce('a' || NULL, 'fallback
         |       | fallback
 ```
 
-`'a' || NULL` is not `'a'`. If one part of the greeting you are building is unknown, the
-greeting is unknown. Every templating bug that renders an empty string where a name
-should be traces back to this, and `coalesce(x, fallback)` — return the first non-NULL
-argument — is the standard defence.
+`'a' || NULL` is NULL, not `'a'`. If one part of the greeting you are building is
+unknown, the greeting is unknown. This is a common cause of templates that render an empty
+string where a name should be, and `coalesce(x, fallback)`, which returns its first
+non-NULL argument, is the standard defence.
 
-Aggregates go the other way and **skip NULLs entirely**, which is the source of a whole
-second family of quiet wrongness:
+Aggregates go the other way and **skip NULLs entirely**, which causes a second kind of
+quiet error:
 
 ```sql order
 CREATE TABLE n(v int);
@@ -134,16 +131,15 @@ SELECT count(*), count(v), sum(v), avg(v) FROM n;
      3 |     2 |   3 | 1.5000000000000000
 ```
 
-`count(*)` counts rows: 3. `count(v)` counts non-NULL values: 2. And `avg` is 1.5, not 1
-— it divided by 2, not by 3. If those NULLs represent "sensor was offline", the average
-you just reported is the average of the readings you have, which is a defensible answer.
-If they represent "we forgot to record a zero", it is a lie. The database cannot tell the
-difference, and neither can the dashboard.
+`count(*)` counts rows: 3. `count(v)` counts non-NULL values: 2. And `avg` is 1.5, not 1,
+because it divided by 2 rather than 3. If those NULLs represent "sensor was offline", the
+average you just reported is the average of the readings you have, which is a defensible
+answer. If they represent "we forgot to record a zero", it is wrong, and neither the
+database nor the dashboard can tell which case you are in.
 
-### The inconsistency the experts actually argue about
+### The inconsistency experts argue about
 
-Here is where SQL stops being merely counter-intuitive and becomes genuinely
-self-contradictory. `WHERE v = NULL` matches nothing, because two unknowns are not known
+SQL does not treat NULLs the same way everywhere. `WHERE v = NULL` matches nothing, because two unknowns are not known
 to be equal. Put a second NULL into that same table and ask two more questions of it:
 
 ```sql
@@ -160,8 +156,8 @@ SELECT count(DISTINCT v) AS distinct_v, count(*) AS all_rows FROM n;
    |     2
 ```
 
-`GROUP BY` collected the two NULL rows into **one group of two** — treating them as equal
-to each other, in a language where `NULL = NULL` is not true — while `count(DISTINCT v)`
+`GROUP BY` collected the two NULL rows into **one group of two**, treating them as equal
+to each other in a language where `NULL = NULL` is not true. Meanwhile `count(DISTINCT v)`
 ignored them entirely and reported 2 distinct values out of 4 rows. `ORDER BY` has an opinion too:
 Postgres sorts NULLs as larger than every value, so they land last ascending and first
 descending, and `ORDER BY x NULLS FIRST` exists because the standard left it to the
@@ -171,18 +167,18 @@ So NULLs are unequal in `WHERE`, equal in `GROUP BY` and `DISTINCT`, absent from
 aggregates, and last-by-default in `ORDER BY`. Four different answers to "are two unknowns
 the same thing", inside one language.
 
-That inconsistency is why this is one of the longest-running arguments in database theory.
+That inconsistency has kept an argument going in database theory for decades.
 C. J. Date, who has spent four decades writing about the relational model and worked with
 Codd himself, argues that nulls should be removed from it outright: that three-valued
 logic makes queries mean things their authors cannot predict, and that missing information
-belongs in additional relations rather than in a magic value. It is not a fringe position,
-and it is not a settled one — Claude Rubinson's *Nulls, three-valued logic, and ambiguity
+belongs in additional relations rather than in a magic value. Others disagree. Claude
+Rubinson's *Nulls, three-valued logic, and ambiguity
 in SQL* (SIGMOD Record, 2007) argues Date misreads his own example queries, while
 conceding the broader point: nulls introduce a startling amount of complexity into
-apparently straightforward queries. Nobody in that argument thinks the current situation
-is *good*. You have to write queries in it anyway.
+apparently straightforward queries. Neither side defends the current rules as good
+design, and the rules are what your queries run under.
 
-### Worth knowing: UNIQUE lets in as many NULLs as you like — until you ask it not to
+### Worth knowing: UNIQUE lets in as many NULLs as you like, unless you say otherwise
 
 A `UNIQUE` constraint is defined in terms of equality, and NULLs are never equal, so:
 
@@ -198,9 +194,9 @@ SELECT count(*) FROM u;
      3
 ```
 
-Three NULLs in a unique column, no error. This is the standard's behaviour and it is
-correct by the rules — but it is not what "unique" means to the person reading your
-schema, and it is why partial unique indexes and `NOT NULL` on key columns are so common.
+Three NULLs in a unique column, no error. This is the standard's behaviour, but it is not
+what "unique" means to most people reading your schema, and it is one reason partial
+unique indexes and `NOT NULL` on key columns are so common.
 
 PostgreSQL 15 finally added the other option:
 
@@ -216,12 +212,11 @@ DETAIL:  Key (v)=(null) already exists.
 ```
 
 `NULLS NOT DISTINCT` says: for the purpose of this constraint, treat unknowns as equal to
-each other. It arrived roughly thirty years into the language's life, which tells you how
-long people put up with the alternative.
+each other. PostgreSQL shipped it in 2022, thirty-six years after the first SQL standard.
 
 One more tool worth carrying: `IS DISTINCT FROM` is `<>` with unknowns treated as
-comparable, so `WHERE v IS DISTINCT FROM 1` returns the NULL rows as well as the 2s —
-which is almost always what the person writing `WHERE v <> 1` actually meant.
+comparable, so `WHERE v IS DISTINCT FROM 1` returns the NULL rows as well as the 2s.
+That is usually what the person writing `WHERE v <> 1` meant.
 
 ## Quiz
 
@@ -251,8 +246,8 @@ Build the bug, then fix it, then prove the fix.
    treated the two NULLs as the same thing.
 6. Finally, get a `UNIQUE` column to accept several NULLs, then get it to reject them.
 
-Write every result you saw into the file as a comment beside the query that produced it.
-The comparison of step 2 against step 4 is the point of the exercise.
+Write every result you saw into the file as a comment beside the query that produced it,
+so step 2 and step 4 sit side by side.
 
 - File: `sql/day03.sql`
 - Run: `psql -h localhost -U postgres -f sql/day03.sql`

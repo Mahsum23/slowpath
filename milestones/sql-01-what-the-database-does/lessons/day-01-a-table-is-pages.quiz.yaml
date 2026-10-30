@@ -9,7 +9,7 @@ questions:
       A table has 200 rows packed into 6 pages. A query returns exactly one row, found by
       scanning. What is the smallest amount of data the engine could have read from disk?
     options:
-      - text: One page — 8 kB in PostgreSQL
+      - text: "One page: 8 kB in PostgreSQL"
         correct: true
         why: >
           The page is the unit of I/O. Even a single-byte column in a single row costs
@@ -38,7 +38,7 @@ questions:
       row's physical location, and to the previous version of the row?
     options:
       - text: >
-          A new version of the row is written elsewhere — possibly on a different page —
+          A new version of the row is written elsewhere, possibly on a different page,
           and the old version stays in the file, marked dead
         correct: true
         why: >
@@ -56,7 +56,7 @@ questions:
           The old version is deleted immediately and the new one takes its slot
         correct: false
         why: >
-          Immediate deletion has the same problem — a transaction that started before
+          Immediate deletion has the same problem: a transaction that started before
           your update is entitled to keep reading the old version. Reclaiming that space
           is a *later*, separate job, which is exactly what VACUUM is for.
       - text: >
@@ -73,7 +73,7 @@ questions:
       `VACUUM`. What happens to the size of the file, and why?
     options:
       - text: >
-          It stays 4 GB — VACUUM marks the dead space reusable by that table but does not
+          It stays 4 GB: VACUUM marks the dead space reusable by that table but does not
           return it to the operating system
         correct: true
         why: >
@@ -81,7 +81,7 @@ questions:
           the file from growing further, because new rows fill the freed space, but the
           file only shrinks if free space happens to sit at the very end. To actually get
           the 3.5 GB back you need VACUUM FULL, which rewrites the table into a new file
-          under an ACCESS EXCLUSIVE lock — or pg_repack, which does it without the lock.
+          under an ACCESS EXCLUSIVE lock, or pg_repack, which does it without the lock.
       - text: It drops to roughly 500 MB, since that is what is still live
         correct: false
         why: >
@@ -90,7 +90,7 @@ questions:
       - text: It grows, because VACUUM writes bookkeeping about what it freed
         correct: false
         why: >
-          VACUUM does write — it touches the visibility map and the free space map — but
+          VACUUM does write (it touches the visibility map and the free space map) but
           those are separate small forks, not growth of the table's own file.
       - text: >
           It stays 4 GB, and the dead space is permanently wasted until the table is
@@ -112,7 +112,7 @@ questions:
           at the old address has to be given the new one
         correct: true
         why: >
-          The indexes are not stale because of what the column meant — they are stale
+          The indexes are not stale because of what the column meant: they are stale
           because of where the row *is*. This write amplification was Uber's headline
           reason for migrating off Postgres in 2016. InnoDB dodges it by having secondary
           indexes point at the primary key rather than a location, paying an extra lookup
@@ -120,17 +120,17 @@ questions:
       - text: Postgres rebuilds all indexes on a table whenever any row in it changes
         correct: false
         why: >
-          Nothing so drastic — the work is per-row, not per-table. A single-row update
+          Nothing so drastic: the work is per-row, not per-table. A single-row update
           adds one entry per index, which is bad enough at scale but is not a rebuild.
       - text: >
           Each index stores a copy of the whole row, so all copies must be kept in sync
         correct: false
         why: >
           An index stores its own key columns plus a pointer, not the whole row. If it
-          stored the whole row, updating an indexed column would be the expensive case —
+          stored the whole row, updating an indexed column would be the expensive case,
           but here the expensive case is updating an *unindexed* one.
       - text: >
-          It cannot — Postgres skips indexes whose columns did not change
+          It cannot: Postgres skips indexes whose columns did not change
         correct: false
         why: >
           There is an optimisation in this direction, HOT (heap-only tuple) updates, but
@@ -143,7 +143,7 @@ questions:
       let one transaction read a table while another rewrites it?
     options:
       - text: >
-          The transaction that created this row version and the one that deleted it — so
+          The transaction that created this row version and the one that deleted it, so
           each transaction can filter to the versions that were live when it started
         correct: true
         why: >
@@ -160,7 +160,7 @@ questions:
       - text: Timestamps recording when the row was inserted and last modified
         correct: false
         why: >
-          Tempting, and they are used for ordering — but they are transaction ids, not
+          Tempting, and they are used for ordering, but they are transaction ids, not
           times. That distinction is why they can run out: they are 32-bit counters, and
           the ceiling of about two billion is what makes wraparound a real operational
           hazard.
@@ -168,6 +168,6 @@ questions:
           A read lock and a write lock held on the row while a transaction touches it
         correct: false
         why: >
-          Backwards — these fields exist so that locks are *not* needed for reading.
+          Backwards: these fields exist so that locks are *not* needed for reading.
           Postgres's readers-never-block-writers property comes precisely from resolving
           visibility by comparing ids rather than by taking a lock.
