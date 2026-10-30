@@ -14,6 +14,7 @@
   import ShortcutsHelp from './components/ShortcutsHelp.svelte';
   import EggToast from './components/EggToast.svelte';
   import Curiosities from './screens/Curiosities.svelte';
+  import Hooks from './screens/Hooks.svelte';
 
   const route = $derived(router.route);
 
@@ -75,6 +76,8 @@
     <Settings />
   {:else if route.name === 'curiosities'}
     <Curiosities />
+  {:else if route.name === 'hooks'}
+    <Hooks />
   {:else}
     <Today />
   {/if}

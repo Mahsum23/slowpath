@@ -1,0 +1,33 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: letter-in-envelope
+    part: 1
+    glyph: 📨
+    remember: "An error is any value with `Error() string`; `%w` wraps the original so `errors.Is` can find it, `%v` only copies its text."
+    hook: >
+      An error is just a **letter** with one method: `Error() string`. Anything that can say
+      what went wrong qualifies. `fmt.Errorf("…: %w", err)` puts the original letter **inside a
+      new envelope**, and `errors.Is` can open envelopes all the way down. `%v` **photocopies the
+      text** and drops the original in the shredder: same words, nothing left to find.
+    tags: [errors are values]
+    cards: [q1, q2]
+  - id: pancakes
+    part: 2
+    glyph: 🥞
+    remember: Deferred calls run when the function returns (even by panic), last-in first-out, with arguments evaluated at the `defer`.
+    hook: >
+      `defer` stacks **pancakes**: the last one stacked is the first one eaten, and they are all
+      eaten when the function returns, even if the kitchen is on fire (a panic). The filling is
+      chosen when you **stack** the pancake: with `i := 1; defer fmt.Println(i); i = 99`, the
+      pancake already has 1 in it.
+    cards: [q3, q4]
+  - id: fire-alarm
+    part: 2
+    glyph: 🚨
+    remember: "`panic` is for programmer errors (broken invariants); `recover` works only inside a deferred function."
+    hook: >
+      `panic` is the **fire alarm**: for a broken invariant, never for a missing file (that is an
+      error you return). While the building burns, the only code still running is the deferred
+      functions on the way out, which is why `recover` works only inside one. Its main honest job:
+      a server catching a panic at the edge so one bad request does not take everyone down.
+    cards: [q5]

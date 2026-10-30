@@ -881,6 +881,31 @@ first find and never shows what is left. Contents are deliberately not listed he
   toolchains, Chromium with a seeded backlog (31 due → "15 left", 14 after one answer,
   25 after changing the setting).
 
+## 8.16 Memory hooks (2026-10-30)
+
+He said the material does not stay in his head and asked for colourful, funny, unusual
+associations for the important parts. Each day can carry `day-NN-<slug>.hooks.yaml`: per
+hook an `id`, `part`, `glyph` (one emoji), `remember` (the fact, one line), `hook` (the
+picture or story, carrying the reason too) and `tags`/`cards` linking it to the items that
+test it. `hooks.ts` is pure and tested (`test-hooks.mjs`).
+
+- **In the lesson**: a part ends with its hooks under "Make it stick", before the check.
+- **After a miss**: the card's hook appears under the answer ("Something to hang it on").
+  Matching is most specific first: a hook naming the card, then one on its theme, then the
+  first of its part. A day read in one go has no part to fall back on. The test fails if
+  any shipped hook could never come back this way.
+- **His own**: "Make your own" stores `progress.hooks[day:hook] = {text, at}` (newest wins
+  in a merge, a clear is an empty text so it syncs). His replaces mine on screen.
+- **Gallery**: `#/hooks`, linked from Stats, lists the hooks of read material. "Cover the
+  facts" shows only the emoji: recall the story and the rule, then tap.
+- Why it is built this way: odd images help through distinctiveness, in mixed lists only
+  (McDaniel & Einstein 1986), so hooks are for the important facts and each is different
+  in kind from its neighbours (colour by position, too). Keyword mnemonics alone rate low
+  (Dunlosky et al. 2013), so a hook carries the mechanism and comes back at retrieval. Self-made
+  items are remembered better (Slamecka & Graf 1978), hence his own.
+- First set: 107 hooks (SQL 53, Go 23, C++ 31). The mentor's prompt now offers a hook when
+  something "won't stick".
+
 ## 9. Offline & local storage
 
 - **Content cache:** Cache API / IndexedDB — loaded weeks fully offline.

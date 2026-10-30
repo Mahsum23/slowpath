@@ -439,6 +439,56 @@
           ]
         }
       ],
+      "hooks": [
+        {
+          "id": "pop-up-factory",
+          "part": 1,
+          "glyph": "🏭",
+          "remember": "`go run` compiles a real binary into a temporary directory and runs it; the binary is ~2 MB because it carries the Go runtime.",
+          "hook": "`go run` is a **pop-up factory**, not an interpreter: it builds a real machine-code binary in a temp directory, runs it, and folds the factory away. The binary weighs about 2 MB because every Go program **packs its own suitcase**: scheduler, garbage collector, type information. C's hello world travels light because libc is waiting at the hotel.",
+          "tags": null,
+          "cards": [
+            "q1",
+            "q3"
+          ]
+        },
+        {
+          "id": "strict-housemate",
+          "part": 2,
+          "glyph": "🧹",
+          "remember": "An unused import or local variable is a compile error; `_ = x` silences it mid-debug.",
+          "hook": "The Go compiler is the **strict housemate** who will not cook while your stuff is lying around. An unused import or variable is a hard error, because it is usually the fingerprint of a bug (you meant to use it) and every import still costs build time. Mid-debug, kick it under the rug: `_ = count`. (The spec only says a compiler *may* refuse unused variables. The `gc` compiler chose to.)",
+          "tags": [
+            "the unused-variable rule"
+          ],
+          "cards": [
+            "q2",
+            "q4"
+          ]
+        },
+        {
+          "id": "party-guest",
+          "part": 2,
+          "glyph": "🎉",
+          "remember": "`import _ \"pkg\"` imports a package only for its side effects: its `init` runs.",
+          "hook": "`import _ \"net/http/pprof\"` invites a guest **only for what they do on arrival**. Its `init` functions run (here, registering debug handlers on the default mux), and you never say a word to it afterwards. The blank `_` is the name tag you leave empty.",
+          "tags": null,
+          "cards": [
+            "q5"
+          ]
+        },
+        {
+          "id": "uniform",
+          "part": 3,
+          "glyph": "🪖",
+          "remember": "gofmt has no settings; `-d` prints the diff, `-w` rewrites the file.",
+          "hook": "`gofmt` is a **uniform**: there are no sizes to choose, so nobody wins or loses the tabs war, because nobody fights it. `-d` is the **d**ress rehearsal (show the diff), `-w` is **w**ear it (rewrite the file).",
+          "tags": [
+            "gofmt"
+          ],
+          "cards": null
+        }
+      ],
       "task": {
         "markdown": "Get Go on your machine and make the compiler shout at you on purpose. The refusals are\nthe lesson; meeting them deliberately now is much better than meeting them at 11pm.\n\nInstall Go from your package manager or from the official downloads — `go version` should\nprint something like `go version go1.24.7 linux/amd64`.\n\n1. Write and run the hello program with `go run`.\n2. Build it with `go build`, then check the result: how big is the binary, and what does\n   `file` say about it? On Linux, what does `ldd` say?\n3. Add a variable you never use. Record the exact error message.\n4. Add an import you never use. Record that error too.\n5. Make both errors go away *without* deleting the lines — use `_ =` for the variable and\n   the blank import for the package.\n6. Deliberately mangle the formatting — no spaces around operators, brace on its own\n   line, spaces instead of tabs — then run `gofmt -d` on it and read the diff before\n   running `gofmt -w`.\n\nKeep every error message you saw in the file as a comment beside the line that caused it.",
         "files": [
@@ -832,6 +882,55 @@
               "correct": true,
               "why": "The short declaration is a statement, and package level only accepts declarations (`var`, `const`, `type`, `func`). `var limit = 10` infers the type just the same."
             }
+          ]
+        }
+      ],
+      "hooks": [
+        {
+          "id": "born-clean",
+          "part": 1,
+          "glyph": "🍼",
+          "remember": "Every Go variable starts at its zero value (0, \"\", false, nil), and good types make that zero usable.",
+          "hook": "In Go every variable is **born clean**: 0, `\"\"`, `false`, `nil`, never yesterday's garbage from the stack. And the designers made the clean state *useful*: a `nil` slice is an empty shelf you can already `append` to, a zero `sync.Mutex` is an unlocked lock ready to use. \"Make the zero value useful\" is one of Rob Pike's Go proverbs.",
+          "tags": null,
+          "cards": [
+            "q1",
+            "q2"
+          ]
+        },
+        {
+          "id": "doppelganger",
+          "part": 2,
+          "glyph": "👥",
+          "remember": "`x := …` inside a block declares a new variable that shadows the outer one; `:=` is only allowed inside functions.",
+          "hook": "`:=` inside a block is a **doppelgänger machine**. `count := 2` in an `if` creates a second `count` that looks exactly like the first, does all the work, and vanishes at the `}`, while the real one never changed. And the machine only runs indoors: at package level, outside any function, write `var limit = 10`.",
+          "tags": [
+            "declaring"
+          ],
+          "cards": [
+            "q3"
+          ]
+        },
+        {
+          "id": "plug-adapter",
+          "part": 3,
+          "glyph": "🔌",
+          "remember": "Go never converts between numeric types implicitly; `int + int64` needs an explicit conversion.",
+          "hook": "`int` and `int64` are **plugs from different countries**. On your machine they carry the same voltage (both 64-bit), but Go ships no adapter in the box: `a + b` will not compile. You write the adapter yourself, `int64(a) + b`, so every conversion is visible where it happens.",
+          "tags": null,
+          "cards": [
+            "q4"
+          ]
+        },
+        {
+          "id": "attic",
+          "part": 3,
+          "glyph": "🏚️",
+          "remember": "Untyped constants are evaluated at arbitrary precision at compile time; they only have to fit once given a type.",
+          "hook": "Untyped constants live in the compiler's **infinite attic**, where `(1 << 62) * 4` fits fine. Nothing has to fit until a constant **moves downstairs** into a real variable with a real type. Then, and only then, it must fit the room.",
+          "tags": null,
+          "cards": [
+            "q5"
           ]
         }
       ],
@@ -1231,6 +1330,55 @@
           ]
         }
       ],
+      "hooks": [
+        {
+          "id": "visitor-badge",
+          "part": 1,
+          "glyph": "🪪",
+          "remember": "An array is a value (assignment copies it); a slice is a header (pointer, len, cap) that shares its backing array.",
+          "hook": "An array is **the building**: `b := a` builds a second building, brick by brick. A slice is a **visitor's badge** with three lines on it: which building (a pointer), how many rooms you may enter (`len`), how many exist past the door (`cap`). Copy the badge and you have two badges into the *same* building.",
+          "tags": null,
+          "cards": [
+            "q1",
+            "q2"
+          ]
+        },
+        {
+          "id": "hermit-crab",
+          "part": 2,
+          "glyph": "🦀",
+          "remember": "`append` may move the data to a new, bigger array, so always write `s = append(s, x)`.",
+          "hook": "`append` is a **hermit crab**: when its shell (the capacity) is full it moves into a bigger shell and leaves the old one on the beach. If you do not write `s = append(s, x)`, you are still holding the address of the **empty shell**. Know you will need a thousand? Buy the big shell up front: `make([]T, 0, 1000)`.",
+          "tags": [
+            "len and cap"
+          ],
+          "cards": [
+            "q3"
+          ]
+        },
+        {
+          "id": "hand-through-the-wall",
+          "part": 3,
+          "glyph": "🧟",
+          "remember": "A sub-slice keeps the parent's spare capacity, so `append` to it can overwrite the parent; `full[:2:2]` caps it.",
+          "hook": "`head := full[:2]` only shows two rooms, but its `cap` is 5: the rooms beyond are still there behind a thin wall. `append(head, x)` finds \"spare room\" and puts its **hand through the wall**, straight into `full[2]`. Brick it up with a three-index slice, `full[:2:2]`, and append has to build elsewhere.",
+          "tags": null,
+          "cards": [
+            "q4"
+          ]
+        },
+        {
+          "id": "anchor",
+          "part": 3,
+          "glyph": "⚓",
+          "remember": "A small slice of a big array keeps the whole array alive; copy what you keep.",
+          "hook": "A 60-byte slice of a 500 MB file is an **anchor chained to a ship**: its pointer holds the entire backing array in memory, all 500 MB, for as long as the slice lives. Cut the chain by copying what you keep into a fresh array: `append([]byte(nil), data[:60]...)`, or `slices.Clone` since Go 1.21.",
+          "tags": null,
+          "cards": [
+            "q5"
+          ]
+        }
+      ],
       "task": {
         "markdown": "Reproduce the trap. This is not a puzzle you should take on faith — it is far more\nconvincing when the numbers come out of your own terminal.\n\n1. Make an array and a slice of the same three values. Assign each to a second variable,\n   modify the second, print both. Record which one changed and satisfy yourself as to why.\n2. Append to an empty slice in a loop, printing `len` and `cap` each time the capacity\n   changes. Record the growth pattern.\n3. Build the trap: a five-element slice, a two-element sub-slice, an append to the\n   sub-slice, then print the original. Record `cap` of the sub-slice before appending —\n   that number is the whole explanation.\n4. Fix it with a three-index slice and show the original surviving unchanged.\n5. Write a function `func addOne(s []int)` that appends to its parameter, call it with a\n   sub-slice of a larger one, and see whether the caller's data survives. Then make it\n   safe.",
         "files": [
@@ -1605,6 +1753,45 @@
               "correct": true,
               "why": "Go drops C++'s `.` versus `->` distinction. For an addressable value the compiler takes the address itself, and the method modifies `c`."
             }
+          ]
+        }
+      ],
+      "hooks": [
+        {
+          "id": "photocopy",
+          "part": 1,
+          "glyph": "📠",
+          "remember": "A value receiver gets a copy; a pointer receiver can change the original, and Go adds the `&` for an addressable value.",
+          "hook": "A value receiver gets a **photocopy**: `func (c Counter) Bump()` scribbles on the copy, and the copy goes in the bin. To change the original, take a pointer, `func (c *Counter)`. When `c` is a variable (addressable), Go quietly writes the `&` for you: `c.BumpPointer()` is really `(&c).BumpPointer()`.",
+          "tags": [
+            "receivers"
+          ],
+          "cards": [
+            "q1",
+            "q2"
+          ]
+        },
+        {
+          "id": "duck",
+          "part": 2,
+          "glyph": "🦆",
+          "remember": "A type satisfies an interface just by having its methods; there is no `implements`.",
+          "hook": "Go interfaces are **duck typing that the compiler checks**. If it has `Write([]byte) (int, error)`, it *is* an `io.Writer`: no `implements`, no paperwork, no permission from the interface's author. `strings.Builder` has never heard of `io.Writer` and qualifies anyway.",
+          "tags": null,
+          "cards": [
+            "q3",
+            "q4"
+          ]
+        },
+        {
+          "id": "sticky-note",
+          "part": 2,
+          "glyph": "📌",
+          "remember": "`var _ Greeter = English{}` makes the compiler check that `English` still satisfies `Greeter`.",
+          "hook": "`var _ Greeter = English{}` is a **sticky note on the compiler's monitor**: \"make sure this still quacks\". It stores nothing, costs nothing at run time, and breaks the build the day someone renames a method, instead of letting the break surface far away at the call that needed the interface.",
+          "tags": null,
+          "cards": [
+            "q5"
           ]
         }
       ],
@@ -2011,6 +2198,45 @@
               "correct": false,
               "why": "Go refuses unused *variables* and imports, not discarded values. `_` is allowed anywhere, errors included."
             }
+          ]
+        }
+      ],
+      "hooks": [
+        {
+          "id": "letter-in-envelope",
+          "part": 1,
+          "glyph": "📨",
+          "remember": "An error is any value with `Error() string`; `%w` wraps the original so `errors.Is` can find it, `%v` only copies its text.",
+          "hook": "An error is just a **letter** with one method: `Error() string`. Anything that can say what went wrong qualifies. `fmt.Errorf(\"…: %w\", err)` puts the original letter **inside a new envelope**, and `errors.Is` can open envelopes all the way down. `%v` **photocopies the text** and drops the original in the shredder: same words, nothing left to find.",
+          "tags": [
+            "errors are values"
+          ],
+          "cards": [
+            "q1",
+            "q2"
+          ]
+        },
+        {
+          "id": "pancakes",
+          "part": 2,
+          "glyph": "🥞",
+          "remember": "Deferred calls run when the function returns (even by panic), last-in first-out, with arguments evaluated at the `defer`.",
+          "hook": "`defer` stacks **pancakes**: the last one stacked is the first one eaten, and they are all eaten when the function returns, even if the kitchen is on fire (a panic). The filling is chosen when you **stack** the pancake: with `i := 1; defer fmt.Println(i); i = 99`, the pancake already has 1 in it.",
+          "tags": null,
+          "cards": [
+            "q3",
+            "q4"
+          ]
+        },
+        {
+          "id": "fire-alarm",
+          "part": 2,
+          "glyph": "🚨",
+          "remember": "`panic` is for programmer errors (broken invariants); `recover` works only inside a deferred function.",
+          "hook": "`panic` is the **fire alarm**: for a broken invariant, never for a missing file (that is an error you return). While the building burns, the only code still running is the deferred functions on the way out, which is why `recover` works only inside one. Its main honest job: a server catching a panic at the edge so one bad request does not take everyone down.",
+          "tags": null,
+          "cards": [
+            "q5"
           ]
         }
       ],
@@ -2423,6 +2649,65 @@
               "correct": false,
               "why": "Stacks are never shared between goroutines. A growing one gets a new, larger allocation of its own."
             }
+          ]
+        }
+      ],
+      "hooks": [
+        {
+          "id": "ants-and-elephants",
+          "part": 1,
+          "glyph": "🐜",
+          "remember": "A goroutine starts with a ~2 KB stack that grows by copying, and the runtime schedules many onto a few OS threads.",
+          "hook": "A goroutine is an **ant**, an OS thread an **elephant**: about 2 KB of stack against 8 MB reserved. The runtime herds a hundred thousand ants onto a handful of elephants (M:N). When an ant outgrows its nest, the runtime builds a bigger nest, carries everything across, and fixes up the pointers, so the ant never notices.",
+          "tags": [
+            "goroutines"
+          ],
+          "cards": [
+            "q1"
+          ]
+        },
+        {
+          "id": "handoff-and-mailbox",
+          "part": 2,
+          "glyph": "📬",
+          "remember": "An unbuffered channel is a rendezvous (both sides wait); a buffered one lets the sender run ahead until it is full.",
+          "hook": "An unbuffered channel is a **hand-off at the door**: the sender stands there holding the parcel until someone takes it, so both meet at that exact moment. A buffered channel is a **mailbox** with N slots: drop letters and walk away, until it is full and you wait for someone to empty it.",
+          "tags": null,
+          "cards": [
+            "q2"
+          ]
+        },
+        {
+          "id": "last-letter",
+          "part": 2,
+          "glyph": "📪",
+          "remember": "The sender closes a channel; sending on a closed channel panics, receiving gets zero values (`v, ok` tells you).",
+          "hook": "Only the **sender closes** the mailbox, because only the sender knows no more letters are coming. Posting into a closed mailbox **panics**. Reading from one never blocks: it hands you zero values forever, so ask `v, ok := <-ch`, where `ok == false` means \"closed and empty\".",
+          "tags": null,
+          "cards": [
+            "q3"
+          ]
+        },
+        {
+          "id": "sleeping-castle",
+          "part": 3,
+          "glyph": "😴",
+          "remember": "\"all goroutines are asleep - deadlock!\" means every goroutine is blocked and none can wake another.",
+          "hook": "The runtime walked through the **castle of Sleeping Beauty** and found everyone asleep, each waiting for someone else to wake them. Nobody is left awake to do the kissing, so it ends the story: `all goroutines are asleep - deadlock!`. If even one goroutine is still awake elsewhere (say, waiting on a timer), it cannot be sure, and says nothing.",
+          "tags": null,
+          "cards": [
+            "q4"
+          ]
+        },
+        {
+          "id": "lost-increment",
+          "part": 3,
+          "glyph": "🏎️",
+          "remember": "`total++` from many goroutines loses updates; use a mutex, `atomic.AddInt64`, or one owner, and find it with `-race`.",
+          "hook": "`total++` is **three steps**: read, add, write. Two goroutines both read 41, both write 42, and one increment evaporates. Lock it (`sync.Mutex`), make it one indivisible step (`atomic.AddInt64`), or give the counter a single owner. `go run -race` is the speed camera that catches it, at about 7x the running cost.",
+          "tags": null,
+          "cards": [
+            "q5"
           ]
         }
       ],

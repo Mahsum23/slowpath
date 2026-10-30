@@ -1,0 +1,33 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: photocopy
+    part: 1
+    glyph: 📠
+    remember: A value receiver gets a copy; a pointer receiver can change the original, and Go adds the `&` for an addressable value.
+    hook: >
+      A value receiver gets a **photocopy**: `func (c Counter) Bump()` scribbles on the copy,
+      and the copy goes in the bin. To change the original, take a pointer, `func (c *Counter)`.
+      When `c` is a variable (addressable), Go quietly writes the `&` for you:
+      `c.BumpPointer()` is really `(&c).BumpPointer()`.
+    tags: [receivers]
+    cards: [q1, q2]
+  - id: duck
+    part: 2
+    glyph: 🦆
+    remember: A type satisfies an interface just by having its methods; there is no `implements`.
+    hook: >
+      Go interfaces are **duck typing that the compiler checks**. If it has
+      `Write([]byte) (int, error)`, it *is* an `io.Writer`: no `implements`, no paperwork, no
+      permission from the interface's author. `strings.Builder` has never heard of `io.Writer`
+      and qualifies anyway.
+    cards: [q3, q4]
+  - id: sticky-note
+    part: 2
+    glyph: 📌
+    remember: "`var _ Greeter = English{}` makes the compiler check that `English` still satisfies `Greeter`."
+    hook: >
+      `var _ Greeter = English{}` is a **sticky note on the compiler's monitor**: "make sure
+      this still quacks". It stores nothing, costs nothing at run time, and breaks the build the
+      day someone renames a method, instead of letting the break surface far away at the call
+      that needed the interface.
+    cards: [q5]

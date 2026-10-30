@@ -1,0 +1,53 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: ants-and-elephants
+    part: 1
+    glyph: 🐜
+    remember: A goroutine starts with a ~2 KB stack that grows by copying, and the runtime schedules many onto a few OS threads.
+    hook: >
+      A goroutine is an **ant**, an OS thread an **elephant**: about 2 KB of stack against 8 MB
+      reserved. The runtime herds a hundred thousand ants onto a handful of elephants (M:N).
+      When an ant outgrows its nest, the runtime builds a bigger nest, carries everything across,
+      and fixes up the pointers, so the ant never notices.
+    tags: [goroutines]
+    cards: [q1]
+  - id: handoff-and-mailbox
+    part: 2
+    glyph: 📬
+    remember: An unbuffered channel is a rendezvous (both sides wait); a buffered one lets the sender run ahead until it is full.
+    hook: >
+      An unbuffered channel is a **hand-off at the door**: the sender stands there holding the
+      parcel until someone takes it, so both meet at that exact moment. A buffered channel is a
+      **mailbox** with N slots: drop letters and walk away, until it is full and you wait for
+      someone to empty it.
+    cards: [q2]
+  - id: last-letter
+    part: 2
+    glyph: 📪
+    remember: The sender closes a channel; sending on a closed channel panics, receiving gets zero values (`v, ok` tells you).
+    hook: >
+      Only the **sender closes** the mailbox, because only the sender knows no more letters are
+      coming. Posting into a closed mailbox **panics**. Reading from one never blocks: it hands
+      you zero values forever, so ask `v, ok := <-ch`, where `ok == false` means "closed and
+      empty".
+    cards: [q3]
+  - id: sleeping-castle
+    part: 3
+    glyph: 😴
+    remember: "\"all goroutines are asleep - deadlock!\" means every goroutine is blocked and none can wake another."
+    hook: >
+      The runtime walked through the **castle of Sleeping Beauty** and found everyone asleep,
+      each waiting for someone else to wake them. Nobody is left awake to do the kissing, so it
+      ends the story: `all goroutines are asleep - deadlock!`. If even one goroutine is still awake
+      elsewhere (say, waiting on a timer), it cannot be sure, and says nothing.
+    cards: [q4]
+  - id: lost-increment
+    part: 3
+    glyph: 🏎️
+    remember: "`total++` from many goroutines loses updates; use a mutex, `atomic.AddInt64`, or one owner, and find it with `-race`."
+    hook: >
+      `total++` is **three steps**: read, add, write. Two goroutines both read 41, both write
+      42, and one increment evaporates. Lock it (`sync.Mutex`), make it one indivisible step
+      (`atomic.AddInt64`), or give the counter a single owner. `go run -race` is the speed camera
+      that catches it, at about 7x the running cost.
+    cards: [q5]

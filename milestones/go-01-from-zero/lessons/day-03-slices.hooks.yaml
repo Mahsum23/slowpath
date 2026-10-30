@@ -1,0 +1,43 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: visitor-badge
+    part: 1
+    glyph: 🪪
+    remember: An array is a value (assignment copies it); a slice is a header (pointer, len, cap) that shares its backing array.
+    hook: >
+      An array is **the building**: `b := a` builds a second building, brick by brick. A slice is
+      a **visitor's badge** with three lines on it: which building (a pointer), how many rooms
+      you may enter (`len`), how many exist past the door (`cap`). Copy the badge and you have
+      two badges into the *same* building.
+    cards: [q1, q2]
+  - id: hermit-crab
+    part: 2
+    glyph: 🦀
+    remember: "`append` may move the data to a new, bigger array, so always write `s = append(s, x)`."
+    hook: >
+      `append` is a **hermit crab**: when its shell (the capacity) is full it moves into a bigger
+      shell and leaves the old one on the beach. If you do not write `s = append(s, x)`, you are
+      still holding the address of the **empty shell**. Know you will need a thousand? Buy the
+      big shell up front: `make([]T, 0, 1000)`.
+    tags: [len and cap]
+    cards: [q3]
+  - id: hand-through-the-wall
+    part: 3
+    glyph: 🧟
+    remember: "A sub-slice keeps the parent's spare capacity, so `append` to it can overwrite the parent; `full[:2:2]` caps it."
+    hook: >
+      `head := full[:2]` only shows two rooms, but its `cap` is 5: the rooms beyond are still
+      there behind a thin wall. `append(head, x)` finds "spare room" and puts its **hand through
+      the wall**, straight into `full[2]`. Brick it up with a three-index slice, `full[:2:2]`,
+      and append has to build elsewhere.
+    cards: [q4]
+  - id: anchor
+    part: 3
+    glyph: ⚓
+    remember: A small slice of a big array keeps the whole array alive; copy what you keep.
+    hook: >
+      A 60-byte slice of a 500 MB file is an **anchor chained to a ship**: its pointer holds the
+      entire backing array in memory, all 500 MB, for as long as the slice lives. Cut the chain by
+      copying what you keep into a fresh array: `append([]byte(nil), data[:60]...)`, or
+      `slices.Clone` since Go 1.21.
+    cards: [q5]

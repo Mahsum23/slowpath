@@ -1,0 +1,42 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: rabbits
+    part: 1
+    glyph: 🐇
+    remember: A join repeats the "one" side once per match; two independent "many" sides multiply.
+    hook: >
+      Joins breed like **rabbits**. An order joined to its 3 items becomes 3 copies of the
+      order. Add its 2 payments in the same query and every item pairs with every payment:
+      **3 × 2 = 6** copies, each carrying the full 100.00. Revenue looks fantastic, and nobody
+      files a bug when revenue goes up.
+    cards: [d1, d2]
+  - id: grain
+    part: 2
+    glyph: 🌾
+    remember: Decide the grain (what one row means) first, and bring every table to it before joining.
+    hook: >
+      **Grain** is the answer to "what does one row stand for?". Orders are one per order,
+      items one per line, payments one per payment. Stir them together and you get flour of
+      **one row per (line, payment)**, which is nobody's report. Name the report's grain out
+      loud ("one row per customer") before you write a single join.
+  - id: boil-down
+    part: 3
+    glyph: 🥣
+    remember: Aggregate each "many" table to the report's grain before joining; `sum(DISTINCT)` is not a fix.
+    hook: >
+      **Boil each "many" table down** to one row per order first, then join one-to-one and
+      nothing can multiply. Do not reach for `sum(DISTINCT amount)`: two honest payments of 50
+      look like *one* 50 to DISTINCT, which removes equal **values**, not duplicate **rows**.
+      Rows are told apart by keys, not by what they happen to contain.
+    tags: [aggregate first]
+    cards: [d3]
+  - id: smoke-alarm
+    part: 4
+    glyph: 🚨
+    remember: Before summing over a join, compare `count(*)` with `count(DISTINCT key)` at the grain you meant.
+    hook: >
+      A two-number **smoke alarm**: `count(*)` and `count(DISTINCT o.id)` over the join you
+      are about to sum. Same number? Quiet. Different? Something is breeding. And "each order has
+      one payment" is a belief until a `GROUP BY order_id HAVING count(*) > 1` finds the order
+      that disagrees, or a `UNIQUE` constraint makes it law.
+    tags: [detecting fan-out]

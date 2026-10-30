@@ -1,0 +1,38 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: coat-check
+    glyph: 🎟️
+    remember: "A file descriptor is a small integer handle to a kernel object: the lowest free slot, -1 on failure, and finite."
+    hook: >
+      An fd is a **coat-check ticket**. The kernel keeps the coat (the socket object) and hands
+      you the lowest free number. Tickets 0, 1 and 2 already went to stdin, stdout and stderr, so
+      your first socket is usually **3**. A ticket of **−1** means "no coat taken", and `errno`
+      says why. Never hand tickets back (`close`) and the cloakroom fills: `RLIMIT_NOFILE`, then
+      `EMFILE`.
+    cards: [q1, q3]
+  - id: phone-without-number
+    glyph: 📱
+    remember: A new socket has no address; `bind()` gives it one, and `connect()` picks one for you.
+    hook: >
+      `socket()` hands you a **phone with no number**. It exists and it works, but nothing can
+      ring it and it has dialled nobody. `bind()` assigns it a number; `listen()` switches the
+      ringer on; `connect()` dials out, and the kernel picks a number for you on the way.
+    cards: [q2]
+  - id: slam-the-door
+    glyph: 🏃
+    remember: "`SOCK_CLOEXEC` sets close-on-exec atomically; a separate `fcntl()` leaves a window where another thread can fork and exec."
+    hook: >
+      Between `socket()` and a later `fcntl(FD_CLOEXEC)` there is an **open doorway**, and in a
+      threaded program another thread can sprint through it: `fork` and `exec`, and the child
+      program walks off holding your socket. `SOCK_CLOEXEC` **slams the door in the same
+      syscall**, so there is no moment when it is open.
+    cards: [q4]
+  - id: costume
+    glyph: 🎭
+    remember: Async libraries such as Asio still call `recv()` on an fd from `socket()`; they add scheduling, not a new mechanism.
+    hook: >
+      `co_await socket.async_read_some(…)` is the same old fd **in a costume**. Peel it off and
+      underneath is `recv()` on a descriptor that `socket()` returned. What the library adds is
+      the waiting: it asks the kernel which fds are ready (epoll on Linux) and resumes your
+      coroutine when yours is.
+    cards: [q5]

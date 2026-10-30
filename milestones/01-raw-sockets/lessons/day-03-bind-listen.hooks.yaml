@@ -1,0 +1,28 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: waiting-room
+    glyph: 🪑
+    remember: The listen backlog is a queue of connections whose handshake is complete, waiting for `accept()`; Linux clamps it to `somaxconn`.
+    hook: >
+      The backlog is a **waiting room** for guests who have already shaken hands (the TCP
+      handshake is done) and are waiting for you to call `accept()`. Ask for 4096 chairs and
+      Linux **quietly** gives you `net.core.somaxconn` of them. `ss -ltn` shows how many chairs
+      you actually got.
+    cards: [q1, q2]
+  - id: haunted-port
+    glyph: 👻
+    remember: "`EADDRINUSE` with nothing running is usually a connection in TIME_WAIT still holding the port."
+    hook: >
+      Nothing is running, yet the port is taken: it is **haunted**. The ghost of the last
+      connection, in TIME_WAIT, lingers there so stray packets from the dead conversation cannot
+      wander into a new one that happens to reuse the same addresses.
+    cards: [q3]
+  - id: one-letter
+    glyph: 🔑
+    remember: "`SO_REUSEADDR` (set before `bind`) lets you bind past a TIME_WAIT socket; `SO_REUSEPORT` lets several sockets share a port."
+    hook: >
+      One letter, two house rules. `SO_REUSEADDR` says **"let me move in, the ghost can stay"**:
+      bind even though TIME_WAIT is lingering, and it only helps if set *before* `bind`.
+      `SO_REUSEPORT` says **"let roommates share"**: several processes bind the same port and
+      the kernel deals connections out between them.
+    cards: [q4, q5]

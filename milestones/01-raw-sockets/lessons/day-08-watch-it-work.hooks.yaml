@@ -1,0 +1,35 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: last-words
+    glyph: 🕵️
+    remember: For a hung process, strace's last line is the syscall it is blocked in.
+    hook: >
+      Attach `strace` to a hung server and read its **last words**: the final line is the
+      syscall it is sitting in right now. `accept(` means waiting for a client, `recv(` waiting
+      for data, `futex(` waiting on another thread. The hang has told you what it is waiting for.
+    cards: [q1]
+  - id: vigil
+    glyph: 🕯️
+    remember: Whichever side closes first enters TIME_WAIT, so late duplicates die out and the last ACK can be resent.
+    hook: >
+      **Whoever hangs up first keeps the vigil.** The side that closes first sits in TIME_WAIT
+      for about a minute: long enough for stray duplicate packets to die, and to resend the final
+      ACK if it was lost. A server that closes its own connections keeps the vigil for every
+      client it ever had.
+    cards: [q2, q3]
+  - id: unread-goodbye
+    glyph: 🗑️
+    remember: CLOSE_WAIT means the peer has closed and your code has not; a pile of them is a leak in your program.
+    hook: >
+      CLOSE_WAIT is a **goodbye you never answered**: the peer sent FIN, the kernel told you
+      (`recv` returned 0), and your code never called `close()`. The kernel waits on *you*. A
+      growing pile is never the network's fault: it is a leak in your program.
+    cards: [q5]
+  - id: last-chance
+    glyph: 📉
+    remember: "`close()` can fail, and a failure can mean buffered data was not delivered; ignoring it hides data loss."
+    hook: >
+      `close()` is the **last chance to hear bad news**. Its error can mean data you thought you
+      had sent never made it, and after `close()` there is no fd left to ask. Ignore it and the
+      loss is silent; check it and at least you can say so.
+    cards: [q4]

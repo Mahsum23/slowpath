@@ -1,0 +1,64 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: ghost-partner
+    part: 1
+    glyph: 👻
+    remember: A LEFT JOIN keeps every left row; with no match it pairs the row with a right side of NULLs (a NULL-extended row).
+    hook: >
+      `LEFT JOIN` is a dance where every left row is **promised a partner**. Anyone left
+      standing alone at the end is handed a **ghost**: a partner made entirely of NULLs. That
+      ghost is the NULL-extended row, and every condition after the join decides whether it
+      survives the night.
+    tags: [what a LEFT JOIN keeps]
+  - id: ghost-hunter
+    part: 2
+    glyph: 🔫
+    remember: A WHERE condition on the right table discards the NULL-extended rows, turning the LEFT JOIN into an inner join.
+    hook: >
+      `WHERE o.status = 'paid'` walks up to each ghost and asks "are you paid?". A ghost can
+      only answer NULL, and WHERE shoots anyone who does not say yes. **All the ghosts die**, and
+      your left join is an inner join wearing a disguise. Postgres sees through it and plans an
+      inner join: **no `Left` in the plan means your ghosts are dead.**
+  - id: who-may-dance
+    part: 3
+    glyph: 💃
+    remember: Right-table conditions belong in ON; left-table conditions belong in WHERE, because ON can never remove a left row.
+    hook: >
+      `ON` decides **who counts as a partner**, before ghosts are handed out. `WHERE` judges
+      everyone afterwards. "Only paid orders may dance" goes in `ON`. A condition on the *left*
+      table goes in `WHERE`, because in `ON` it only stops partners turning up: every left row
+      still gets its seat. And `OR o.status IS NULL` revives the ghosts but not `bo`, whose
+      real (refunded) partner was shot by the WHERE.
+    tags: [ON vs WHERE]
+    cards: [d1]
+  - id: count-the-living
+    part: 4
+    glyph: 🧮
+    remember: After an outer join, `count(*)` counts the NULL-extended row; count the right table's key instead.
+    hook: >
+      `count(*)` counts heads, and a **ghost has a head**: the customer who never ordered "has 1
+      order". Count something only a living partner carries, `count(o.id)`. And to find the
+      lonely ones on purpose, keep only the ghosts: `WHERE o.id IS NULL`, testing the right
+      table's key, which a real row never has as NULL.
+    tags: [anti-join]
+    cards: [d2, d3]
+  - id: natural-bomb
+    part: 5
+    glyph: 💣
+    remember: NATURAL JOIN joins on every column the two tables share a name with, so an unrelated migration can change it.
+    hook: >
+      `NATURAL JOIN` is a **time bomb whose fuse is made of column names**. It joins on every
+      name the tables share. The day a migration adds `note` to both, the join silently becomes
+      `… AND a.note = b.note`, and with NULL notes every row vanishes. Nobody touched the query.
+      Write `ON`, every time.
+    tags: [NATURAL JOIN]
+  - id: vanishing-join
+    part: 5
+    glyph: 🪄
+    remember: PostgreSQL removes a LEFT JOIN when the right side is unique on the join key and none of its columns are used.
+    hook: >
+      A magic trick: you wrote a join and it **vanished from the plan**. The planner proved two
+      things: each left row matches at most one right row (a unique key), so no rows can be
+      added, and you never use a right-side column, so nothing would change. A join that cannot
+      change the answer is deleted. Select `p.bio` and it reappears.
+    tags: [join removal]

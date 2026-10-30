@@ -1,0 +1,72 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: pin-on-the-timeline
+    part: 1
+    glyph: 📍
+    remember: "`timestamptz` stores an instant and no zone; the session's TimeZone converts on the way in and out."
+    hook: >
+      A `timestamptz` is a **pin stuck in the world's one timeline**, 8 bytes, with no room for
+      a note saying where. The "time zone" in its name is the **interpreter at the door**: it
+      reads your `'12:00'` in the session's zone on the way in, and speaks the session's zone on
+      the way out. Change the interpreter and the same pin is read out differently.
+    cards: [q1, q2]
+  - id: revolving-door
+    part: 2
+    glyph: 🔄
+    remember: "`timestamptz AT TIME ZONE z` gives the wall-clock `timestamp` there; `timestamp AT TIME ZONE z` gives the instant."
+    hook: >
+      `AT TIME ZONE` is a **revolving door**, and what comes out is always the other type. An
+      instant goes in, a wall-clock reading comes out ("what did the clocks say *there*?"). A
+      wall-clock reading goes in, an instant comes out ("this local time, *there*, was when?").
+    tags: [AT TIME ZONE]
+  - id: upside-down
+    part: 2
+    glyph: 🙃
+    remember: "`'UTC+5'` is a POSIX zone, five hours behind UTC; `'+05'` is ISO, five hours ahead."
+    hook: >
+      POSIX hangs its map **upside down**: positive means *west* of Greenwich. That is why New
+      York is `EST5EDT`, with a plus-five meaning five hours *behind*. So `'12:00 UTC+5'` is
+      17:00 UTC, while ISO's `'12:00+05'` is 07:00 UTC: ten hours apart. Write zone names
+      (`Asia/Tashkent`), never `UTC+n`.
+    tags: [time zone names]
+  - id: rubber-calendar
+    part: 3
+    glyph: 🗓️
+    remember: "`interval '1 day'` keeps the wall-clock time, `'24 hours'` adds 86,400 s; adding a month clamps to the month's last day."
+    hook: >
+      The calendar is **rubber**. A day stretches to 25 hours or shrinks to 23 on the clock-change
+      days, so `'1 day'` (same time tomorrow) and `'24 hours'` (86,400 seconds) part company.
+      Months shrink too: 31 January plus a month is 28 February, and a subscription renewed from
+      its *previous* date is **stuck on the 28th forever**. Count from the start date.
+    tags: [calendar arithmetic]
+    cards: [d1]
+  - id: bricks
+    part: 4
+    glyph: 🧱
+    remember: "For time ranges use `>= start AND < end`; `BETWEEN` includes both ends and a date bound means midnight."
+    hook: >
+      `BETWEEN '06-01' AND '06-07'` stops at the **first second** of 7 June, losing the whole
+      day; stretch it to the 8th and midnight lands in two weeks. Time ranges are **bricks**:
+      `>= start AND < end`. Bricks laid end to end leave no gap and no overlap, at any
+      precision.
+    cards: [q3, d2]
+  - id: whose-midnight
+    part: 4
+    glyph: 🌍
+    remember: "`date_trunc('day', ts)` on a timestamptz cuts at midnight in the session's zone; pass the zone explicitly."
+    hook: >
+      "Today" is a **question with a passport**: whose midnight? `date_trunc('day', created_at)`
+      answers in the zone of whoever happens to be connected: the dashboard server, the analyst's
+      laptop, the cron job. Same data, different daily totals. Give it the zone yourself as the
+      third argument and the answer stops depending on who asks.
+    cards: [q5]
+  - id: photo-not-video
+    part: 4
+    glyph: 🧊
+    remember: "`now()` is fixed at the start of the transaction; `clock_timestamp()` keeps moving."
+    hook: >
+      `now()` is a **photograph** taken the moment the transaction began. Every row inserted
+      during that transaction gets the same photo, a minute later or an hour later.
+      `clock_timestamp()` is the **live video**: use it when you need to know how long something
+      really took.
+    tags: [now() in a transaction]

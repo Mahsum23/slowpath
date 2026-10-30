@@ -1,0 +1,83 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: frogs-wear-gold-hats
+    part: 1
+    glyph: 🐸
+    remember: "Running order: FROM, WHERE, GROUP BY, HAVING, SELECT, DISTINCT, ORDER BY, LIMIT."
+    hook: >
+      **F**rogs **W**ear **G**old **H**ats; **S**ome **D**ance, **O**thers **L**eap. Picture
+      it: a frog kitchen. **F**ROM, fetch the ingredients. **W**HERE, bin the rotten ones.
+      **G**ROUP BY, sort them into bowls. **H**AVING, bin the bowls that are too small.
+      **S**ELECT, plate the dish and *name it*. **D**ISTINCT, drop duplicate plates. **O**RDER
+      BY, line them up. **L**IMIT, serve the first few.
+    tags: [running order]
+  - id: name-tag
+    part: 2
+    glyph: 🏷️
+    remember: An alias exists from SELECT on, so WHERE and HAVING cannot use it; ORDER BY can, but only on its own.
+    hook: >
+      An alias is a **name tag printed at step 5**. `WHERE` (step 2) and `HAVING` (step 4)
+      worked the room before the printer ran, so they have never heard of `doubled`. `ORDER BY`
+      comes after and reads the tag, but only when the tag is the whole thing: `ORDER BY gross`
+      reads it, while `ORDER BY gross + 0` goes rummaging in the fridge for an ingredient called
+      gross.
+    tags: [what a clause can see]
+  - id: two-bouncers
+    part: 3
+    glyph: 🚪
+    remember: Conditions on one row go in WHERE, conditions on a group go in HAVING.
+    hook: >
+      Two bouncers. **WHERE** stands at the club door and checks each person. **HAVING** walks
+      the tables afterwards and checks each *party*. The cancelled order has to be stopped at the
+      door: once it is sitting at the table, its 500 is already in the bill that HAVING reads.
+    tags: [WHERE vs HAVING]
+  - id: basket-label
+    part: 4
+    glyph: 🧺
+    remember: After GROUP BY, every selected column must be grouped on or aggregated (a primary key makes its table's columns safe).
+    hook: >
+      A group is a **basket of rows**, and SELECT writes the basket's label. A label can only say
+      what is true of the whole basket (the grouped column) or a summary (`count`, `sum`). "The
+      status of a basket holding one paid and one cancelled order" does not exist. For years MySQL
+      just read whichever apple was on top. Group by a customer's **primary key** and everything
+      else about that customer is the same throughout the basket, so it may go on the label.
+    tags: [GROUP BY rules]
+  - id: empty-bag
+    part: 5
+    glyph: 🕳️
+    remember: "`count` of no rows is 0, `sum` of no rows is NULL; without GROUP BY you get one row, with it none."
+    hook: >
+      Turn an **empty bag** upside down. `count` says "0 things fell out". `sum` says nothing,
+      because it added nothing: **NULL**. Without `GROUP BY` there is always one bag, even an
+      empty one, so you get one row. With `GROUP BY` there is one row per bag, and no rows means
+      no bags means **no rows at all**. `coalesce(sum(x), 0)` when you mean zero.
+    tags: [aggregates over nothing]
+  - id: calendar-page
+    part: 6
+    glyph: 🗓️
+    remember: "`date_trunc('month', d)` keeps the year (a timeline); `extract(month FROM d)` is just 1 to 12 and merges years."
+    hook: >
+      `date_trunc` **trims** the date back to the first of its month but leaves the year on: a
+      point on a timeline. `extract(month …)` **tears off the calendar page** and keeps only the
+      big number, so every January that ever happened lands in one pile. Timeline? Trim. "Which
+      month sells best"? Tear. And `date_trunc` hands back a timestamp: add `::date`.
+    tags: [grouping by a computed value]
+  - id: whole-pizzas
+    part: 6
+    glyph: 🍕
+    remember: "Integer divided by integer is an integer, rounded toward zero: `3 / 12` is 0."
+    hook: >
+      Integer division is a pizzeria that only sells **whole pizzas**. Three pizzas between
+      twelve people? Everybody gets **0**, and the leftovers are thrown away. Let one side be
+      `numeric` (`100.0 * 3 / 12`, or `3::numeric / 12`) and the shop starts selling slices.
+    tags: [integer division]
+  - id: zero-is-something
+    part: 7
+    glyph: 🎯
+    remember: "`count` counts every non-NULL value, so `count(CASE … ELSE 0 END)` counts all rows; use `FILTER (WHERE …)`."
+    hook: >
+      To `count`, **0 is a perfectly good something**. It only skips NULL. So
+      `count(CASE WHEN paid THEN 1 ELSE 0 END)` counts every row, paid or not, with a straight
+      face. Drop the `ELSE` (the missing branch is NULL) or say what you mean:
+      `count(*) FILTER (WHERE status = 'paid')`, which gives that one aggregate its own bouncer.
+    tags: [aggregate filters]

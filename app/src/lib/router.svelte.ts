@@ -9,6 +9,7 @@ export type Route =
   | { name: 'review'; practice: boolean; round: string | null }
   | { name: 'settings' }
   | { name: 'curiosities' }
+  | { name: 'hooks' }
   | { name: 'session'; weekId: string; dayId: string; step: number; part: number | null };
 
 function parse(hash: string): Route {
@@ -26,6 +27,8 @@ function parse(hash: string): Route {
       return { name: 'settings' };
     case 'curiosities':
       return { name: 'curiosities' };
+    case 'hooks':
+      return { name: 'hooks' };
     case 'session':
       if (parts[1] && parts[2]) {
         return {

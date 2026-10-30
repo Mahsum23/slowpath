@@ -1,0 +1,42 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: pop-up-factory
+    part: 1
+    glyph: 🏭
+    remember: "`go run` compiles a real binary into a temporary directory and runs it; the binary is ~2 MB because it carries the Go runtime."
+    hook: >
+      `go run` is a **pop-up factory**, not an interpreter: it builds a real machine-code
+      binary in a temp directory, runs it, and folds the factory away. The binary weighs about
+      2 MB because every Go program **packs its own suitcase**: scheduler, garbage collector,
+      type information. C's hello world travels light because libc is waiting at the hotel.
+    cards: [q1, q3]
+  - id: strict-housemate
+    part: 2
+    glyph: 🧹
+    remember: An unused import or local variable is a compile error; `_ = x` silences it mid-debug.
+    hook: >
+      The Go compiler is the **strict housemate** who will not cook while your stuff is lying
+      around. An unused import or variable is a hard error, because it is usually the
+      fingerprint of a bug (you meant to use it) and every import still costs build time. Mid-debug,
+      kick it under the rug: `_ = count`. (The spec only says a compiler *may* refuse unused
+      variables. The `gc` compiler chose to.)
+    tags: [the unused-variable rule]
+    cards: [q2, q4]
+  - id: party-guest
+    part: 2
+    glyph: 🎉
+    remember: "`import _ \"pkg\"` imports a package only for its side effects: its `init` runs."
+    hook: >
+      `import _ "net/http/pprof"` invites a guest **only for what they do on arrival**. Its
+      `init` functions run (here, registering debug handlers on the default mux), and you never
+      say a word to it afterwards. The blank `_` is the name tag you leave empty.
+    cards: [q5]
+  - id: uniform
+    part: 3
+    glyph: 🪖
+    remember: "gofmt has no settings; `-d` prints the diff, `-w` rewrites the file."
+    hook: >
+      `gofmt` is a **uniform**: there are no sizes to choose, so nobody wins or loses the tabs
+      war, because nobody fights it. `-d` is the **d**ress rehearsal (show the diff), `-w` is
+      **w**ear it (rewrite the file).
+    tags: [gofmt]

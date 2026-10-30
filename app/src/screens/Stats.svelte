@@ -11,6 +11,7 @@
   import KnowledgeMap from '../components/KnowledgeMap.svelte';
   import AccuracyBars from '../components/AccuracyBars.svelte';
   import { TRACKS } from '../lib/types';
+  import { hookRead } from '../lib/hooks';
 
   const lp = $derived(levelProgress(app.progress.xp));
   const earned = $derived(app.progress.badges);
@@ -47,6 +48,9 @@
   const ahead = $derived(allConcepts.length - map.length);
   const solid = $derived(map.filter((k) => k.s.status === 'solid').length);
   const found = $derived(Object.keys(app.eggs.found).length);
+  const hookCount = $derived(
+    (app.path?.days ?? []).reduce((n, d) => n + (d.hooks ?? []).filter((h) => hookRead(d, app.progress.days[d.id], h)).length, 0),
+  );
 </script>
 
 <div class="screen">
@@ -89,6 +93,13 @@
     {#if ahead}
       <p class="sub ahead">{ahead} more concept{ahead === 1 ? '' : 's'} written and waiting further along the path.</p>
     {/if}
+  {/if}
+  {#if hookCount}
+    <button class="hooklink" onclick={() => router.go('/hooks')}>
+      <span aria-hidden="true">🪝</span>
+      <span>Memory hooks · {hookCount}</span>
+      <span class="go" aria-hidden="true">›</span>
+    </button>
   {/if}
 
   <h2>Showing up</h2>
@@ -184,6 +195,25 @@
 </div>
 
 <style>
+  .hooklink {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin: 12px 0 0;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 14.5px;
+    font-weight: 650;
+  }
+
+  .hooklink .go {
+    margin-left: auto;
+    color: var(--text-faint);
+  }
+
   .cabinet {
     display: flex;
     align-items: center;

@@ -13,6 +13,7 @@
 import { mergePractice } from './practice';
 import { mergeParts } from './parts';
 import { mergeEggs } from './eggs';
+import { mergeOwnHooks } from './hooks';
 import { mergeActivity } from './motivation';
 import {
   emptyDayProgress, emptyReview,
@@ -178,5 +179,6 @@ export function mergeProgress(local: Progress, remote: Progress): Progress {
     loadedWeeks: local.loadedWeeks,
     ...(local.activity || remote.activity ? { activity: mergeActivity(local.activity, remote.activity) } : {}),
     ...(local.eggs || remote.eggs ? { eggs: mergeEggs(local.eggs, remote.eggs) } : {}),
+    ...(local.hooks || remote.hooks ? { hooks: mergeOwnHooks(local.hooks, remote.hooks) } : {}),
   };
 }

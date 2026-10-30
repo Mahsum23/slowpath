@@ -622,6 +622,34 @@ tested in `test-motivation.mjs`), and each piece rests on a finding, so keep the
 - The answer log (`progress.activity`) merges by **max per field, never sum** — a summed
   tally once doubled on every sync.
 
+## Hooks: an odd picture for each fact that will not stick
+
+He said the material does not hold in his mind, and asked for colourful, unique, funny and
+interesting associations for the important material. So every lesson day carries
+`day-NN-<slug>.hooks.yaml` (`app/src/lib/hooks.ts`, DESIGN.md §8.16), written with the day,
+and shown at the end of each part, after a missed card on the same idea, and in the gallery
+(`#/hooks`). Rules that keep them working:
+
+- **Only for the important, arbitrary facts.** Three to five a day: the rule people forget
+  (`RANGE` is the default frame, `extract` merges years), not every sentence. An odd image
+  helps because it stands out from ordinary material (McDaniel & Einstein 1986); a page of
+  them stands out from nothing.
+- **Every hook carries the reason, not just the words.** "Two bouncers: WHERE at the door
+  checks each person, HAVING checks each table" encodes *why* the cancelled order must be
+  stopped at the door. A jingle that only encodes the words is the weak kind of mnemonic.
+- **Each one different in kind from its neighbours**: a scene, a character, a myth (Ariadne's
+  thread for keyset paging), hacker lore, a mnemonic sentence, a number with a story (2³¹−1 is
+  also the 2038 problem). His taste, from the surprises questions: absurd, nerdy and dark
+  humour; myth and the hacker underground. Never the same image twice in a track.
+- **True and exact.** A hook is a lesson in miniature: the fact in `remember` must match the
+  lesson, and any story in it is verified like any other. It may only use what the lesson
+  has taught.
+- **Linked, or it never comes back.** `tags` (bank themes) and `cards` (item ids) say which
+  misses bring it back; on a day in parts the first hook of a part is the fallback.
+  `test-hooks.mjs` fails if a shipped hook can never be reached.
+- **His own wins.** He can write his own for any hook (a self-made association holds better,
+  Slamecka & Graf 1978), and from then on his is shown, with mine one tap away.
+
 ## Surprises: novelty, without turning it into points
 
 He asked to be surprised: "the novelty is the key to the dopamine", something positive and

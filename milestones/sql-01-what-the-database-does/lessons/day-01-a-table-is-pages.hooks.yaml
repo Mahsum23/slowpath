@@ -1,0 +1,39 @@
+# Memory hooks: one vivid picture per fact that will not stay put on its own, carrying
+# the reason as well as the words (see app/src/lib/hooks.ts and CLAUDE.md).
+hooks:
+  - id: page-box
+    glyph: 📦
+    remember: PostgreSQL reads and writes in 8 kB pages, never single rows.
+    hook: >
+      The table is a warehouse that only lends out **whole boxes**, 8 kB each. Want one row?
+      You carry out the entire box it sits in. A `Seq Scan` is a forklift hauling every box in
+      the building to find one sock, which is why "rows read" matters less than "pages touched".
+    cards: [q1]
+  - id: ctid-hotel
+    glyph: 🏨
+    remember: "`ctid` is a physical address, `(page, slot)`, and an UPDATE moves the row to a new one."
+    hook: >
+      Every row is a guest at Hotel Postgres, and `ctid` is the room number: floor and door,
+      `(page, slot)`. An `UPDATE` never redecorates. The guest checks into a **new room** with
+      the change, and the old room keeps a ghost until housekeeping comes. So a `ctid` is where
+      somebody is sleeping tonight, never who they are.
+    cards: [q2, q4]
+  - id: birth-death
+    glyph: 🪦
+    remember: "`xmin` is the transaction that created a row version, `xmax` the one that ended it."
+    hook: >
+      Each row version carries two certificates: a **birth** certificate (`xmin`, the
+      transaction that wrote it) and, once replaced or deleted, a **death** certificate
+      (`xmax`). A reader never asks a writer for permission. It reads the dates against its own
+      snapshot: born before I looked, not dead yet? Visible. That is how readers and writers
+      avoid waiting for each other.
+    cards: [q5]
+  - id: janitor
+    glyph: 🧹
+    remember: Plain VACUUM makes dead space reusable but does not shrink the file; VACUUM FULL rewrites it under a lock.
+    hook: >
+      `VACUUM` is a janitor: it sweeps the ghost rooms and hangs **"vacant"** signs on the doors
+      for this table's next guests. The building stays 4 GB. To shrink it you need
+      `VACUUM FULL`, which builds a whole new hotel next door, moves everyone in, and keeps the
+      front door **locked** the entire time.
+    cards: [q3]

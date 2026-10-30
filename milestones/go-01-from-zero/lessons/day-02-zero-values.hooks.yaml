@@ -1,0 +1,42 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: born-clean
+    part: 1
+    glyph: 🍼
+    remember: "Every Go variable starts at its zero value (0, \"\", false, nil), and good types make that zero usable."
+    hook: >
+      In Go every variable is **born clean**: 0, `""`, `false`, `nil`, never yesterday's
+      garbage from the stack. And the designers made the clean state *useful*: a `nil` slice is an
+      empty shelf you can already `append` to, a zero `sync.Mutex` is an unlocked lock ready to
+      use. "Make the zero value useful" is one of Rob Pike's Go proverbs.
+    cards: [q1, q2]
+  - id: doppelganger
+    part: 2
+    glyph: 👥
+    remember: "`x := …` inside a block declares a new variable that shadows the outer one; `:=` is only allowed inside functions."
+    hook: >
+      `:=` inside a block is a **doppelgänger machine**. `count := 2` in an `if` creates a
+      second `count` that looks exactly like the first, does all the work, and vanishes at the
+      `}`, while the real one never changed. And the machine only runs indoors: at package level,
+      outside any function, write `var limit = 10`.
+    tags: [declaring]
+    cards: [q3]
+  - id: plug-adapter
+    part: 3
+    glyph: 🔌
+    remember: Go never converts between numeric types implicitly; `int + int64` needs an explicit conversion.
+    hook: >
+      `int` and `int64` are **plugs from different countries**. On your machine they carry the
+      same voltage (both 64-bit), but Go ships no adapter in the box: `a + b` will not compile.
+      You write the adapter yourself, `int64(a) + b`, so every conversion is visible where it
+      happens.
+    cards: [q4]
+  - id: attic
+    part: 3
+    glyph: 🏚️
+    remember: Untyped constants are evaluated at arbitrary precision at compile time; they only have to fit once given a type.
+    hook: >
+      Untyped constants live in the compiler's **infinite attic**, where `(1 << 62) * 4` fits
+      fine. Nothing has to fit until a constant **moves downstairs** into a real variable with a
+      real type. Then, and only then, it must fit the room.
+    cards: [q5]

@@ -7,6 +7,8 @@
   import MentorSheet from '../../components/MentorSheet.svelte';
   import { focusComposer, mentorKey } from '../../lib/shortcuts.svelte';
   import SelectionAsk from '../../components/SelectionAsk.svelte';
+  import HookCard from '../../components/HookCard.svelte';
+  import { hooksForPart } from '../../lib/hooks';
 
   interface Props {
     day: Day;
@@ -22,6 +24,7 @@
   const parts = $derived(partsOf(day));
   const progress = $derived(app.dayProgress(day.id, weekId));
   const checks = $derived(part ? partQuestions(day, part.n).length : 0);
+  const hooks = $derived(hooksForPart(day, part?.n ?? null));
 
   let asking = $state(false);
   let ask = $state<string | null>(null);
@@ -88,6 +91,18 @@
   <Markdown source={part ? part.markdown : day.theoryMarkdown} />
 </SelectionAsk>
 
+<!-- The facts from this reading that will not hold on their own, each with something to
+     hang it on. After the text rather than inside it: the hook is for once the idea makes
+     sense, and it is what comes back when a card on it is missed. -->
+{#if hooks.length}
+  <section class="hooks" aria-label="Make it stick">
+    <h2>Make it stick</h2>
+    {#each hooks as h (h.id)}
+      <HookCard {day} hook={h} />
+    {/each}
+  </section>
+{/if}
+
 <div class="cta">
   <Button full onclick={next}>
     {#if part}
@@ -111,6 +126,15 @@
 {/if}
 
 <style>
+  .hooks {
+    margin-top: 28px;
+  }
+
+  .hooks h2 {
+    font-size: 18px;
+    margin: 0 0 -4px;
+  }
+
   .parts {
     display: flex;
     gap: 6px;

@@ -1,0 +1,34 @@
+# Memory hooks: see app/src/lib/hooks.ts.
+hooks:
+  - id: receptionist
+    glyph: 🛎️
+    remember: "`accept()` returns a new fd per connection; the listening socket stays in LISTEN, and closing it stops the server taking clients."
+    hook: >
+      The listening socket is the **receptionist**. `accept()` does not hand you the
+      receptionist; it hands you a **private line** to one guest (a new fd). When the guest
+      leaves, hang up that line. Close the receptionist instead and nobody new gets in, ever.
+    cards: [q1]
+  - id: four-tuple
+    glyph: 🧾
+    remember: Connections to the same port are told apart by the four-tuple (local IP, local port, remote IP, remote port).
+    hook: >
+      Three clients on port 9000 look identical from your side of the counter. What tells them
+      apart is the **full receipt**: local IP, local port, *remote* IP, *remote* port. Your
+      half is the same on all three; their half differs, and that is enough.
+    cards: [q2]
+  - id: tape-measure
+    glyph: 📏
+    remember: "The `socklen_t*` argument is value-result: you pass your buffer's size in, the kernel writes the real size back."
+    hook: >
+      The `socklen_t*` is a **tape measure you lend the kernel**. Going in, it says how big
+      your box is. Coming back, it says how much the kernel actually put in. That is why it is a
+      pointer, and why it must be set to `sizeof peer` before every call.
+    cards: [q3]
+  - id: sleeping-guard
+    glyph: 💤
+    remember: A process blocked in `accept()` uses no CPU; the kernel deschedules it until a connection arrives.
+    hook: >
+      A server blocked in `accept()` is a **guard asleep on a pressure mat**. It burns no CPU at
+      all: the kernel takes it off the run queue and wakes it the instant a completed connection
+      steps on the mat.
+    cards: [q5]

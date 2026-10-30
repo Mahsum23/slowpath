@@ -61,6 +61,29 @@ export interface DayPart {
   added: string | null;
 }
 
+/**
+ * A vivid association for one fact (hooks.ts). `remember` is the fact in a line, `hook`
+ * the picture or story that carries both it and its reason.
+ */
+export interface Hook {
+  id: string;
+  /** The part it belongs to, on a day read in parts. */
+  part?: number | null;
+  glyph: string;
+  remember: string;
+  hook: string;
+  /** Themes (bank `tag:`s) it covers: a miss on any of them brings it back. */
+  tags?: string[] | null;
+  /** Card ids it covers, for items with no tag. */
+  cards?: string[] | null;
+}
+
+/** A hook he wrote himself. An empty text means he cleared it (kept so the clear syncs). */
+export interface OwnHook {
+  text: string;
+  at: string;
+}
+
 export interface Day {
   id: string;
   day: number;
@@ -93,6 +116,8 @@ export interface Day {
    */
   practice?: PracticeSet | null;
   task: DayTask | null;
+  /** Associations for the facts that will not stay put on their own (hooks.ts). */
+  hooks?: Hook[] | null;
   /** The topic this day belongs to (its source directory), shown as a divider on the path. */
   topic?: string;
 }
@@ -421,6 +446,8 @@ export interface Progress {
   activity?: Record<string, { n: number; right: number; known?: number }>;
   /** Surprises found, and hunts in progress (eggs.ts). Absent until the first. */
   eggs?: EggState;
+  /** Hooks he wrote himself, by hookKey (hooks.ts). Absent until the first. */
+  hooks?: Record<string, OwnHook>;
 }
 
 export function emptyReview(): ReviewState {
