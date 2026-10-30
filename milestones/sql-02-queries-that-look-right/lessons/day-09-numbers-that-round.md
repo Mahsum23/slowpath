@@ -4,8 +4,8 @@
 
 Numbers feel like the one part of SQL that cannot surprise you. The surprise is that
 PostgreSQL has several kinds of number, each with its own rules for division, rounding and
-running out of room, and the literal you type decides which one you get. Today: four small
-experiments, each of which has cost somebody real money or a real outage.
+running out of room, and the literal you type decides which one you get. The four parts
+below take those rules one at a time, each with a small experiment you can run.
 
 ```sql
 DROP SCHEMA IF EXISTS day09 CASCADE;
@@ -82,7 +82,7 @@ FROM visits;
 
 ## Part 2: Floating point
 
-Starting a new psql session? Run `SET search_path = day09;` first — the tables
+Starting a new psql session? Run `SET search_path = day09;` first. The tables
 are still there, but the setting lasts only for the session.
 
 ```sql
@@ -192,7 +192,7 @@ the window the system was looking in.
 
 ## Part 3: numeric, and rounding
 
-Starting a new psql session? Run `SET search_path = day09;` first — the tables
+Starting a new psql session? Run `SET search_path = day09;` first. The tables
 are still there, but the setting lasts only for the session.
 
 `numeric` is decimal and arbitrary-precision, and for money it is the right type in
@@ -289,7 +289,7 @@ of them, and they all pointed the same way.
 
 ## Part 4: Overflow, money, and NaN
 
-Starting a new psql session? Run `SET search_path = day09;` first — the tables
+Starting a new psql session? Run `SET search_path = day09;` first. The tables
 are still there, but the setting lasts only for the session.
 
 ```sql
@@ -335,7 +335,7 @@ SELECT 12.345::money AS money;
  $12.35
 ```
 
-There are two respected answers instead, and you will meet both. Store `numeric` with an
+There are two common answers instead, and you will meet both. Store `numeric` with an
 explicit scale and keep the currency in its own column. Or store an integer count of
 the currency's smallest unit, which is what Stripe's API does: amounts are integers in
 cents for USD, and in whole yen for JPY, a currency with no minor unit. Either works.

@@ -21,7 +21,7 @@ questions:
       - text: They do the same thing; `OVER` is newer syntax for `GROUP BY`
         correct: false
         why: >
-          The row counts differ, which is the whole point. They also run at different
+          The row counts differ, and that is what matters. They also run at different
           steps: grouping before SELECT, windows inside it.
       - text: >
           A window function filters rows to those in the window, while `GROUP BY` keeps
@@ -33,7 +33,7 @@ questions:
       - text: Window functions can only be used together with `GROUP BY`
         correct: false
         why: >
-          They work on their own, and they can be combined with GROUP BY — in which case
+          They work on their own, and they can be combined with GROUP BY, in which case
           they run over the grouped rows.
 
   - id: q2
@@ -195,7 +195,7 @@ questions:
       - text: "`lag` skips the first row of every window by design"
         correct: false
         why: >
-          It does not skip it — the row is there, with a NULL in the column that needed a
+          It does not skip it: the row is there, with a NULL in the column that needed a
           previous value.
       - text: The window has no frame clause, so `lag` cannot see earlier rows
         correct: false
@@ -207,20 +207,20 @@ questions:
     part: 4
     tag: windows after WHERE
     prompt: >
-      `SELECT id, amount, sum(amount) OVER () FROM sales WHERE region = 'north'` — is the
+      `SELECT id, amount, sum(amount) OVER () FROM sales WHERE region = 'north'`: is the
       window total the whole table's, or north's?
     options:
-      - text: North's — the window runs in the `SELECT` step, after `WHERE` removed the other rows
+      - text: "North's: the window runs in the `SELECT` step, after `WHERE` removed the other rows"
         correct: true
         why: >
           `OVER ()` means "all rows", but only those that reached `SELECT`. For a share of the
           whole table, compute the window in a subquery and filter outside it.
-      - text: The whole table's — `OVER ()` always sees every row
+      - text: "The whole table's: `OVER ()` always sees every row"
         correct: false
         why: >
           A window is computed over the query's rows at that point in the pipeline. The other
           regions were already gone.
-      - text: Neither — an empty `OVER ()` is an error
+      - text: "Neither: an empty `OVER ()` is an error"
         correct: false
         why: >
           `OVER ()` is valid: one window holding every row of the result.

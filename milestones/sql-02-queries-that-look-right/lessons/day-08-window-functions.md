@@ -63,8 +63,8 @@ ORDER BY id;
 
 Seven in, seven out. For each row, the window function looks at a **window** of related
 rows, here every row in the same region, computes the aggregate over that window, and
-writes the result next to the row. Nothing collapses. That is the whole idea; everything
-else is about choosing the window:
+writes the result next to the row. Nothing collapses. The rest of this lesson is about
+choosing the window:
 
 ```text
 function(...) OVER (
@@ -75,7 +75,7 @@ function(...) OVER (
 ```
 
 (`100.0 *` and not `100 *` is deliberate: `amount` is an integer, and integer division
-would turn every share into 0. That is day 9's whole subject.)
+would turn every share into 0. Day 9 covers that in full.)
 
 ### Check yourself
 
@@ -85,7 +85,7 @@ would turn every share into 0. That is day 9's whole subject.)
 
 ## Part 2: Ranking, and the top of each group
 
-Starting a new psql session? Run `SET search_path = day08;` first — the tables
+Starting a new psql session? Run `SET search_path = day08;` first. The tables
 are still there, but the setting lasts only for the session.
 
 ```sql
@@ -189,7 +189,7 @@ exactly one.
 
 ## Part 3: Frames: the running total that jumps
 
-Starting a new psql session? Run `SET search_path = day08;` first — the tables
+Starting a new psql session? Run `SET search_path = day08;` first. The tables
 are still there, but the setting lasts only for the session.
 
 Add `ORDER BY` inside the window and `sum` becomes a running total:
@@ -304,7 +304,7 @@ the `id` at the end of the `ORDER BY` is what decides the tie between the two 20
 
 ## Part 4: Neighbours, and what a window can see
 
-Starting a new psql session? Run `SET search_path = day08;` first — the tables
+Starting a new psql session? Run `SET search_path = day08;` first. The tables
 are still there, but the setting lasts only for the session.
 
 "How did each day compare with the day before?" used to need a self-join on `day - 1`.

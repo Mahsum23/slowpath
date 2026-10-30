@@ -9,7 +9,7 @@ questions:
       row whose condition evaluates to that?
     options:
       - text: >
-          Unknown, a third truth value — and `WHERE` discards the row, exactly as it would
+          Unknown, a third truth value, and `WHERE` discards the row, exactly as it would
           for false
         correct: true
         why: >
@@ -21,19 +21,19 @@ questions:
         correct: false
         why: >
           The row is discarded, but the reason matters enormously. If it were false you
-          could rely on `NOT (NULL = NULL)` being true — and it is not, it is unknown too.
+          could rely on `NOT (NULL = NULL)` being true, and it is not, it is unknown too.
           That is precisely how NOT IN goes wrong.
       - text: True, since both sides are identical
         correct: false
         why: >
           Identical *syntax*, not identical values. NULL is not a value that can be equal
-          to anything, including another NULL — which is why `IS NULL` had to be invented
+          to anything, including another NULL, which is why `IS NULL` had to be invented
           as separate syntax.
       - text: It raises an error, which is why `IS NULL` exists
         correct: false
         why: >
           No error is raised, and that is the whole danger. An error would be a gift; you
-          would find it in a log. Instead the expression quietly evaluates to unknown and
+          would find it in a log. Instead the expression evaluates to unknown and
           the row silently vanishes.
 
   - id: q2
@@ -46,7 +46,7 @@ questions:
           unknown, so the whole conjunction is at best unknown and never true
         correct: true
         why: >
-          The crucial part is that this does not depend on x. Even when x is 7 and both
+          The important part is that this does not depend on x. Even when x is 7 and both
           real comparisons are true, `true AND true AND unknown` is unknown, and `WHERE`
           keeps only true. One NULL anywhere in the list disables the entire predicate for
           every input. `NOT EXISTS` is the fix, because it asks about the existence of
@@ -64,7 +64,7 @@ questions:
         correct: false
         why: >
           A tidy story that gives the right answer for the wrong reason, and it will
-          mislead you next time. NULL matches nothing — the comparison yields unknown, not
+          mislead you next time. NULL matches nothing: the comparison yields unknown, not
           a match. If NULL genuinely matched everything, plain `IN` would return every
           row, and it returns none.
       - text: >
@@ -77,10 +77,10 @@ questions:
   - id: q3
     prompt: >
       A column `v` holds the values 1, 2 and NULL. What do `count(*)`, `count(v)` and
-      `avg(v)` return, and why can that quietly make a dashboard wrong?
+      `avg(v)` return, and why can that make a dashboard wrong without anything failing?
     options:
       - text: >
-          3, 2 and 1.5 — aggregates skip NULLs, so the average divided by 2 rather than 3
+          3, 2 and 1.5: aggregates skip NULLs, so the average divided by 2 rather than 3
         correct: true
         why: >
           `count(*)` counts rows, `count(v)` counts non-NULL values, and `avg` sums 3 over
@@ -88,23 +88,23 @@ questions:
           offline" makes it the correct average of known readings; "we failed to record a
           zero" makes it a 50% overstatement. The database cannot distinguish the two
           cases, and neither can anything downstream of it.
-      - text: 3, 3 and 1.0 — NULL counts as zero in numeric aggregates
+      - text: "3, 3 and 1.0: NULL counts as zero in numeric aggregates"
         correct: false
         why: >
           This is the intuition the behaviour is designed to contradict. NULL is not zero;
           it is unknown. Treating it as zero would mean claiming knowledge you do not
           have, so SQL leaves it out of the calculation entirely.
-      - text: 3, 2 and NULL — one unknown input makes the whole aggregate unknown
+      - text: "3, 2 and NULL: one unknown input makes the whole aggregate unknown"
         correct: false
         why: >
-          That is how NULL behaves in *scalar* expressions — `1 + NULL` really is NULL —
+          That is how NULL behaves in *scalar* expressions (`1 + NULL` really is NULL)
           but aggregates deliberately break that rule and skip nulls instead. Knowing that
           aggregates are the exception is most of the point of this question.
       - text: >
           An error, since an average cannot be computed over an unknown value
         correct: false
         why: >
-          No error. Aggregates over columns containing NULLs are entirely routine — the
+          No error. Aggregates over columns containing NULLs are entirely routine: the
           risk is a plausible number, not a failure. (`avg` over *no* non-NULL rows at all
           returns NULL rather than raising.)
 
@@ -121,7 +121,7 @@ questions:
           Both halves are real and they contradict each other inside one language. Two
           NULL rows collapse into a single group, yet `WHERE v = NULL` matches neither of
           them, and a UNIQUE column will happily accept both. `ORDER BY` takes a third
-          position — Postgres sorts NULLs as larger than everything, hence NULLS FIRST as
+          position: Postgres sorts NULLs as larger than everything, hence NULLS FIRST as
           an option. This inconsistency is what the long-running theoretical argument
           about nulls is actually about.
       - text: >
@@ -129,21 +129,21 @@ questions:
         correct: false
         why: >
           It would be a much easier language if that were true. Run `GROUP BY v` on a
-          table with two NULL rows and you get one group of two — which is only possible
+          table with two NULL rows and you get one group of two, which is only possible
           if something decided those NULLs were the same.
       - text: >
           They are equal everywhere except inside aggregate functions
         correct: false
         why: >
           Backwards on the main point, and aggregates are not doing an equality comparison
-          at all — they simply exclude NULL inputs before computing anything.
+          at all: they simply exclude NULL inputs before computing anything.
       - text: >
           Equality depends on the column's type; numeric NULLs compare equal, text NULLs
           do not
         correct: false
         why: >
-          Type has nothing to do with it. The behaviour differs by *clause* — GROUP BY
-          versus WHERE — and is identical for every data type.
+          Type has nothing to do with it. The behaviour differs by *clause* (GROUP BY
+          versus WHERE) and is identical for every data type.
 
   - id: q5
     prompt: >
@@ -151,7 +151,7 @@ questions:
       What happens, and how would you make it fail instead?
     options:
       - text: >
-          It is accepted — uniqueness is defined by equality and NULLs are never equal —
+          It is accepted (uniqueness is defined by equality and NULLs are never equal)
           and `UNIQUE NULLS NOT DISTINCT` makes the second one fail
         correct: true
         why: >
@@ -161,7 +161,7 @@ questions:
           unknowns as equal"; before that the options were NOT NULL or a partial unique
           index. It took about thirty years for the language to offer the choice.
       - text: >
-          It is rejected — a unique constraint permits at most one NULL
+          It is rejected: a unique constraint permits at most one NULL
         correct: false
         why: >
           That is SQL Server's behaviour, and assuming it is portable is how this bug
@@ -173,7 +173,7 @@ questions:
         why: >
           Right about the acceptance, out of date on the remedy. NOT NULL is one answer,
           but `UNIQUE NULLS NOT DISTINCT` (PostgreSQL 15+) forbids the duplicate NULL
-          while still permitting a single one — and a partial unique index solved it
+          while still permitting a single one, and a partial unique index solved it
           before that.
       - text: >
           It is accepted, but only because the column is nullable; a NOT NULL column would

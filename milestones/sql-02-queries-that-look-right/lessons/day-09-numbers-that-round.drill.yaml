@@ -56,7 +56,7 @@ steps:
       - text: psql rounds results for display, so it showed `t` by mistake
         correct: false
         why: >
-          A boolean is not rounded. The check really was true — for numeric arithmetic.
+          A boolean is not rounded. The check really was true, for numeric arithmetic.
       - text: The WHERE clause needs `::float8` on 0.3 to compare at all
         correct: false
         why: >
@@ -79,7 +79,7 @@ steps:
         why: >
           Money must be exact, so numeric (or integer cents). A sensor reading is already
           an approximation with its own measurement error, and float8 is fast and more
-          than precise enough. A busy table's id will pass 2,147,483,647 — Basecamp 3
+          than precise enough. A busy table's id will pass 2,147,483,647: Basecamp 3
           went read-only for about five hours in 2018 when an `int` id ran out.
       - text: "`float8`, `float8`, `int`"
         correct: false

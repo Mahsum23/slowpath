@@ -64,7 +64,7 @@ steps:
         why: >
           Filtering a window result from an outer query is exactly the right pattern. By
           the time the outer WHERE runs, rn is an ordinary column.
-      - text: Nothing — row_number always gives 1 to the row with the lowest id
+      - text: "Nothing: row_number always gives 1 to the row with the lowest id"
         correct: false
         why: >
           Nothing in the window mentions id. Postgres adds no tiebreaker of its own.

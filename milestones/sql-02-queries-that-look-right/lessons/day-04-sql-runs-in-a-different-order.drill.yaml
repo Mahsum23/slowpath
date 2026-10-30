@@ -31,7 +31,7 @@ steps:
           It fails: `aggregate functions are not allowed in HAVING`
         correct: false
         why: >
-          Aggregates in HAVING are the whole point of HAVING. The aggregate-ban error
+          Aggregates are what HAVING is for. The aggregate-ban error
           belongs to WHERE, which runs before any group exists.
       - text: It runs and returns no rows, because `total` is NULL at that point
         correct: false
@@ -56,7 +56,7 @@ steps:
       - text: "No rows at all"
         correct: false
         why: >
-          That is what you get once you add `GROUP BY` — no input, no groups, no rows.
+          That is what you get once you add `GROUP BY`: no input, no groups, no rows.
           Without GROUP BY there is always exactly one.
       - text: "One row: `n` is 0 and `total` is 0"
         correct: false
@@ -83,7 +83,7 @@ steps:
       LIMIT 1;
     options:
       - text: >
-          `bo 530.00` — the cancelled 500 is summed, because nothing filters out unpaid
+          `bo 530.00`: the cancelled 500 is summed, because nothing filters out unpaid
           orders before grouping
         correct: true
         why: >
@@ -101,7 +101,7 @@ steps:
         why: >
           ORDER BY runs after SELECT, so the alias exists by then. Of all the places an
           alias can go, this is the one that works.
-      - text: "`bo 30.00` — Postgres skips cancelled rows when summing"
+      - text: "`bo 30.00`: Postgres skips cancelled rows when summing"
         correct: false
         why: >
           The database has no idea what "cancelled" means to you. A status is just text

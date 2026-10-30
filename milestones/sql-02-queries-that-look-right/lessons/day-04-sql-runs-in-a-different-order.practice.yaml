@@ -46,7 +46,7 @@ write:
     prompt: >
       Which customers have **paid** more than 150 in total? Return `customer_id` and
       `total`, sorted by customer_id. Cancelled and pending orders must not count.
-    hint: One condition is about a row, the other about a group — they belong to different clauses.
+    hint: "One condition is about a row, the other about a group: they belong to different clauses."
     solution: |
       SELECT customer_id, sum(amount) AS total
       FROM orders
@@ -95,7 +95,7 @@ write:
     tag: aggregate filters
     prompt: >
       For every customer who has orders: `customer_id`, `orders` (all of them) and
-      `paid` (only the paid ones), sorted by customer_id. One query, one pass — filtering on
+      `paid` (only the paid ones), sorted by customer_id. One query, one pass: filtering on
       status in `WHERE` would change the first count too.
     hint: An aggregate can carry its own filter, or count a CASE that is NULL for the rows you don't want.
     solution: |
@@ -115,7 +115,7 @@ write:
     prompt: >
       For each status: `status` and its `share` of all orders, as a fraction rounded to
       2 decimal places, sorted by status.
-    hint: The denominator is one number for the whole table — a scalar subquery can supply it.
+    hint: "The denominator is one number for the whole table: a scalar subquery can supply it."
     solution: |
       SELECT status, round(count(*)::numeric / (SELECT count(*) FROM orders), 2) AS share
       FROM orders
@@ -162,7 +162,7 @@ write:
     prompt: >
       Return `id` and `gross` (amount times 1.2) for every order, sorted by gross
       **rounded to the nearest 50**, highest first, then by id. `ORDER BY round(gross / 50)`
-      is an error — find out why, and write what works.
+      is an error: find out why, and write what works.
     hint: Inside an expression, ORDER BY looks for input columns, not output names.
     solution: |
       SELECT id, amount * 1.2 AS gross FROM orders ORDER BY round(amount * 1.2 / 50) DESC, id;
@@ -177,7 +177,7 @@ write:
       return `label` (the label in lower case) and `uses`, sorted by `label`. Each label
       must appear exactly once.
     hint: >
-      Named `label`, the alias clashes with the table's own column — and GROUP BY picks the
+      Named `label`, the alias clashes with the table's own column, and GROUP BY picks the
       column. Group by the expression itself.
     solution: |
       SELECT lower(label) AS label, count(*) AS uses
@@ -229,7 +229,7 @@ write:
     tag: GROUP BY rules
     prompt: >
       The customer with the largest **paid** total: `customer_id` and `total`. (Nested
-      aggregates like `max(sum(amount))` aren't allowed — sort the groups instead.)
+      aggregates like `max(sum(amount))` aren't allowed: sort the groups instead.)
     hint: Group, order by the sum, keep one.
     solution: |
       SELECT customer_id, sum(amount) AS total
@@ -247,7 +247,7 @@ write:
     prompt: >
       Every `customer_id` that has an order, once each, ordered by their single largest
       order, biggest first. (`SELECT DISTINCT customer_id … ORDER BY amount` is an error.)
-    hint: After DISTINCT there's no single amount per customer — say which one with an aggregate.
+    hint: "After DISTINCT there's no single amount per customer: say which one with an aggregate."
     solution: |
       SELECT customer_id FROM orders GROUP BY customer_id ORDER BY max(amount) DESC;
     bad:
@@ -270,7 +270,7 @@ write:
   - id: refunds-zero
     tag: aggregates over nothing
     prompt: >
-      Return the total amount of `'refunded'` orders as one value named `total` — `0`
+      Return the total amount of `'refunded'` orders as one value named `total`: `0`
       when there are none, never NULL.
     hint: The sum of no rows is NULL; something returns its first non-NULL argument.
     solution: |
@@ -284,7 +284,7 @@ write:
     prompt: >
       A dashboard tile needs exactly one row for customer 5 even though they have no
       orders: `orders` (the count) and `spent` (the total, 0 if none).
-    hint: An aggregate with no GROUP BY always returns one row. Adding one makes it return a row per group — here, none.
+    hint: "An aggregate with no GROUP BY always returns one row. Adding one makes it return a row per group: here, none."
     solution: |
       SELECT count(*) AS orders, coalesce(sum(amount), 0) AS spent FROM orders WHERE customer_id = 5;
     bad:
@@ -308,7 +308,7 @@ write:
     tag: ORDER BY and LIMIT
     prompt: >
       The second-largest order: `id` and `amount`, with ties broken by the smaller id.
-    hint: LIMIT runs last, after the sort — and it can skip as well as take.
+    hint: "LIMIT runs last, after the sort, and it can skip as well as take."
     solution: |
       SELECT id, amount FROM orders ORDER BY amount DESC, id LIMIT 1 OFFSET 1;
     bad:
@@ -348,7 +348,7 @@ drill:
       - text: "`ERROR: aggregate functions are not allowed in WHERE`"
         correct: false
         why: >
-          There's no aggregate here — `amount * 2` is a per-row expression. The only
+          There's no aggregate here: `amount * 2` is a per-row expression. The only
           problem is the name.
 
   - id: having-ordered
@@ -377,7 +377,7 @@ drill:
         correct: false
         why: >
           Descending by the count puts the bigger group first. Sorted by status
-          alphabetically that would be the order — but that isn't what `ORDER BY 2` asks for.
+          alphabetically that would be the order, but that isn't what `ORDER BY 2` asks for.
       - text: "An error: a bare integer in ORDER BY is not allowed"
         correct: false
         why: >
@@ -438,7 +438,7 @@ drill:
       SELECT DISTINCT status FROM orders ORDER BY amount;
     prompt: Why does PostgreSQL reject this?
     options:
-      - text: "After DISTINCT, each status stands for many orders — there's no single amount to sort it by"
+      - text: "After DISTINCT, each status stands for many orders: there's no single amount to sort it by"
         correct: true
         why: >
           The error is `for SELECT DISTINCT, ORDER BY expressions must appear in select
@@ -450,7 +450,7 @@ drill:
       - text: "DISTINCT and ORDER BY can't appear in the same query"
         correct: false
         why: >
-          They can — `SELECT DISTINCT status FROM orders ORDER BY status` is fine. The
+          They can: `SELECT DISTINCT status FROM orders ORDER BY status` is fine. The
           sort key just has to be one of the things DISTINCT kept.
 
   - id: alias-in-group-by
@@ -462,15 +462,15 @@ drill:
       SELECT status AS s, count(*) FROM orders GROUP BY s ORDER BY s;
     prompt: Does `GROUP BY s` work?
     options:
-      - text: "Yes — one row per status"
+      - text: "Yes: one row per status"
         correct: true
         why: >
           PostgreSQL lets GROUP BY use an output alias as an extension to the standard,
           as long as it doesn't clash with an input column's name.
-      - text: "No — `column \"s\" does not exist`, GROUP BY runs before SELECT"
+      - text: "No: `column \"s\" does not exist`, GROUP BY runs before SELECT"
         correct: false
         why: >
-          Logically true, and the standard agrees — but PostgreSQL resolves the alias
+          Logically true, and the standard agrees, but PostgreSQL resolves the alias
           anyway. HAVING is not so forgiving: `HAVING s <> 'pending'` is an error.
       - text: "It runs but puts everything into one group"
         correct: false
@@ -489,7 +489,7 @@ drill:
         correct: true
         why: >
           GROUP BY accepts the alias as an extension; HAVING doesn't. Write
-          `HAVING status <> 'pending'` — or better, put that row condition in WHERE.
+          `HAVING status <> 'pending'`, or better, put that row condition in WHERE.
       - text: "Two rows, cancelled and paid"
         correct: false
         why: >
@@ -508,13 +508,13 @@ drill:
       SELECT status, count(*) FROM orders GROUP BY status HAVING status = 'paid';
     prompt: Is a plain column allowed in HAVING, and what does this return?
     options:
-      - text: "Yes, because it's grouped — one row: `paid 3`"
+      - text: "Yes, because it's grouped: one row: `paid 3`"
         correct: true
         why: >
           A grouped column has one value per group, so HAVING can test it. It gives the
           same answer as `WHERE status = 'paid'`, but filters *after* grouping everything,
           where WHERE would have thrown the rows away first.
-      - text: "No — HAVING only accepts aggregates"
+      - text: "No: HAVING only accepts aggregates"
         correct: false
         why: >
           HAVING accepts anything that has one value per group: aggregates, and the
@@ -523,7 +523,7 @@ drill:
         correct: false
         why: >
           The groups were formed first; HAVING only chooses which to keep. The paid group
-          still holds its 3 orders — the cancelled one is a different group.
+          still holds its 3 orders: the cancelled one is a different group.
 
   - id: nested-aggregate
     tag: GROUP BY rules
@@ -561,12 +561,12 @@ drill:
         correct: true
         why: >
           PostgreSQL allows extra columns only when they are functionally dependent on the
-          grouping — which it can prove only from a primary key (or unique not-null set).
+          grouping, which it can prove only from a primary key (or unique not-null set).
           The data happening to be unique today proves nothing.
       - text: "City must always be inside an aggregate when you join"
         correct: false
         why: >
-          With `GROUP BY c.id`, `c.name` and `c.city` can be selected bare — joins don't
+          With `GROUP BY c.id`, `c.name` and `c.city` can be selected bare: joins don't
           change the rule.
       - text: "GROUP BY can't use a column from a joined table"
         correct: false
@@ -582,18 +582,18 @@ drill:
       SELECT lower(label) AS label, count(*) FROM tags GROUP BY label ORDER BY label, 2;
     prompt: How many rows does it return?
     options:
-      - text: "5 — `go` and `sql` each appear twice"
+      - text: "5: `go` and `sql` each appear twice"
         correct: true
         why: >
           The alias has the same name as a column, and GROUP BY resolves an ambiguous name
-          to the *input* column, so `Go` and `go` stay separate groups — while the output
+          to the *input* column, so `Go` and `go` stay separate groups, while the output
           lowercases both. Name the alias something else, or `GROUP BY 1`.
-      - text: "3 — c++, go, sql"
+      - text: "3: c++, go, sql"
         correct: false
         why: >
           That's what `GROUP BY lower(label)` (or `GROUP BY 1`) returns. Here `label` means
           the raw column.
-      - text: "6 — one per row"
+      - text: "6: one per row"
         correct: false
         why: >
           The two lowercase `go` rows have identical input labels, so they do share a
@@ -618,7 +618,7 @@ drill:
         correct: true
         why: >
           `count(*)` counts rows (6). `count(x)` counts rows where x is not NULL (5: one
-          customer_id is NULL). `count(DISTINCT x)` counts different non-NULL values —
+          customer_id is NULL). `count(DISTINCT x)` counts different non-NULL values:
           statuses paid and cancelled (2), customers 1, 2 and 3 (3). NULL is never counted
           as a value, distinct or not.
       - text: "6, 6, 3, 4"

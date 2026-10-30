@@ -53,19 +53,19 @@ steps:
       JOIN payments p ON p.order_id = o.id
       GROUP BY o.id;
     options:
-      - text: "1 — the two `mug` lines share a SKU, so DISTINCT merges them"
+      - text: "1: the two `mug` lines share a SKU, so DISTINCT merges them"
         correct: true
         why: >
           `count(DISTINCT sku)` counts distinct *products*, not lines. It looked like a fix
           only because every earlier order happened to use different SKUs. To count lines
-          you need something that identifies a line — a line id — or to count the items
+          you need something that identifies a line (a line id) or to count the items
           table before joining.
-      - text: "2 — DISTINCT removes the payment duplication and keeps both lines"
+      - text: "2: DISTINCT removes the payment duplication and keeps both lines"
         correct: false
         why: >
           DISTINCT inside count looks only at the value `sku`. It cannot tell a duplicated
           row from a second, genuine line with the same SKU.
-      - text: "4 — DISTINCT has no effect inside an aggregate"
+      - text: "4: DISTINCT has no effect inside an aggregate"
         correct: false
         why: >
           It has an effect, and here too much of one: 4 joined rows, 1 distinct SKU.
@@ -115,7 +115,7 @@ steps:
         why: >
           A joins items as well, which turns order 1's two payments into six rows: 300 +
           60 = 360.00.
-      - text: "None — any join to payments inflates the payment total"
+      - text: "None: any join to payments inflates the payment total"
         correct: false
         why: >
           A one-to-many join repeats the "one" side, not the "many" side. Summing a column

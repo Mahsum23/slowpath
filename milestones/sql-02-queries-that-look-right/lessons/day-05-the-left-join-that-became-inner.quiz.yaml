@@ -14,7 +14,7 @@ questions:
         correct: true
         why: >
           It is how a left join keeps its promise that every left row appears at least
-          once. It is a real row in the result — which is why a later WHERE can delete it
+          once. It is a real row in the result, which is why a later WHERE can delete it
           and why count(*) counts it.
       - text: A row whose right-hand columns happen to contain NULL values in the table
         correct: false
@@ -32,7 +32,7 @@ questions:
         correct: false
         why: >
           An ON that evaluates to unknown simply fails to match, exactly like false. If
-          that leaves a left row with no matches at all, then it is NULL-extended — the
+          that leaves a left row with no matches at all, then it is NULL-extended: the
           trigger is "no match", not "a NULL in ON".
 
   - id: q2
@@ -68,7 +68,7 @@ questions:
         correct: false
         why: >
           The planner is not allowed to change your result. The query, read in its logical
-          order — join first, then WHERE — already means this. The planner only noticed
+          order (join first, then WHERE) already means this. The planner only noticed
           and planned it as an inner join.
 
   - id: q3
@@ -80,7 +80,7 @@ questions:
     options:
       - text: >
           It recovers customers with no orders at all, but a customer whose only orders
-          are refunds had real, non-NULL rows that are still filtered out — and nothing
+          are refunds had real, non-NULL rows that are still filtered out, and nothing
           remains to NULL-extend
         correct: true
         why: >
@@ -112,7 +112,7 @@ questions:
       with no `Left` in it. What does that tell you?
     options:
       - text: >
-          Something after the join — usually a `WHERE` on the right table — can never be
+          Something after the join (usually a `WHERE` on the right table) can never be
           true for a NULL-extended row, so the planner turned it into an inner join
         correct: true
         why: >
@@ -125,8 +125,8 @@ questions:
         correct: false
         why: >
           The algorithm (nested loop, hash, merge) and the join type (inner, left, anti)
-          are separate things, and EXPLAIN shows both. A left join keeps its type —
-          `Hash Left Join`, `Nested Loop Left Join` — whatever algorithm runs it.
+          are separate things, and EXPLAIN shows both. A left join keeps its type
+          (`Hash Left Join`, `Nested Loop Left Join`) whatever algorithm runs it.
       - text: There is a bug in Postgres's `EXPLAIN` output
         correct: false
         why: >
@@ -163,7 +163,7 @@ questions:
         correct: false
         why: >
           Half right, for the wrong reason. Every group has at least one row, so count(*)
-          is at least 1 — but that is because of the NULL-extended row, not rounding.
+          is at least 1, but that is because of the NULL-extended row, not rounding.
           That is exactly why you count a column instead.
       - text: >
           Use `count(c.id)` instead, which counts only customers that matched an order
@@ -217,7 +217,7 @@ questions:
         why: >
           That is what `WHERE c.name = 'ana'` does. Inside `ON` of a left join, a condition
           cannot remove a left row.
-      - text: The query is rejected — `ON` may only mention the right table
+      - text: "The query is rejected: `ON` may only mention the right table"
         correct: false
         why: >
           `ON` may mention either table. It runs, and returns all four customers.
@@ -238,7 +238,7 @@ questions:
           The join column matched `c.id`, so it is never NULL on a real match; only the
           NULL-extended row has it NULL. `NOT EXISTS` says the same thing without the
           choice to get wrong.
-      - text: Any column of `orders` — they are all NULL on the invented row
+      - text: "Any column of `orders`: they are all NULL on the invented row"
         correct: false
         why: >
           They are, but a nullable column such as a `note` is also NULL on real orders, so

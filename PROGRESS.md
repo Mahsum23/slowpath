@@ -652,3 +652,11 @@ be forgotten first, plus at most 6 brand-new cards a day. The rest waits for lat
 never shown as a debt. Same request: Go got the parts treatment SQL had — days 1–6 split into
 2–3 parts with their own questions (6 new), and the "nothing untaught" check now covers Go cards.
 
+
+**SQL prose pass (2026-10-30).** He asked for the SQL track to be reviewed with the open-source
+humanizer skill (blader/humanizer, used as outside guidance). All ten lessons, their questions,
+drills, practice banks and teasers were edited for prose only: em dashes out, "not X but Y"
+contrasts, one-line closers, staged run-ups and inflated claims ("the single most common…")
+rewritten, and leftovers like "yesterday" and "last week" pointed at day numbers instead,
+since a day is no longer read the day after the previous one. Code, output blocks and facts
+are unchanged (checked with the lesson, write-card and syllabus checkers).

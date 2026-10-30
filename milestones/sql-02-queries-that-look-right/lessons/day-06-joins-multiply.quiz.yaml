@@ -16,7 +16,7 @@ questions:
         correct: true
         why: >
           This is fan-out: the "one" side of a one-to-many join is repeated once per
-          match on the "many" side. The join is not wrong — summing a column from the
+          match on the "many" side. The join is not wrong: summing a column from the
           repeated side at that grain is.
       - text: Postgres double-counts numeric columns across joins unless they are indexed
         correct: false
@@ -32,7 +32,7 @@ questions:
         correct: false
         why: >
           `sum` faithfully adds up the rows it is given. Grouping by order would give one
-          group per order — still containing three rows each, still summing to 300.
+          group per order: still containing three rows each, still summing to 300.
 
   - id: q2
     part: 1
@@ -40,24 +40,24 @@ questions:
       One order has 3 items and 2 payments. When both tables are joined to it in one
       query, how many rows does that order become, and why?
     options:
-      - text: "6 — every item is paired with every payment, because neither table relates to the other except through the order"
+      - text: "6: every item is paired with every payment, because neither table relates to the other except through the order"
         correct: true
         why: >
           Two independent one-to-many joins multiply: 3 × 2. Every aggregate over that
-          result is wrong by a different factor — the order total ×6, payments ×3, item
+          result is wrong by a different factor: the order total ×6, payments ×3, item
           counts ×2.
-      - text: "5 — three item rows plus two payment rows"
+      - text: "5: three item rows plus two payment rows"
         correct: false
         why: >
           Joins do not stack rows side by side like a UNION. Each output row combines one
           item and one payment for the same order, and all combinations survive the ON
           conditions.
-      - text: "3 — the larger of the two child tables decides the row count"
+      - text: "3: the larger of the two child tables decides the row count"
         correct: false
         why: >
           That would require pairing each payment with only some items. Nothing in the ON
           conditions says which item a payment belongs to, so every pairing is kept.
-      - text: "2 — the join stops at the smaller table"
+      - text: "2: the join stops at the smaller table"
         correct: false
         why: >
           No join type works that way. Row counts in an inner join come only from which
@@ -80,7 +80,7 @@ questions:
       - text: "`sum(DISTINCT …)` is not valid SQL"
         correct: false
         why: >
-          It is valid, which is what makes it dangerous — it runs and returns a
+          It is valid, which is what makes it dangerous: it runs and returns a
           plausible number.
       - text: It is a correct fix but too slow for large tables
         correct: false
@@ -145,7 +145,7 @@ questions:
         correct: false
         why: >
           No such field exists. You infer fan-out from the `rows=` numbers.
-      - text: It cannot — fan-out is only visible in the final result
+      - text: "It cannot: fan-out is only visible in the final result"
         correct: false
         why: >
           EXPLAIN ANALYZE's `actual rows` is the clearest place to see it, node by node,
@@ -165,7 +165,7 @@ questions:
         correct: true
         why: >
           Fan-out happens when a row meets several matches. Bring each side to the report's
-          grain first — one row per order — and every pairing is one row with one row.
+          grain first (one row per order) and every pairing is one row with one row.
       - text: Subqueries in `FROM` are evaluated separately, so their rows are never joined
         correct: false
         why: >
@@ -226,4 +226,4 @@ questions:
       - text: Join the two tables and check that nothing errors
         correct: false
         why: >
-          A join never errors on duplicates. It multiplies quietly, which is the whole problem.
+          A join never errors on duplicates. It multiplies without a word, and that is the problem.

@@ -25,7 +25,7 @@ challenges:
   - id: top-per-region
     part: 2
     prompt: >
-      Each region's biggest sale — `region`, `id`, `amount` — keeping **both** when two
+      Each region's biggest sale (`region`, `id`, `amount`) keeping **both** when two
       sales tie for first. Ordered by region, then id. You can't filter on a window
       function in `WHERE`.
     hint: Rank in a subquery, filter the rank outside it.
@@ -45,7 +45,7 @@ challenges:
       A running total of north's sales in order of day then id: return `id` and
       `running`, ordered by id. Two sales share a day, so the default frame would get
       it wrong.
-    hint: Count rows, not peers — and give the frame explicitly.
+    hint: "Count rows, not peers, and give the frame explicitly."
     solution: |
       SELECT id,
              sum(amount) OVER (ORDER BY day, id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running

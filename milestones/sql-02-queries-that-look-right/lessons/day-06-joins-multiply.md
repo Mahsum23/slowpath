@@ -2,7 +2,7 @@
 
 ## Part 1: One side repeats once per match
 
-Yesterday a join quietly *lost* rows. Today it quietly makes extra ones, which is worse,
+In day 5 a join *lost* rows without a word. Here it makes extra ones, which is worse,
 because extra rows go straight into sums, and inflated sums look like good news. Nobody
 files a bug when revenue goes up.
 
@@ -119,7 +119,7 @@ off by a different factor.
 
 ## Part 2: Seeing it, and naming it
 
-Starting a new psql session? Run `SET search_path = day06;` first — the tables
+Starting a new psql session? Run `SET search_path = day06;` first. The tables
 are still there, but the setting lasts only for the session.
 
 `EXPLAIN ANALYZE` runs the query and reports how many rows each node actually produced,
@@ -178,7 +178,7 @@ So the rule: **bring each table to the grain of the report before you join it.**
 
 ## Part 3: Aggregate first, join second
 
-Starting a new psql session? Run `SET search_path = day06;` first — the tables
+Starting a new psql session? Run `SET search_path = day06;` first. The tables
 are still there, but the setting lasts only for the session.
 
 Collapse `items` and `payments` to one row per order each. Now every join is one-to-one,
@@ -263,10 +263,10 @@ duplicated *rows*, and rows are identified by keys, not by what they happen to c
 
 ## Part 4: A famous bug, and a one-line detector
 
-Starting a new psql session? Run `SET search_path = day06;` first — the tables
+Starting a new psql session? Run `SET search_path = day06;` first. The tables
 are still there, but the setting lasts only for the session.
 
-### This is a famous bug, not a beginner's one
+### Tools that ship a fix for it
 
 This exact problem is common enough that tools ship features against it:
 
@@ -281,8 +281,8 @@ This exact problem is common enough that tools ship features against it:
   in one query and it throws `MultipleBagFetchException: cannot simultaneously fetch
   multiple bags`, because the result would be exactly the 3 × 2 table above.
 
-Three ecosystems arrived at the same conclusion. Two independent one-to-many joins in one
-query is almost never what anyone meant.
+All three treat two independent one-to-many joins in one query as almost never what
+anyone meant.
 
 ### Worth knowing: a one-line fan-out detector
 

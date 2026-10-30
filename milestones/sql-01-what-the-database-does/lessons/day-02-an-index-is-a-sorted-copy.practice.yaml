@@ -116,7 +116,7 @@ write:
       A report runs `ORDER BY user_id, created_at DESC`. A plain `(user_id, created_at)`
       index can't produce that order, so Postgres sorts. Create a two-column index that
       can produce it directly.
-    hint: Each column of an index has its own direction. Read it forwards or backwards — what order do you need?
+    hint: "Each column of an index has its own direction. Read it forwards or backwards: what order do you need?"
     solution: |
       CREATE INDEX ON orders (user_id, created_at DESC);
     verify: |
@@ -175,7 +175,7 @@ write:
     prompt: >
       `SELECT amount FROM orders WHERE user_id = $1` should be answered from the index
       alone, with no trip to the table. Create one index keyed on `user_id` that also
-      carries `amount` — without making `amount` part of the sort key.
+      carries `amount`, without making `amount` part of the sort key.
     hint: There is a clause for columns that ride along in the leaf pages.
     solution: |
       CREATE INDEX ON orders (user_id) INCLUDE (amount);
@@ -239,7 +239,7 @@ write:
       Return `id` and `created_at` of the orders placed on 5 March 2026 (UTC), oldest
       first (then by id). `created_at` is indexed, so leave the column bare: no function or cast
       wrapped around it.
-    hint: A day is a half-open range — from its midnight, up to but not including the next one.
+    hint: "A day is a half-open range, from its midnight, up to but not including the next one."
     solution: |
       SELECT id, created_at FROM orders
       WHERE created_at >= '2026-03-05' AND created_at < '2026-03-06'
@@ -346,9 +346,9 @@ write:
     prompt: >
       Orders are listed by `(created_at, id)`, five per page. The last row of the
       previous page had `created_at = '2026-03-04 06:00+00'` and `id = 9`. Return the
-      next page — `id`, `created_at`, sorted by created_at then id — without `OFFSET`, which reads
+      next page (`id`, `created_at`, sorted by created_at then id) without `OFFSET`, which reads
       and throws away every earlier row.
-    hint: Two columns can be compared as one, left to right — `(a, b) > (x, y)`.
+    hint: "Two columns can be compared as one, left to right: `(a, b) > (x, y)`."
     solution: |
       SELECT id, created_at FROM orders
       WHERE (created_at, id) > ('2026-03-04 06:00+00', 9)
@@ -374,14 +374,14 @@ drill:
         correct: true
         why: >
           99% of the table matches. Reading it straight through is far cheaper than one
-          index lookup and one random heap jump per row, so the planner ignores the index —
+          index lookup and one random heap jump per row, so the planner ignores the index:
           correctly. The same index *is* used for `deleted = true`, the rare value.
-      - text: "`Index Scan using t_deleted` — there is an index on exactly that column"
+      - text: "`Index Scan using t_deleted`: there is an index on exactly that column"
         correct: false
         why: >
           An index existing is not a reason to use it. For 198,000 matching rows, 198,000
           random heap fetches lose to one sequential pass.
-      - text: "`Bitmap Heap Scan` — a middle gear for many rows"
+      - text: "`Bitmap Heap Scan`: a middle gear for many rows"
         correct: false
         why: >
           A bitmap scan is for a few thousand rows. At 99% of the table there is nothing
@@ -406,7 +406,7 @@ drill:
           Matching created_at values are scattered across every country's section, so
           there is no single place to start. PostgreSQL 16 can still walk the *whole*
           index checking each entry, but it can't seek. (PostgreSQL 18 added B-tree *skip
-          scan*, which hops from one country to the next — worth it when the leading
+          scan*, which hops from one country to the next: worth it when the leading
           column has few distinct values.)
       - text: "`WHERE country > 'T' AND created_at = '2026-03-01'`"
         correct: false
@@ -424,17 +424,17 @@ drill:
       EXPLAIN (COSTS OFF) SELECT *    FROM t WHERE name = 'name7';
     prompt: The first plan says `Index Only Scan using t_name`. What does the second say?
     options:
-      - text: "`Index Scan using t_name` — it has to visit the table for the other columns"
+      - text: "`Index Scan using t_name`: it has to visit the table for the other columns"
         correct: true
         why: >
           `SELECT *` needs columns that live only in the heap, so each match costs a second
           lookup, from index entry to row. Selecting only what the index holds skips it.
-      - text: "`Index Only Scan using t_name` — the WHERE clause is the same"
+      - text: "`Index Only Scan using t_name`: the WHERE clause is the same"
         correct: false
         why: >
           The WHERE clause decides how rows are found; the SELECT list decides whether the
           table has to be visited to finish them. `*` includes columns the index lacks.
-      - text: "`Seq Scan on t` — `SELECT *` is too wide for an index"
+      - text: "`Seq Scan on t`: `SELECT *` is too wide for an index"
         correct: false
         why: >
           One matching row is cheap to fetch from the heap. The index is still used to find
@@ -448,7 +448,7 @@ drill:
       SELECT * FROM t WHERE name LIKE '%77';
     prompt: Can a B-tree index on `name` help this query?
     options:
-      - text: "No — a sorted list can't find values by how they end; a trigram (`pg_trgm`) GIN index can"
+      - text: "No: a sorted list can't find values by how they end; a trigram (`pg_trgm`) GIN index can"
         correct: true
         why: >
           A B-tree is sorted from the first character. Everything starting with "name7" is
@@ -459,7 +459,7 @@ drill:
         why: >
           `text_pattern_ops` makes *prefix* matches indexable under any collation. A leading
           wildcard is still a scan of everything.
-      - text: "Yes — LIKE always uses an index when one exists on the column"
+      - text: "Yes: LIKE always uses an index when one exists on the column"
         correct: false
         why: >
           Only a pattern with a fixed prefix can be rewritten into a range, and only under
@@ -473,17 +473,17 @@ drill:
       EXPLAIN (COSTS OFF) SELECT * FROM t ORDER BY created_at DESC LIMIT 10;
     prompt: What does PostgreSQL 16 do about the descending order?
     options:
-      - text: "`Limit` over `Index Scan Backward using t_created` — no sort at all"
+      - text: "`Limit` over `Index Scan Backward using t_created`: no sort at all"
         correct: true
         why: >
           A B-tree's leaf pages are linked both ways, so reading it from the far end gives
           descending order for free. A separate `DESC` index on a single column buys nothing.
-      - text: "`Limit` over `Sort` over `Seq Scan` — the index is ascending"
+      - text: "`Limit` over `Sort` over `Seq Scan`: the index is ascending"
         correct: false
         why: >
           Direction only matters when *columns disagree* (`a, b DESC`). One column can be
           read either way.
-      - text: "An error — the index has to be declared DESC to be used for DESC"
+      - text: "An error: the index has to be declared DESC to be used for DESC"
         correct: false
         why: >
           Index direction never causes an error; at worst it means a sort step. Here it
@@ -503,7 +503,7 @@ drill:
           The index already delivers rows grouped by user_id; only within each user does the
           order need flipping. Incremental sort (PostgreSQL 13+) sorts one small group at a
           time. An index `(user_id, created_at DESC)` would remove even that.
-      - text: "Nothing — `Index Scan Backward` handles the DESC"
+      - text: "Nothing: `Index Scan Backward` handles the DESC"
         correct: false
         why: >
           Backwards gives `user_id DESC, created_at DESC`. You asked for user_id ascending
@@ -551,7 +551,7 @@ drill:
       EXPLAIN (COSTS OFF) SELECT * FROM t WHERE status = 'paid' AND created_at > '2026-04-01';
     prompt: Can `t_pending` be used here?
     options:
-      - text: "No — it holds only pending rows, so it can't answer a question about paid ones"
+      - text: "No: it holds only pending rows, so it can't answer a question about paid ones"
         correct: true
         why: >
           The planner may use a partial index only when the query's WHERE *implies* the
@@ -561,7 +561,7 @@ drill:
         why: >
           The paid rows aren't in it at all. Using it would silently return nothing, which is
           exactly the mistake the implication rule prevents.
-      - text: "Yes — partial indexes are used for any query on their key column"
+      - text: "Yes: partial indexes are used for any query on their key column"
         correct: false
         why: >
           The predicate is part of the index's meaning. Same query with `status = 'pending'`:
@@ -581,7 +581,7 @@ drill:
       - text: "Both inserts succeed and the count is 2"
         correct: true
         why: >
-          A unique index compares values, and NULL is not equal to NULL — so two NULLs are
+          A unique index compares values, and NULL is not equal to NULL, so two NULLs are
           not duplicates. Since PostgreSQL 15 you can say `UNIQUE NULLS NOT DISTINCT` when
           you want at most one.
       - text: "The second insert fails with a duplicate key error"
@@ -604,13 +604,13 @@ drill:
       SELECT count(*) FROM u;
     prompt: What does the count say?
     options:
-      - text: "0 — `EXPLAIN ANALYZE` really runs the statement"
+      - text: "0: `EXPLAIN ANALYZE` really runs the statement"
         correct: true
         why: >
           ANALYZE means "execute it and measure". The plan printed `Seq Scan on u (actual
           rows=2 …)` and the rows are gone. Wrap it in `BEGIN; … ROLLBACK;` whenever you
           analyse a write.
-      - text: "2 — EXPLAIN only shows a plan"
+      - text: "2: EXPLAIN only shows a plan"
         correct: false
         why: >
           Plain `EXPLAIN` only plans. `EXPLAIN ANALYZE` executes, which is the only way it
@@ -618,7 +618,7 @@ drill:
       - text: "An error: EXPLAIN only accepts SELECT"
         correct: false
         why: >
-          INSERT, UPDATE, DELETE and MERGE can all be explained — and analysed, with their
+          INSERT, UPDATE, DELETE and MERGE can all be explained, and analysed, with their
           effects.
 
   - id: stale-statistics
@@ -637,7 +637,7 @@ drill:
       - text: "The statistics still describe the 10-row table; `ANALYZE b` and the plan becomes `Seq Scan`"
         correct: true
         why: >
-          The planner never reads your data to plan — it reads the sample `ANALYZE` took,
+          The planner never reads your data to plan: it reads the sample `ANALYZE` took,
           which says every k is 1, so `k > 5` "matches nothing". Autovacuum would analyze
           eventually; after a bulk load, do it yourself.
       - text: "The index is corrupted; `REINDEX` fixes it"
@@ -661,18 +661,18 @@ drill:
       INSERT INTO p VALUES (1, 2, 3);
     prompt: How many B-trees does that one INSERT write to, besides the table itself?
     options:
-      - text: "Three — the primary key's index and both others"
+      - text: "Three: the primary key's index and both others"
         correct: true
         why: >
           Every index is a separate sorted copy, and each must gain an entry for the new
           row. This is the cost side of every index: reads get cheaper, every write gets a
           little dearer, forever.
-      - text: "One — only the primary key is maintained on insert; the others are updated lazily"
+      - text: "One, only the primary key is maintained on insert; the others are updated lazily"
         correct: false
         why: >
           B-tree indexes in PostgreSQL are maintained synchronously, in the same
           transaction. (GIN has a "pending list" that defers work; B-tree has no such thing.)
-      - text: "None — indexes are rebuilt by VACUUM"
+      - text: "None: indexes are rebuilt by VACUUM"
         correct: false
         why: >
           VACUUM removes dead entries; it never adds new ones. A row is findable through an

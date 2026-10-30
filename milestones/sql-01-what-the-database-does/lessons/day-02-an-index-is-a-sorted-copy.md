@@ -2,28 +2,27 @@
 
 ## Theory
 
-Yesterday: a table is a heap of pages, and finding a row without help means reading all
-of them. Today: what an index actually is, and the four separate reasons a perfectly good
+Day 1 showed that a table is a heap of pages, and that finding a row without help means
+reading all of them. This lesson covers what an index actually is, and the four separate reasons a perfectly good
 one gets ignored.
 
 ### It is a second table you don't get to see
 
-An index is not an annotation on a table, and it is not a hint. It is **another B-tree,
-containing the indexed columns plus a pointer back to the row's physical location**, kept
-sorted.
+An index is **another B-tree**, containing the indexed columns plus a pointer back to the
+row's physical location, kept sorted.
 
-That single sentence explains almost everything indexes do:
+That one sentence explains most of what indexes do:
 
-- Lookups get fast, because the tree is sorted — finding a value is a descent through
+- Lookups get fast, because the tree is sorted: finding a value is a descent through
   three or four pages instead of a walk through all of them.
-- Writes get slower, because every `INSERT` now writes two trees, and (as yesterday's
-  `ctid` lesson showed) an `UPDATE` that moves a row writes *every* index on the table.
+- Writes get slower, because every `INSERT` now writes two trees, and (as day 1's
+  `ctid` section showed) an `UPDATE` that moves a row writes *every* index on the table.
 - The database gets bigger, sometimes much bigger, because the index is a real copy of
   real data.
-- `ORDER BY` on the indexed column can become free — the sorted order already exists on
+- `ORDER BY` on the indexed column can become free: the sorted order already exists on
   disk, so there is nothing to sort.
 
-That third point is not theoretical. Two indexes on a 50,000-row table:
+Here is the third point on a 50,000-row table with two indexes:
 
 ```
   relname  | pg_size_pretty
@@ -34,12 +33,9 @@ That third point is not theoretical. Two indexes on a 50,000-row table:
 ```
 
 Two indexes on one column each, and they are already two thirds of the size of the table
-holding three columns. This is why index bloat is a real budget line and why
-`pg_stat_user_indexes.idx_scan = 0` — an index nobody has ever used — is the first thing
-a Postgres consultant grep's for.
-
-You never pay for an index once. You pay on every write, forever, in exchange for the
-reads.
+holding three columns. This is why index bloat is a real budget line, and why
+`pg_stat_user_indexes.idx_scan = 0` (an index nobody has ever used) is the first thing a
+Postgres consultant greps for.
 
 ### Ask the planner, never guess
 
@@ -59,7 +55,7 @@ EXPLAIN SELECT * FROM s WHERE name = 'name7';
    Filter: (name = 'name7'::text)
 ```
 
-`Seq Scan` — every page, to find one row. Now build the index:
+`Seq Scan`: every page, to find one row. Now build the index:
 
 ```sql order
 CREATE INDEX idx_name ON s(name);
@@ -72,22 +68,22 @@ EXPLAIN SELECT * FROM s WHERE name = 'name7';
    Index Cond: (name = 'name7'::text)
 ```
 
-Cost 1194 to cost 8.31. Note `ANALYZE` in there — not `EXPLAIN ANALYZE`, the *other*
-`ANALYZE`, which updates the planner's statistics. Postgres does not pick plans by
-reading your query; it picks them by estimating rows from a sample of your data. Stale
-statistics are behind an enormous share of "it was fast yesterday" incidents, and it is
-the first thing to check after a bulk load.
+Cost 1194 to cost 8.31. Note the `ANALYZE` in there. It is the *other* `ANALYZE`, separate
+from `EXPLAIN ANALYZE`, and it updates the planner's statistics. Postgres picks plans by
+estimating row counts from a sample of your data, so stale statistics are behind a lot of
+"it was fast yesterday" incidents, and they are the first thing to check after a bulk load.
 
 Two numbers, both estimates: `cost` is in arbitrary units where 1.0 is roughly one
 sequential page read, and `rows` is how many the planner *thinks* will come back.
-`EXPLAIN ANALYZE` runs the query and prints what really happened next to the guess — and
-the gap between estimate and reality is where nearly every planner mystery is solved.
+`EXPLAIN ANALYZE` runs the query and prints what really happened next to the guess. When a
+plan looks mysterious, the gap between the estimated and the actual row count usually
+explains it.
 
 ### Reason one: you asked about a different value
 
-Here is the rule that catches everyone: **an index on a column can only answer questions
-about that column's value.** Wrap the column in a function and you are asking about a
-different value, which the sorted copy is not sorted by.
+**An index on a column can only answer questions about that column's value.** Wrap the
+column in a function and you are asking about a different value, which the sorted copy is
+not sorted by.
 
 ```sql
 EXPLAIN SELECT * FROM s WHERE lower(name) = 'name7';
@@ -113,14 +109,12 @@ EXPLAIN SELECT * FROM s WHERE lower(name) = 'name7';
    Index Cond: (lower(name) = 'name7'::text)
 ```
 
-Expression indexes are a genuine Postgres advantage — MySQL only got them in 8.0.13, in
-2018 — and the case-insensitive-email index is the single most common use of them in
-production schemas anywhere.
+MySQL only got expression indexes in 8.0.13, in 2018. The case-insensitive email index
+above is one of the most common uses of them.
 
 ### Reason two: the index would be slower
 
-This is the one people refuse to believe, so watch it happen. One table, one index, one
-query shape — only the *value* changes:
+One table, one index and one query shape. Only the *value* changes:
 
 ```
 === WHERE status = 'rare'      (2,000 of 200,000 rows)
@@ -136,8 +130,8 @@ The planner used the index for `'rare'` and *refused* it for `'common'`, and it 
 both times. An index scan costs one descent per matching row, plus a jump to the heap for
 each; once you are fetching most of the table, reading it straight through in physical
 order is cheaper than 198,000 random jumps. This is why "add an index" does nothing for
-your `WHERE deleted = false` filter when 99% of rows are not deleted — and why a partial
-index (`CREATE INDEX ... WHERE deleted = true`) is often the actual answer.
+your `WHERE deleted = false` filter when 99% of rows are not deleted, and why a partial
+index (`CREATE INDEX ... WHERE deleted = true`) is often the answer.
 
 ### Reason three: the query needed a column the index doesn't carry
 
@@ -152,8 +146,8 @@ EXPLAIN SELECT name FROM s WHERE name = 'name7';
  Index Only Scan using idx_name on s  (cost=0.29..8.31 rows=1 width=9)
 ```
 
-**`Index Only Scan`** is the phrase to look for — it means the second lookup, index to
-row, did not happen. Change that `SELECT name` to `SELECT *` and it drops back to a plain
+Look for `Index Only Scan` in the plan: it means the second lookup, index to row, did not
+happen. Change that `SELECT name` to `SELECT *` and it drops back to a plain
 `Index Scan`, because `note` only exists in the heap. This is why adding one more column
 to an existing index sometimes beats adding a whole new index, and Postgres has dedicated
 syntax for exactly that: `CREATE INDEX ... INCLUDE (note)` carries the extra column in the
@@ -162,7 +156,7 @@ index's leaf pages without making it part of the sort key.
 > [!NOTE]
 > Index-only scans in Postgres are only *mostly* index-only. The index has no visibility
 > information, so the engine still has to know whether each row is visible to your
-> transaction — it consults the **visibility map**, one bit per page saying "everything on
+> transaction. It consults the **visibility map**, one bit per page saying "everything on
 > this page is visible to everyone". Pages the map hasn't marked force a heap fetch
 > anyway. `EXPLAIN ANALYZE` prints `Heap Fetches:`, and a high number there on a
 > supposedly index-only scan almost always means the table needs vacuuming. Two lessons
@@ -170,8 +164,8 @@ index's leaf pages without making it part of the sort key.
 
 ### Worth knowing: `C.UTF-8` is not `C`, and the difference is a sequential scan
 
-A prefix search looks like it should be a range scan — everything starting with `name7`
-is contiguous in a sorted list. It isn't:
+A prefix search looks like it should be a range scan, since everything starting with
+`name7` is contiguous in a sorted list. It isn't:
 
 ```sql
 EXPLAIN SELECT * FROM s WHERE name LIKE 'name7%';
@@ -184,7 +178,7 @@ EXPLAIN SELECT * FROM s WHERE name LIKE 'name7%';
 
 The reason is **collation**. An index is sorted according to some collation, and a
 locale-aware one (`en_US.UTF-8`, and yes `C.UTF-8`) can sort in ways where the strings
-matching a prefix are not one contiguous run — so `LIKE 'x%'` cannot be turned into a
+matching a prefix are not one contiguous run, so `LIKE 'x%'` cannot be turned into a
 range. Only the `C` collation, which compares byte by byte, guarantees it can.
 
 The trap is that `C.UTF-8` *looks* like `C` and is not. Prove it by declaring an index
@@ -207,12 +201,12 @@ name < 'name8'`, a range, exactly as the intuition said it should. The equivalen
 touching collation is a `text_pattern_ops` index, which sorts by byte regardless of the
 database's locale.
 
-Two more things worth carrying out of this. First, the plan is a **Bitmap Heap Scan**, not
-an Index Scan — Postgres's middle gear for when a few thousand rows match: collect all
-their locations first, sort them into physical order, then sweep the heap once. Second,
-and this is the part that bites in production: a database created with a locale-aware
-collation will *silently* not use your index for prefix searches, and you will discover it
-the week after it worked on someone's laptop where the default was different.
+Two more things to carry out of this. First, the plan is a **Bitmap Heap Scan**, Postgres's
+middle gear for when a few thousand rows match: it collects all their locations first,
+sorts them into physical order, then sweeps the heap once. Second, a database created with
+a locale-aware collation will *silently* not use your index for prefix searches, and people
+usually find out in production, the week after it worked on a laptop where the default
+was different.
 
 ## Quiz
 
@@ -230,7 +224,7 @@ the week after it worked on someone's laptop where the default was different.
 ## Task
 
 Prove each of these to yourself rather than taking the lesson's word for it. Use enough
-rows that the planner has a real decision to make — 50,000 is plenty, and
+rows that the planner has a real decision to make: 50,000 is plenty, and
 `generate_series` will produce them in one statement.
 
 1. `EXPLAIN` an equality filter with no index. Record the plan and its cost.
@@ -241,10 +235,10 @@ rows that the planner has a real decision to make — 50,000 is plenty, and
    a plain `Index Scan`, and work out what you changed.
 6. Build a column where one value is rare and one is common, index it, and find the query
    where Postgres uses the index and the query where it refuses. Use `EXPLAIN ANALYZE` and
-   compare the execution times — the refusal should be the faster one.
+   compare the execution times. The refusal should be the faster one.
 
 Write every plan you saw into the file as a comment beside the query that produced it.
-That file is the point of the exercise, not the queries.
+Those comments are your record of what the planner actually did.
 
 - File: `sql/day02.sql`
 - Run: `psql -h localhost -U postgres -f sql/day02.sql`

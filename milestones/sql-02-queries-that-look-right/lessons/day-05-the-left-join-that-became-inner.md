@@ -4,8 +4,8 @@
 
 `LEFT JOIN` is the join people reach for when they want to keep everybody: every customer,
 whether or not they ordered. And there is a one-line change that quietly takes that promise
-back. It is probably the single most common logic error in reporting SQL. It survives code
-review because the query still reads exactly like what it was meant to do.
+back. It is a very common logic error in reporting SQL, and it survives code review because
+the query still reads exactly like what it was meant to do.
 
 ```sql
 DROP SCHEMA IF EXISTS day05 CASCADE;
@@ -52,9 +52,9 @@ ORDER BY c.name, o.id;
 
 `dee` is gone, because no pairing for `dee` passed the `ON`. A `LEFT JOIN` makes one extra
 promise: **every left row appears at least once.** When a left row has no surviving
-pairing, the join invents one — the left row glued to a right side made entirely of NULLs.
-That invented row is called a **NULL-extended row**, and the whole of today is about what
-happens to it next.
+pairing, the join invents one: the left row glued to a right side made entirely of NULLs.
+That invented row is called a **NULL-extended row**, and the rest of this lesson follows
+what happens to it next.
 
 ```sql
 SELECT c.name, o.id, o.status
@@ -79,7 +79,7 @@ ORDER BY c.name, o.id;
 
 ## Part 2: The WHERE that undoes it
 
-Starting a new psql session? Run `SET search_path = day05;` first — the tables
+Starting a new psql session? Run `SET search_path = day05;` first. The tables
 are still there, but the setting lasts only for the session.
 
 The report someone asks for: *every customer, with their paid orders*. The natural thing
@@ -100,7 +100,7 @@ ORDER BY c.name;
 ```
 
 `bo` and `dee` have vanished, and the report asked for every customer. Follow the two
-rows through the pipeline from yesterday. The join runs first (`FROM`), then `WHERE` filters
+rows through the pipeline from day 4. The join runs first (`FROM`), then `WHERE` filters
 what it produced:
 
 - `dee`'s NULL-extended row has `o.status` = NULL. `NULL = 'paid'` is **unknown**, and
@@ -135,9 +135,9 @@ WHERE o.status = 'paid';
 
 There is no `Left` anywhere in that plan. The planner proved that the `WHERE` condition
 can never be true on a NULL-extended row, a property called being *strict*, so it rewrote
-your outer join into an inner join and planned it that way. It does this to make the query
-faster, not to warn you. But it is a warning, and a free one. **If you wrote `LEFT JOIN`
-and the plan says plain `Join` or `Nested Loop`, your left join is not a left join.**
+your outer join into an inner join and planned it that way. It does this for speed, but
+you can read it as a free warning: **if you wrote `LEFT JOIN` and the plan says plain
+`Join` or `Nested Loop`, your left join is not a left join.**
 
 ### Check yourself
 
@@ -149,7 +149,7 @@ and the plan says plain `Join` or `Nested Loop`, your left join is not a left jo
 
 ## Part 3: Where the condition belongs
 
-Starting a new psql session? Run `SET search_path = day05;` first — the tables
+Starting a new psql session? Run `SET search_path = day05;` first. The tables
 are still there, but the setting lasts only for the session.
 
 ### The fix: the condition belongs in ON
@@ -257,7 +257,7 @@ Everyone is still here, with only `ana` allowed to match. So, for a `LEFT JOIN`:
 
 ## Part 4: Counting after an outer join
 
-Starting a new psql session? Run `SET search_path = day05;` first — the tables
+Starting a new psql session? Run `SET search_path = day05;` first. The tables
 are still there, but the setting lasts only for the session.
 
 One more consequence of the NULL-extended row. It is a real row, so `count(*)` counts it:
@@ -318,7 +318,7 @@ WHERE o.customer_id IS NULL;
 ```
 
 This is called an **anti-join**: rows on the left with no partner on the right. It means
-the same thing as last week's `NOT EXISTS`, and Postgres plans the two identically:
+the same thing as day 3's `NOT EXISTS`, and Postgres plans the two identically:
 
 ```sql
 EXPLAIN (COSTS OFF)
@@ -349,7 +349,7 @@ one that says what you mean, and it cannot be broken by testing the wrong column
 
 ## Part 5: Joins the planner rewrites, and one to avoid
 
-Starting a new psql session? Run `SET search_path = day05;` first — the tables
+Starting a new psql session? Run `SET search_path = day05;` first. The tables
 are still there, but the setting lasts only for the session.
 
 ### Worth knowing: Postgres will delete a join you wrote

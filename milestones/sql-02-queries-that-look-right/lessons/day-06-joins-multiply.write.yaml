@@ -11,7 +11,7 @@ challenges:
     part: 3
     prompt: >
       One row per customer, with `customer`, `revenue` (the order total), `paid` (the
-      sum of their payments) and `lines` (their item rows) — every number correct, not
+      sum of their payments) and `lines` (their item rows): every number correct, not
       multiplied by the other table. Ordered by customer.
     hint: Reduce each many-side table to one row per order before it meets anything else.
     solution: |
@@ -48,7 +48,7 @@ challenges:
   - id: conditional-count
     prompt: >
       From `items`, return in one row `multi`, how many lines have `qty` above 1, and
-      `all_lines`, how many lines there are in total — without joining or using a subquery.
+      `all_lines`, how many lines there are in total, without joining or using a subquery.
     hint: An aggregate can carry its own filter.
     solution: |
       SELECT count(*) FILTER (WHERE qty > 1) AS multi, count(*) AS all_lines FROM items;

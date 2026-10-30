@@ -43,18 +43,18 @@ questions:
       `America/New_York`. Are the stored values the same?
     options:
       - text: >
-          No — offset-less input is read in the session's zone, so the two rows are four
+          No: offset-less input is read in the session's zone, so the two rows are four
           hours apart
         correct: true
         why: >
           Noon in New York that day is 16:00 UTC. The same text became two different
           instants. Send timestamps with an explicit offset or `Z`, and run servers in
           UTC, so the meaning never depends on who connected.
-      - text: Yes — timestamptz always assumes UTC for input without an offset
+      - text: "Yes: timestamptz always assumes UTC for input without an offset"
         correct: false
         why: >
           It assumes the session's TimeZone, which is UTC only if someone set it so.
-      - text: No — the New York row is rejected because the offset is missing
+      - text: "No: the New York row is rejected because the offset is missing"
         correct: false
         why: >
           Missing offsets are accepted silently. That silence is why the bug survives.
@@ -110,12 +110,12 @@ questions:
           A day interval means "same local time tomorrow"; an hour interval means a fixed
           number of seconds. They disagree on exactly the two DST days a year, which is how
           a daily job ends up an hour off for half the year.
-      - text: Nothing — both are 86,400 seconds
+      - text: "Nothing: both are 86,400 seconds"
         correct: false
         why: >
           That is only true of `24 hours`. `1 day` is calendar arithmetic in the session's
           zone.
-      - text: "`1 day` raises an error because 02:00–03:00 does not exist that day"
+      - text: "`1 day` raises an error because 02:00 to 03:00 does not exist that day"
         correct: false
         why: >
           The gap is between 02:00 and 03:00 on the transition day; neither result falls
@@ -164,7 +164,7 @@ questions:
       What does `timestamptz '2026-03-29 12:00+00' AT TIME ZONE 'Asia/Tashkent'` return?
     options:
       - text: >
-          A plain `timestamp`, `2026-03-29 17:00:00` — what a wall clock in Tashkent showed
+          A plain `timestamp`, `2026-03-29 17:00:00`: what a wall clock in Tashkent showed
           at that instant
         correct: true
         why: >
@@ -174,7 +174,7 @@ questions:
       - text: A `timestamptz` that now carries the Tashkent zone inside it
         correct: false
         why: >
-          A `timestamptz` never stores a zone — it is one 64-bit instant. The result is a
+          A `timestamptz` never stores a zone: it is one 64-bit instant. The result is a
           plain `timestamp`.
       - text: The same instant, displayed as 07:00, because Tashkent is five hours behind
         correct: false
@@ -188,7 +188,7 @@ questions:
       Which is the earlier instant: `timestamptz '2026-06-01 12:00 UTC+5'` or
       `timestamptz '2026-06-01 12:00+05'`?
     options:
-      - text: "`12:00+05` — it is 07:00 UTC, while `12:00 UTC+5` is 17:00 UTC"
+      - text: "`12:00+05`: it is 07:00 UTC, while `12:00 UTC+5` is 17:00 UTC"
         correct: true
         why: >
           `+05` is an ISO 8601 offset, positive east of Greenwich. `UTC+5` is read as a POSIX
@@ -199,7 +199,7 @@ questions:
         why: >
           They look alike, which is the trap. PostgreSQL reads the two forms with opposite
           sign conventions.
-      - text: "`12:00 UTC+5` — it is 07:00 UTC"
+      - text: "`12:00 UTC+5`: it is 07:00 UTC"
         correct: false
         why: >
           That would be right if `UTC+5` meant five hours east. As a POSIX string it means
@@ -214,7 +214,7 @@ questions:
     options:
       - text: >
           31 January + 1 month is 28 February, and every renewal after that lands on the
-          28th — it should be computed from the original start date
+          28th: it should be computed from the original start date
         correct: true
         why: >
           PostgreSQL clamps to the last day of a shorter month, which is sensible once, but
@@ -238,7 +238,7 @@ questions:
       A transaction runs for a minute, inserting rows that each set `created_at = now()`.
       What times do the rows get?
     options:
-      - text: All the same time — when the transaction began
+      - text: "All the same time, when the transaction began"
         correct: true
         why: >
           `now()` is the transaction's start time and does not move until it ends, so one unit

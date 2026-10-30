@@ -21,14 +21,14 @@ questions:
       - text: Aliases are only allowed in `ORDER BY` because the SQL standard forgot `WHERE`
         correct: false
         why: >
-          Nothing was forgotten — it follows from the order. `HAVING` cannot see the alias
+          Nothing was forgotten: it follows from the order. `HAVING` cannot see the alias
           either, for the same reason, while `ORDER BY` can because it runs after `SELECT`.
       - text: >
           `WHERE` only accepts real column names, and any expression must be computed in
           `SELECT` first
         correct: false
         why: >
-          `WHERE amount * 2 > 100` is perfectly legal — `WHERE` accepts any expression over
+          `WHERE amount * 2 > 100` is perfectly legal: `WHERE` accepts any expression over
           the input columns. What it cannot see is a *name* given in a later step.
       - text: >
           Postgres evaluates `WHERE` lazily, so the alias is not yet bound when the filter
@@ -58,7 +58,7 @@ questions:
       - text: Both go in `HAVING`, because that is where the report's conditions live
         correct: false
         why: >
-          `HAVING status = 'paid'` is rejected unless status is grouped on — after
+          `HAVING status = 'paid'` is rejected unless status is grouped on, after
           grouping there is no single status per customer. Row conditions belong in WHERE.
       - text: Both go in `WHERE`, with the sum written as `sum(amount) > 150`
         correct: false
@@ -120,12 +120,12 @@ questions:
         why: >
           This is functional dependency. If the grouping columns determine a column, it is
           the same for the whole group and safe to show. Otherwise the database would have
-          to pick one — which is what MySQL silently did before `ONLY_FULL_GROUP_BY` became
+          to pick one, which is what MySQL silently did before `ONLY_FULL_GROUP_BY` became
           the default in 5.7.5.
       - text: Postgres requires every column to be listed in `GROUP BY` for performance
         correct: false
         why: >
-          It is about meaning, not speed — and the primary-key exception shows that
+          It is about meaning, not speed, and the primary-key exception shows that
           listing everything is not actually required.
       - text: The first query would work if `status` were indexed
         correct: false
@@ -136,8 +136,8 @@ questions:
           Text columns can never be selected alongside an aggregate unless they are grouped
         correct: false
         why: >
-          Type has nothing to do with it. Any column that is determined by the grouping —
-          including text columns of the grouped table — can be selected.
+          Type has nothing to do with it. Any column that is determined by the grouping,
+          including text columns of the grouped table, can be selected.
 
   - id: q5
     part: 5
@@ -150,19 +150,19 @@ questions:
         correct: true
         why: >
           Without GROUP BY the whole input is one group, even when it is empty, so you get
-          exactly one row — and the sum of nothing is NULL, not 0. With GROUP BY there are
+          exactly one row, and the sum of nothing is NULL, not 0. With GROUP BY there are
           no groups to report. Code that reads "the first row" must handle both shapes,
           and `coalesce(sum(amount), 0)` turns the NULL into zero.
       - text: Both return no rows, because nothing matched
         correct: false
         why: >
           True only of the grouped version. An aggregate with no GROUP BY always returns
-          exactly one row — `count(*)` over nothing is 0, and that 0 has to live somewhere.
+          exactly one row: `count(*)` over nothing is 0, and that 0 has to live somewhere.
       - text: The first returns one row containing 0; the second returns no rows
         correct: false
         why: >
           The row count is right, the value is not. `count` returns 0 on an empty input,
-          but `sum`, `avg`, `min` and `max` return NULL — there is nothing to add up.
+          but `sum`, `avg`, `min` and `max` return NULL: there is nothing to add up.
       - text: Both return one row containing NULL
         correct: false
         why: >
@@ -190,7 +190,7 @@ questions:
       - text: "`FROM`, `SELECT`, `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT`"
         correct: false
         why: >
-          If `SELECT` ran before `WHERE`, `WHERE` could use its aliases — and it famously
+          If `SELECT` ran before `WHERE`, `WHERE` could use its aliases, and it famously
           cannot ("column does not exist").
       - text: "`FROM`, `WHERE`, `SELECT`, `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT`"
         correct: false
@@ -206,7 +206,7 @@ questions:
       clause order: push a filter down, use an index instead of sorting, stop early for a
       `LIMIT`. What is it not allowed to change?
     options:
-      - text: The answer — it must return exactly what running the clauses in logical order would
+      - text: "The answer: it must return exactly what running the clauses in logical order would"
         correct: true
         why: >
           The logical order defines the result; the physical plan is free as long as the
@@ -222,7 +222,7 @@ questions:
         why: >
           Close, but the rule is wider: anything may move, as long as the result does not
           change. A row filter can even be applied inside an index scan.
-      - text: Nothing — the logical order is exactly the execution order
+      - text: "Nothing: the logical order is exactly the execution order"
         correct: false
         why: >
           `EXPLAIN` shows otherwise: filters attached to scans, sorts skipped because an
@@ -242,7 +242,7 @@ questions:
           `gross` is only an output name
         correct: true
         why: >
-          `ORDER BY` accepts an output alias only on its own — a SQL-92 leftover. A name
+          `ORDER BY` accepts an output alias only on its own: a SQL-92 leftover. A name
           inside an expression is always taken as an input column. Repeat the expression
           (`amount * 1.2 + 0`) or sort by the position.
       - text: "`ORDER BY` cannot sort by an expression, only by a column"
@@ -267,7 +267,7 @@ questions:
       what does that do to the result?
     options:
       - text: >
-          The input column, so `'ana'` and `'Ana'` are separate groups — and both print
+          The input column, so `'ana'` and `'Ana'` are separate groups, and both print
           as `ana`, twice
         correct: true
         why: >
@@ -279,7 +279,7 @@ questions:
         why: >
           That is what was meant, and it is what `ORDER BY customer` would have used. In
           `GROUP BY` an ambiguous name means the input column.
-      - text: Neither — the query is rejected as ambiguous
+      - text: "Neither: the query is rejected as ambiguous"
         correct: false
         why: >
           It runs without a warning, which is the problem. Postgres has a rule for the
@@ -306,7 +306,7 @@ questions:
       - text: "`sum` returns 0 too, the `coalesce` is only defensive"
         correct: false
         why: >
-          Run `SELECT sum(amount) FROM orders WHERE false` — it prints an empty cell, a
+          Run `SELECT sum(amount) FROM orders WHERE false`: it prints an empty cell, a
           NULL, not 0.
 
   # --- part 6 ---------------------------------------------------------------------
@@ -342,18 +342,18 @@ questions:
       What type does `date_trunc('month', date '2026-01-20')` return, and how do you get
       a plain date back?
     options:
-      - text: "A `timestamp with time zone` (midnight on the 1st) — cast it with `::date`"
+      - text: "A `timestamp with time zone` (midnight on the 1st): cast it with `::date`"
         correct: true
         why: >
           `pg_typeof` shows it. `date_trunc` works on timestamps, so the date is converted
           first and a timestamp comes back; `::date` (or `CAST(… AS date)`) turns it into
           `2026-01-01`.
-      - text: "A `date`, already — `2026-01-01`"
+      - text: "A `date`, already: `2026-01-01`"
         correct: false
         why: >
           It prints `2026-01-01 00:00:00+00`. The time and the zone are part of the value,
           not formatting.
-      - text: "A month number, `1` — use `make_date` to turn it back into a date"
+      - text: "A month number, `1`: use `make_date` to turn it back into a date"
         correct: false
         why: >
           That is `extract(month …)`. `date_trunc` keeps the whole point in time, just cut
@@ -367,7 +367,7 @@ questions:
       Why, and what is the smallest fix?
     options:
       - text: >
-          `count(*) / 12` is integer division, so it is 0 before `round` sees it — cast
+          `count(*) / 12` is integer division, so it is 0 before `round` sees it: cast
           one side, `count(*)::numeric / 12`
         correct: true
         why: >
@@ -423,7 +423,7 @@ questions:
           `count(x)` counts the rows where `x` is not NULL, and `0` is not NULL. Drop the
           `ELSE` (so a miss is NULL), use `sum` instead of `count`, or write
           `count(*) FILTER (WHERE status = 'paid')`.
-      - text: The paid rows — the zeros are ignored
+      - text: "The paid rows: the zeros are ignored"
         correct: false
         why: >
           `count` ignores NULLs, not zeros. `sum(CASE … THEN 1 ELSE 0 END)` would count the
@@ -441,7 +441,7 @@ questions:
       For a customer with no paid payments, what does
       `sum(amount) FILTER (WHERE status = 'paid')` return in that customer's row?
     options:
-      - text: NULL — a sum over no rows, even inside a group
+      - text: "NULL: a sum over no rows, even inside a group"
         correct: true
         why: >
           The filter leaves the aggregate nothing to add up, and `sum` of nothing is NULL.

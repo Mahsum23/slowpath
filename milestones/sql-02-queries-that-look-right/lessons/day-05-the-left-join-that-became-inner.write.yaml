@@ -42,7 +42,7 @@ challenges:
   - id: count-right
     part: 4
     prompt: >
-      Return each customer's `name` and how many orders they have — `0` for the one
+      Return each customer's `name` and how many orders they have: `0` for the one
       with none. Ordered by name.
     hint: "`count(*)` counts the row the join made up. Count something from the other side."
     solution: |

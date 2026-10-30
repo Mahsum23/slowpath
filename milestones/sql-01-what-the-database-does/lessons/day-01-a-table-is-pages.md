@@ -4,22 +4,22 @@
 
 You already write queries that work. This track is about the layer underneath them: what
 the engine does with the bytes once your `SELECT` arrives. Start with the most physical
-question there is — where does a row actually live?
+question there is: where does a row actually live?
 
 Everything below is run against **PostgreSQL 16**, because it is the engine most likely
 to be under whatever you build next, and because it is unusually willing to show you its
 own internals. Stack Overflow's developer survey has had it as the most-used database
-since 2023, and by 2025 it had pulled to 55.6% of all respondents — 58.2% of professional
-developers, roughly eighteen points clear of MySQL in second. But popularity is not why
-it earns this track. It earns it because you can ask Postgres to hand you a raw 8 kB page
-and tell you what is on it, and almost nothing else will.
+since 2023, and by 2025 it had pulled to 55.6% of all respondents (58.2% of professional
+developers), roughly eighteen points clear of MySQL in second. It earns this track for a
+different reason, though: you can ask Postgres to hand you a raw 8 kB page and tell you
+what is on it, and almost nothing else will.
 
 ### A row is not the unit of anything
 
 The mental model most people carry is that a table is a list of rows, and reading a row
 reads a row. Neither half is true.
 
-A table on disk is a flat array of fixed-size **pages** — Postgres calls the file a
+A table on disk is a flat array of fixed-size **pages**. Postgres calls the file a
 *heap*. Every page is the same size, and the page is the unit the engine reads, writes,
 caches and locks. Rows are packed into pages; a page holds as many as fit. When you ask
 for one row, the engine reads the whole page that row sits in, because that is the
@@ -38,9 +38,9 @@ SHOW block_size;
 8192 bytes, and it is a compile-time constant: changing it means rebuilding Postgres and
 recreating every cluster, which is why essentially nobody does. SQLite defaults to 4096,
 matching the virtual-memory page and most filesystem blocks. The number is a compromise
-nobody has wanted to relitigate since the 1990s — bigger pages waste less space on
-per-page bookkeeping and read more useful bytes per seek, smaller pages waste less I/O
-when you only wanted one row.
+nobody has wanted to relitigate since the 1990s: bigger pages waste less space on
+per-page bookkeeping and read more useful bytes per seek, while smaller pages waste less
+I/O when you only wanted one row.
 
 Watch the file grow in page-sized steps rather than row-sized ones:
 
@@ -61,12 +61,12 @@ SELECT pg_relation_size('t') / 8192 AS pages, pg_size_pretty(pg_relation_size('t
     23 | 184 kB
 ```
 
-A freshly created Postgres table is **zero pages** — an empty file. (SQLite's answer is
+A freshly created Postgres table is **zero pages**, an empty file. (SQLite's answer is
 different and worth knowing: creating a table there costs pages before any row exists,
 because the schema and the table's own tree root have to live somewhere.) Then 2000 rows
 land in 23 pages, and the file grew one page at a time at moments that had nothing to do
-with your row count. Ninety-seven of those rows fit on the first page — a number you will
-be able to derive rather than guess by the end of this lesson.
+with your row count. Ninety-seven of those rows fit on the first page, and by the end of
+this lesson you will be able to work that number out instead of guessing it.
 
 ### Where a row is, exactly
 
@@ -86,12 +86,12 @@ SELECT ctid, id, name FROM t WHERE id IN (1, 2, 82) ORDER BY id;
 ```
 
 `(page, slot)`. Row 1 is the first slot of page zero; row 82 is the 82nd slot of the same
-page. This is a **physical address**, not an identity — and the difference is the whole
-lesson of the next section.
+page. This is a **physical address**, and the next section shows that a row's address can
+change while the row stays the same row.
 
 ### An UPDATE does not update
 
-Here is the fact that surprises people who have used Postgres for years:
+Update a row and ask for its address again:
 
 ```sql
 UPDATE t SET note = 'changed' WHERE id = 1;
@@ -108,8 +108,8 @@ The row moved from page 0 to page 22. Postgres did not modify the row in place. 
 a **new version** of the row wherever there was space, and marked the old one as dead.
 Both copies are in the file right now.
 
-That is MVCC — multi-version concurrency control — and it is the mechanism behind
-Postgres's most-loved property: readers never block writers and writers never block
+This is MVCC (multi-version concurrency control), the mechanism behind Postgres's
+most-loved property: readers never block writers and writers never block
 readers, because a reader is looking at a version that hasn't gone anywhere. The two
 other hidden columns are the bookkeeping:
 
@@ -169,10 +169,10 @@ SELECT pg_size_pretty(pg_relation_size('t')) AS after_vacuum_full;
  184 kB
 ```
 
-**Plain `VACUUM` gave back nothing.** It marks the dead space reusable *by that table*,
-so the file stops growing — but it does not shrink the file, and this is the single most
-misunderstood thing about Postgres operations. `VACUUM FULL` genuinely returns the space,
-by rewriting the whole table into a new file, and it takes an `ACCESS EXCLUSIVE` lock for
+Plain `VACUUM` gave back nothing. It marks the dead space reusable *by that table*, so
+the file stops growing, but it does not shrink the file, which surprises a lot of people
+who run Postgres. `VACUUM FULL` does return the space, by rewriting the whole table into
+a new file, and it takes an `ACCESS EXCLUSIVE` lock for
 the duration: nothing reads or writes that table until it finishes. On a large production
 table that is an outage, which is why teams reach for `pg_repack` instead, and why "our
 disk is full and `VACUUM` didn't help" is a support conversation that happens every week
@@ -181,19 +181,19 @@ of the year.
 > [!NOTE]
 > **The most expensive consequence of ctid, in production.** Because an index entry
 > points at a physical `(page, slot)`, moving a row means every index on the table has to
-> be updated — even indexes on columns your `UPDATE` never touched. Uber's engineering
+> be updated, including indexes on columns your `UPDATE` never touched. Uber's engineering
 > blog made this famous in 2016 as their headline reason for migrating off Postgres:
 > a table with a dozen indexes turned a one-column update into twelve index writes, and
 > that amplification then rode through their replication stream, which ships physical
 > page changes rather than statements. MySQL's InnoDB avoids it by making secondary
-> indexes point at the primary key instead of a physical location — which costs an extra
-> lookup on every index read. There is no free answer here, only a trade someone picked.
+> indexes point at the primary key instead of a physical location, which costs an extra
+> lookup on every index read. Postgres pays on writes and InnoDB pays on reads.
 
 ### Worth knowing: ask Postgres for the raw bytes of a page
 
 There is a contrib extension that reads pages directly, and it turns every claim above
 into something you can check yourself. Rebuild the table first if you have been updating
-it — the numbers below are page 0 of a table freshly loaded with those 2000 rows:
+it: the numbers below are page 0 of a table freshly loaded with those 2000 rows.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS pageinspect;
@@ -214,18 +214,18 @@ SELECT count(*) AS tuples, min(lp_len) AS small, max(lp_len) AS big FROM heap_pa
 Do the arithmetic and the page layout falls out of it. A page starts with a 24-byte
 header, then grows an array of 4-byte **line pointers** downward from the front while the
 row data itself is stacked upward from the back. `lower` is where the pointer array ends,
-`upper` where the data begins, and the gap between them is the free space — here
+`upper` where the data begins, and the gap between them is the free space: here
 432 − 412 = 20 bytes, so this page is full.
 
 Which gives you an invariant to check rather than a number to believe:
 **`lower` = 24 + 4 × tuples**. Here that is 24 + 97 × 4 = 412, exactly. Run those two
 queries against any page of any table of your own and it will still hold, whatever the
 counts happen to be. That layer of indirection is also why a row can be moved *within* a
-page without any index noticing — the line pointer keeps the slot number stable while the
+page without any index noticing: the line pointer keeps the slot number stable while the
 data behind it moves.
 
 Now account for one row's 79 bytes. Eight for the bigint, six for `'name1'`, 41 for the
-40-character note — varying-length values each carry a length byte — and the other 24 are
+40-character note (varying-length values each carry a length byte), and the other 24 are
 a per-row header that is yours whether you want it or not. Postgres charges 23 bytes of
 visibility bookkeeping per row, rounded up for alignment. That is why a table of millions
 of narrow rows is far bigger than `rows × columns` suggests, and why "just add a boolean
@@ -234,7 +234,7 @@ column" is never as free as it sounds.
 > [!NOTE]
 > **The clock nobody watches until it stops them.** Transaction ids are 32-bit, so they
 > wrap. Postgres protects itself by refusing all writes once a table's oldest unfrozen
-> transaction gets too far behind — `SELECT name, setting FROM pg_settings WHERE name =
+> transaction gets too far behind. `SELECT name, setting FROM pg_settings WHERE name =
 > 'autovacuum_freeze_max_age'` shows the threshold, 200 million by default, against a
 > 2^31 ceiling. Vacuum's *other* job, besides reclaiming space, is freezing old rows so
 > this never happens. When it falls behind on a write-heavy table the ending is always
@@ -258,7 +258,7 @@ column" is never as free as it sounds.
 ## Task
 
 Get a PostgreSQL server in front of you and make it show you its own pages. Do not take
-any of the numbers above on trust — the point of this exercise is that you produced them.
+any of the numbers above on trust; produce them yourself.
 
 If you have no Postgres to hand, `docker run --rm -e POSTGRES_PASSWORD=x -p 5432:5432
 postgres:16` and `psql -h localhost -U postgres` is a 30-second setup.
@@ -270,10 +270,10 @@ postgres:16` and `psql -h localhost -U postgres` is a 30-second setup.
 3. Update one row. Select its `ctid` again. Explain the number you get.
 4. Update *every* row three times, then compare `pg_relation_size` and `count(*)`.
 5. Run `VACUUM`, measure again, then `VACUUM FULL`, and measure again. Only one of them
-   changes the file size — record both numbers.
+   changes the file size. Record both numbers.
 
 Write every number you saw into the file as a comment beside the query that produced it.
-That file is the point of the exercise, not the queries.
+Those comments are your record of what the engine actually did.
 
 - File: `sql/day01.sql`
 - Run: `psql -h localhost -U postgres -f sql/day01.sql`

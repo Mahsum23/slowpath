@@ -18,7 +18,7 @@ challenges:
     part: 2
     prompt: >
       Which rows of `m` hold the value 0.3? Row 1 stores `0.1 + 0.2` as a `float8`, so
-      `v = 0.3` finds only row 2 — compare with a tolerance of `1e-9` instead, and return
+      `v = 0.3` finds only row 2: compare with a tolerance of `1e-9` instead, and return
       the matching `id`s in order.
     hint: The absolute difference, against a small number.
     solution: |

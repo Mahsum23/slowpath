@@ -70,7 +70,7 @@ UPDATE players SET score = 90 WHERE id = 1;
 
 ## Part 2: Ties are unordered too
 
-Starting a new psql session? Run `SET search_path = day07;` first — the tables
+Starting a new psql session? Run `SET search_path = day07;` first. The tables
 are still there, but the setting lasts only for the session.
 
 ### ORDER BY with ties is unordered too
@@ -155,7 +155,7 @@ Asked for three, got four. The third place is a tie between `bo` and `eli`, and
 
 ## Part 3: Paging with OFFSET
 
-Starting a new psql session? Run `SET search_path = day07;` first — the tables
+Starting a new psql session? Run `SET search_path = day07;` first. The tables
 are still there, but the setting lasts only for the session.
 
 The textbook way to page through a list:
@@ -235,7 +235,7 @@ exports and "load all" buttons do.
 
 ## Part 4: Keyset pagination
 
-Starting a new psql session? Run `SET search_path = day07;` first — the tables
+Starting a new psql session? Run `SET search_path = day07;` first. The tables
 are still there, but the setting lasts only for the session.
 
 Instead of remembering *how many* rows you have seen, remember *the last one*. Each page
@@ -287,14 +287,14 @@ a count.
 
 Markus Winand, author of *Use The Index, Luke*, has campaigned for years under the banner
 "No Offset", and many large public APIs page this way. Stripe's list endpoints take
-`starting_after=<object id>` rather than a page number. The honest trade-off is that
+`starting_after=<object id>` rather than a page number. The trade-off is that
 keyset pagination cannot jump to "page 37". It moves forwards and backwards from where you
 are. For feeds, timelines, exports and APIs that is exactly what you want. For a search
 results page with numbered links, people still use `OFFSET` and accept the cost.
 
 ### The keyset that looks right and skips rows
 
-The row comparison is not decoration. Here is a small feed where two posts share a
+To see why the row comparison matters, take a small feed where two posts share a
 timestamp and one was imported late with a backdated time, so `id` and `created_at`
 disagree:
 
@@ -356,7 +356,7 @@ ORDER BY created_at DESC, id DESC LIMIT 2;
 
 ## Part 5: The same query can start in the middle
 
-Starting a new psql session? Run `SET search_path = day07;` first — the tables
+Starting a new psql session? Run `SET search_path = day07;` first. The tables
 are still there, but the setting lasts only for the session.
 
 ### Worth knowing: the same query can start in the middle of the table
@@ -433,8 +433,8 @@ DROP TABLE big;
 
 The manual warns that this "can result in unpredictable changes in the row ordering
 returned by queries that have no ORDER BY clause", and Franck Pachot has written up the
-`LIMIT`-without-`ORDER BY` version of exactly this experiment. It is the cleanest proof
-there is that the order you saw was never a property of the table.
+`LIMIT`-without-`ORDER BY` version of exactly this experiment. It shows directly that the
+order you saw was never a property of the table.
 
 ### Carry this
 
