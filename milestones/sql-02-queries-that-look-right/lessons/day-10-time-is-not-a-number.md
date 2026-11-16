@@ -61,6 +61,35 @@ SELECT at_tz, at_naive FROM events;
  2026-03-29 08:00:00-04 | 2026-03-29 12:00:00
 ```
 
+```viz tables
+title: One instant, three sessions
+steps:
+- say: 'Stored once: `at_tz` is an instant, `at_naive` a wall-clock reading. Read with `TimeZone` = UTC.'
+  code: SET timezone = 'UTC';
+  tables:
+  - name: TimeZone = 'UTC'
+    cols: [at_tz, at_naive]
+    rows:
+    - ['2026-03-29 12:00:00+00', '2026-03-29 12:00:00']
+- say: Change only the session's zone. The **same instant** is shown as Tashkent's local time; the naive
+    value does not move.
+  code: SET timezone = 'Asia/Tashkent';
+  tables:
+  - name: TimeZone = 'Asia/Tashkent'
+    cols: [at_tz, at_naive]
+    rows:
+    - ['2026-03-29 17:00:00+05', '2026-03-29 12:00:00']
+    hl: [0]
+- say: And again as New York's. Nothing in the row changed; only how it is read out.
+  code: SET timezone = 'America/New_York';
+  tables:
+  - name: TimeZone = 'America/New_York'
+    cols: [at_tz, at_naive]
+    rows:
+    - ['2026-03-29 08:00:00-04', '2026-03-29 12:00:00']
+    hl: [0]
+```
+
 Same stored row, read three times. `at_tz` is the same instant each time, shown as the
 local time in each place: noon UTC is 17:00 in Tashkent and 08:00 in New York.
 `at_naive` doesn't move, because it has no idea where it is. If you want proof that no
@@ -167,6 +196,34 @@ SELECT timestamptz '2026-06-01 12:00 UTC+5' AS posix_style,
  2026-06-01 17:00:00+00 | 2026-06-01 07:00:00+00
 ```
 
+```viz tables
+title: AT TIME ZONE, and two ways to write +5
+steps:
+- say: '`timestamptz AT TIME ZONE ''Asia/Tashkent''` answers "what did the clock say there?": a plain
+    `timestamp`, 17:00.'
+  code: SELECT timestamptz '2026-03-29 12:00:00+00' AT TIME ZONE 'Asia/Tashkent';
+  tables:
+  - name: result
+    cols: [wall_clock, type]
+    rows:
+    - ['2026-03-29 17:00:00', timestamp without time zone]
+    marks: [hit]
+- say: '`''12:00+05''` is ISO: five hours **east** of UTC, so 07:00 UTC.'
+  tables:
+  - name: as UTC
+    cols: [written, instant]
+    rows:
+    - ['12:00+05', '07:00+00']
+- say: '`''12:00 UTC+5''` is a POSIX zone, where plus means **west**: 17:00 UTC. Ten hours apart.'
+  tables:
+  - name: as UTC
+    cols: [written, instant]
+    rows:
+    - ['12:00+05', '07:00+00']
+    - ['12:00 UTC+5', '17:00+00']
+    marks: [null, out]
+```
+
 Same digits, opposite answers, ten hours apart. `+05` is ISO 8601, where positive means
 *east* of Greenwich: Tashkent's offset. `UTC+5` is read as a POSIX time-zone string, and
 POSIX counts positive offsets *west* of Greenwich. That is the convention behind strings
@@ -215,6 +272,36 @@ SET timezone = 'UTC';
  length_of_day |       plus_1_day       |     plus_24_hours
 ---------------+------------------------+------------------------
  23:00:00      | 2026-03-30 01:00:00+02 | 2026-03-30 02:00:00+02
+```
+
+```viz tables
+title: A day that is 23 hours long
+steps:
+- say: In Berlin on 29 March 2026 the clocks jump from 02:00 to 03:00. That day is 23 hours long.
+  tables:
+  - name: Europe/Berlin
+    cols: [measure, result]
+    rows:
+    - [length of 29 March, '23:00:00']
+    marks: [hit]
+- say: '`+ interval ''1 day''` means the same wall-clock time tomorrow: 01:00 again.'
+  code: timestamptz '2026-03-29 01:00' + interval '1 day'
+  tables:
+  - name: 01:00 + …
+    cols: [added, result]
+    rows:
+    - [interval '1 day', '2026-03-30 01:00:00+02']
+    marks: [new]
+- say: '`+ interval ''24 hours''` means exactly 86,400 seconds. Across the short day, that lands an hour
+    later on the clock.'
+  code: timestamptz '2026-03-29 01:00' + interval '24 hours'
+  tables:
+  - name: 01:00 + …
+    cols: [added, result]
+    rows:
+    - [interval '1 day', '2026-03-30 01:00:00+02']
+    - [interval '24 hours', '2026-03-30 02:00:00+02']
+    marks: [null, hit]
 ```
 
 `interval '1 day'` means "same wall-clock time tomorrow". `interval '24 hours'` means

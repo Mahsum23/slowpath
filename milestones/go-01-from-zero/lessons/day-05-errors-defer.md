@@ -88,6 +88,36 @@ caller might reasonably want to inspect the cause; use plain `%v` when you are
 deliberately hiding the internals. Wrapping everything makes your internal error
 types part of your public API, which is a real cost.
 
+```viz tables
+title: '%w keeps the cause, %v keeps the words'
+steps:
+- say: '`os.Open` returns an error value whose cause is `os.ErrNotExist`.'
+  tables:
+  - name: err
+    cols: [layer, text]
+    rows:
+    - [os.Open, 'open /no/such/file: no such file or directory']
+    - [cause, os.ErrNotExist]
+- say: '`%w` wraps: a new message on top, the original still inside. `errors.Is` digs down and finds the
+    cause.'
+  code: 'fmt.Errorf("loading config: %w", err)  // errors.Is → true'
+  tables:
+  - name: wrapped with %w
+    cols: [layer, text]
+    rows:
+    - [your context, 'loading config: …']
+    - [os.Open, 'open /no/such/file: …']
+    - [cause, os.ErrNotExist]
+    marks: [null, null, hit]
+- say: '`%v` copies the text and keeps nothing else. Same message, but `errors.Is` finds nothing.'
+  code: 'fmt.Errorf("loading config: %v", err)  // errors.Is → false'
+  tables:
+  - name: formatted with %v
+    cols: [layer, text]
+    rows:
+    - [your context, 'loading config: open /no/such/file: …']
+```
+
 ### Check yourself
 
 1. What is the `error` type in Go, exactly — what makes a value an error?

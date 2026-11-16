@@ -173,6 +173,35 @@ SELECT count(*) AS close_enough FROM m WHERE abs(v - 0.3) < 1e-9;
             1
 ```
 
+```viz tables
+title: The same sum, in two types
+steps:
+- say: 'Typed at the prompt, `0.1 + 0.2` is `numeric`: exact. It equals 0.3.'
+  code: SELECT 0.1 + 0.2, 0.1 + 0.2 = 0.3;
+  tables:
+  - name: numeric
+    cols: [0.1 + 0.2, = 0.3]
+    rows:
+    - ['0.3', true]
+    marks: [hit]
+- say: As `float8`, each 0.1 is the nearest binary fraction, and the error shows up in the sum.
+  code: SELECT 0.1::float8 + 0.2::float8 ...
+  tables:
+  - name: float8
+    cols: [0.1 + 0.2, = 0.3]
+    rows:
+    - ['0.30000000000000004', false]
+    marks: [out]
+- say: Store that value in a `float8` column and `WHERE v = 0.3` matches nothing. A tolerance does.
+  tables:
+  - name: table m
+    cols: [query, count]
+    rows:
+    - [WHERE v = 0.3, 0]
+    - [WHERE abs(v - 0.3) < 1e-9, 1]
+    marks: [out, hit]
+```
+
 Never test floats for equality. Compare with a tolerance, or do not use floats for
 anything you need to compare exactly.
 
@@ -291,6 +320,38 @@ SELECT 2.5::int AS from_numeric, 2.5::float8::int AS from_float8;
             3 |           2
 ```
 
+```viz tables
+title: Two types, two rounding rules
+steps:
+- say: A `numeric(10,2)` column rounds on the way in, silently.
+  tables:
+  - name: INSERT into numeric(10,2)
+    cols: [typed, stored]
+    rows:
+    - ['19.999', '20.00']
+    - ['0.005', '0.01']
+    - ['0.015', '0.02']
+    hl: [1]
+- say: '`numeric` rounds halves **away from zero**: 2.5 to 3, 3.5 to 4.'
+  code: SELECT round(2.5), round(3.5), round(-2.5);
+  tables:
+  - name: round on numeric
+    cols: [value, round]
+    rows:
+    - ['2.5', 3]
+    - ['3.5', 4]
+    - ['-2.5', -3]
+- say: '`float8` rounds halves **to even**: 2.5 to 2, 3.5 to 4. Same 2.5, different answer.'
+  code: SELECT round(2.5::float8), round(3.5::float8);
+  tables:
+  - name: round on float8
+    cols: [value, round]
+    rows:
+    - ['2.5', 2]
+    - ['3.5', 4]
+    marks: [hit]
+```
+
 The same 2.5 becomes 3 or 2, depending on a type you may never have chosen consciously.
 
 And then there is not rounding at all. `trunc` drops digits, `round` rounds them:
@@ -388,6 +449,35 @@ SELECT 'NaN'::float8 = 'NaN'::float8 AS nan_equals_nan,
  nan_equals_nan | nan_beats_everything
 ----------------+----------------------
  t              | t
+```
+
+```viz tables
+title: Where the numbers run out
+steps:
+- say: '`int` stops at 2,147,483,647. One more and Postgres refuses, loudly, instead of wrapping round.'
+  code: SELECT 2147483647 + 1;
+  tables:
+  - name: result
+    cols: [expression, result]
+    rows:
+    - [2147483647 + 1, 'ERROR: integer out of range']
+    marks: [out]
+- say: As `bigint` there is room to spare.
+  code: SELECT 2147483647::bigint + 1;
+  tables:
+  - name: result
+    cols: [expression, result]
+    rows:
+    - ['2147483647::bigint + 1', '2147483648']
+    marks: [hit]
+- say: And NaN, which IEEE 754 says equals nothing, equals itself in Postgres, and sorts above every number,
+    so an index can sort it.
+  tables:
+  - name: result
+    cols: [expression, result]
+    rows:
+    - ['''NaN''::float8 = ''NaN''::float8', true]
+    - ['''NaN''::float8 > 1e308', true]
 ```
 
 A B-tree needs every value to be equal to itself and comparable with every other value,

@@ -72,6 +72,52 @@ ORDER BY c.name, o.id;
  dee  |    |
 ```
 
+```viz tables
+title: What INNER and LEFT JOIN return
+steps:
+- say: Four customers and four orders. `dee` has no order at all.
+  tables:
+  - name: customers
+    cols: [id, name]
+    rows:
+    - [1, ana]
+    - [2, bo]
+    - [3, cy]
+    - [4, dee]
+    marks: [null, null, null, hit]
+  - name: orders
+    cols: [id, customer_id, status]
+    rows:
+    - [10, 1, paid]
+    - [11, 1, refunded]
+    - [12, 2, refunded]
+    - [13, 3, paid]
+- say: An inner join returns only pairings that pass `ON`. No pairing for `dee` does, so `dee` is simply
+    not there.
+  code: customers c JOIN orders o ON o.customer_id = c.id
+  tables:
+  - name: JOIN
+    cols: [name, o.id, o.status]
+    rows:
+    - [ana, 10, paid]
+    - [ana, 11, refunded]
+    - [bo, 12, refunded]
+    - [cy, 13, paid]
+- say: '`LEFT JOIN` promises every left row at least once. `dee` gets a **NULL-extended row**: dee, glued
+    to NULLs.'
+  code: customers c LEFT JOIN orders o ON o.customer_id = c.id
+  tables:
+  - name: LEFT JOIN
+    cols: [name, o.id, o.status]
+    rows:
+    - [ana, 10, paid]
+    - [ana, 11, refunded]
+    - [bo, 12, refunded]
+    - [cy, 13, paid]
+    - [dee, null, null]
+    marks: [null, null, null, null, ghost]
+```
+
 ### Check yourself
 
 1. In a `LEFT JOIN`, what is a NULL-extended row, and when does the join produce one?
@@ -362,6 +408,44 @@ ORDER BY c.name;
  dee  |      0
 ```
 
+```viz tables
+title: What count(*) counts after a LEFT JOIN
+steps:
+- say: After the join, `dee` is one NULL-extended row. It is a real row in the result.
+  tables:
+  - name: LEFT JOIN
+    cols: [name, o.id]
+    rows:
+    - [ana, 10]
+    - [ana, 11]
+    - [bo, 12]
+    - [cy, 13]
+    - [dee, null]
+    marks: [null, null, null, null, ghost]
+- say: '`count(*)` counts rows, the NULL-extended one included: `dee` "has 1 order".'
+  code: count(*)
+  tables:
+  - name: result
+    cols: [name, count(*)]
+    rows:
+    - [ana, 2]
+    - [bo, 1]
+    - [cy, 1]
+    - [dee, 1]
+    marks: [null, null, null, out]
+- say: '`count(o.id)` skips NULLs, so it counts only rows with a real order: `dee` has 0.'
+  code: count(o.id)
+  tables:
+  - name: result
+    cols: [name, count(o.id)]
+    rows:
+    - [ana, 2]
+    - [bo, 1]
+    - [cy, 1]
+    - [dee, 0]
+    marks: [null, null, null, hit]
+```
+
 ### Using the NULL row on purpose: the anti-join
 
 "Customers who have never ordered" is a question *about* the NULL-extended row, so here a
@@ -468,6 +552,48 @@ SELECT * FROM a NATURAL JOIN b ORDER BY id;
  id | note | val
 ----+------+-----
 (0 rows)
+```
+
+```viz tables
+title: The join condition nobody wrote
+steps:
+- say: '`NATURAL JOIN` joins on every column the two tables share a name with. Today that is only `id`.'
+  code: SELECT * FROM a NATURAL JOIN b;
+  tables:
+  - name: a
+    cols: [id, note]
+    rows:
+    - [1, x]
+    - [2, y]
+    hl: [0]
+  - name: b
+    cols: [id, val]
+    rows:
+    - [1, 100]
+    - [2, 200]
+    hl: [0]
+- say: A migration adds `note` to `b`. Now the tables share `id` **and** `note`, so the join silently
+    becomes `a.id = b.id AND a.note = b.note`.
+  code: ALTER TABLE b ADD note text;
+  tables:
+  - name: a
+    cols: [id, note]
+    rows:
+    - [1, x]
+    - [2, y]
+    hl: [0, 1]
+  - name: b
+    cols: [id, val, note]
+    rows:
+    - [1, 100, null]
+    - [2, 200, null]
+    hl: [0, 2]
+- say: Every `b.note` is NULL, and `'x' = NULL` is never true. Same query, zero rows.
+  code: SELECT * FROM a NATURAL JOIN b;
+  tables:
+  - name: result
+    cols: [id, note, val]
+    rows: []
 ```
 
 Nobody touched the query. A migration added an unrelated `note` column to `b`, and now

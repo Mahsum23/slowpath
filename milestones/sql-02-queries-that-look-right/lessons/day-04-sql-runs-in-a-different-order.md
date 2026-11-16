@@ -233,6 +233,45 @@ LINE 1: SELECT DISTINCT customer FROM orders ORDER BY amount;
                                                       ^
 ```
 
+```viz tables
+title: Where the alias comes into existence
+steps:
+- say: '`WHERE` runs at step 2, on the input rows. There is no `gross` column here yet, so `WHERE gross
+    > 100` fails with *column "gross" does not exist*.'
+  code: SELECT id, amount * 1.2 AS gross FROM orders WHERE gross > 100;
+  tables:
+  - name: what WHERE can see
+    cols: [id, amount]
+    rows:
+    - [1, '120.00']
+    - [2, '40.00']
+    - [3, '500.00']
+    - [4, '30.00']
+    - [5, '90.00']
+    - [6, '25.00']
+- say: '`SELECT` (step 5) computes `amount * 1.2` and **names** it `gross`. From here on the name exists.'
+  tables:
+  - name: after SELECT
+    cols: [id, amount, gross]
+    rows:
+    - [1, '120.00', '144.000']
+    - [2, '40.00', '48.000']
+    - [3, '500.00', '600.000']
+    - [4, '30.00', '36.000']
+    - [5, '90.00', '108.000']
+    - [6, '25.00', '30.000']
+    hl: [2]
+- say: '`ORDER BY` runs at step 7, after the name exists, so `ORDER BY gross DESC LIMIT 2` works.'
+  code: SELECT id, amount * 1.2 AS gross FROM orders ORDER BY gross DESC LIMIT 2;
+  tables:
+  - name: result
+    cols: [id, gross]
+    rows:
+    - [3, '600.000']
+    - [1, '144.000']
+    marks: [hit, hit]
+```
+
 Five errors with five messages, and all of them come from the same one rule.
 
 ### Check yourself
@@ -277,6 +316,33 @@ working rule:
 
 Putting a row condition in `HAVING` is usually either an error or a slower way to get the
 same result. Leaving it out entirely is a wrong number that nothing will ever flag.
+
+```viz tables
+title: The same HAVING, with and without WHERE
+steps:
+- say: Without a `WHERE`, every row reaches the sum, the cancelled 500 included. `bo` totals 530 and passes
+    `HAVING sum(amount) > 150`.
+  code: '... GROUP BY customer HAVING sum(amount) > 150'
+  tables:
+  - name: groups
+    cols: [customer, summed, sum(amount)]
+    rows:
+    - [ana, 120.00 + 40.00, '160.00']
+    - [bo, 500.00 + 30.00, '530.00']
+    - [cy, 90.00 + 25.00, '115.00']
+    marks: [null, hit, out]
+- say: With `WHERE status = 'paid'`, the cancelled row is gone **before** grouping. `bo` now sums to 30
+    and fails the same `HAVING`.
+  code: '... WHERE status = ''paid'' GROUP BY customer HAVING sum(amount) > 150'
+  tables:
+  - name: groups
+    cols: [customer, summed, sum(amount)]
+    rows:
+    - [ana, 120.00 + 40.00, '160.00']
+    - [bo, '30.00', '30.00']
+    - [cy, 90.00 + 25.00, '115.00']
+    marks: [hit, out, out]
+```
 
 ### Seeing the order with your own eyes
 
@@ -352,6 +418,31 @@ whichever one it happened to read first. That was an indeterminate value, delive
 without a warning. MySQL turned the strict mode `ONLY_FULL_GROUP_BY` on by default in
 5.7.5, and a lot of old applications broke on upgrade. They had been relying on a value
 the database had never promised.
+
+```viz tables
+title: One output row per group, so one value per column
+steps:
+- say: '`GROUP BY customer` makes one output row per customer. Each group holds two input rows.'
+  tables:
+  - name: groups
+    cols: [customer, statuses in the group, sum(amount)]
+    rows:
+    - [ana, 'paid, paid', '160.00']
+    - [bo, 'cancelled, paid', '530.00']
+    - [cy, 'paid, paid', '115.00']
+- say: '`status` would need **one** value per output row. `bo`''s group holds two different ones, so Postgres
+    refuses rather than pick one.'
+  code: SELECT customer, status, sum(amount) FROM orders GROUP BY customer;
+  tables:
+  - name: groups
+    cols: [customer, statuses in the group, sum(amount)]
+    rows:
+    - [ana, 'paid, paid', '160.00']
+    - [bo, 'cancelled, paid', '530.00']
+    - [cy, 'paid, paid', '115.00']
+    marks: [null, out, null]
+    hl: [1]
+```
 
 Postgres has one sensible exception, called **functional dependency**. If you group by a
 table's primary key, every other column of that table is determined by it, so it is safe
@@ -461,6 +552,33 @@ SELECT customer, count(*) FROM orders WHERE customer = 'zed' GROUP BY customer;
  customer | count
 ----------+-------
 (0 rows)
+```
+
+```viz tables
+title: Aggregating nothing
+steps:
+- say: No order belongs to `zed`, so `WHERE` leaves no rows at all.
+  code: '... FROM orders WHERE customer = ''zed'''
+  tables:
+  - name: rows after WHERE
+    cols: [customer, amount]
+    rows: []
+- say: 'Without `GROUP BY` the whole input is **one group**, even when it is empty. One row comes back:
+    `count` says 0, `sum` of nothing is NULL.'
+  code: SELECT count(*), sum(amount) FROM orders WHERE customer = 'zed';
+  tables:
+  - name: result
+    cols: [count, sum]
+    rows:
+    - [0, null]
+    marks: [hit]
+- say: 'With `GROUP BY` there is one row per group, and no rows means no groups: nothing comes back at
+    all.'
+  code: SELECT customer, count(*) FROM orders WHERE customer = 'zed' GROUP BY customer;
+  tables:
+  - name: result
+    cols: [customer, count]
+    rows: []
 ```
 
 Code that reads "the first row" of the result has to handle both shapes.
@@ -658,6 +776,44 @@ ORDER BY 1;
 query merged them without a word. `extract(month …)` is the right tool for "which month of
 the year sells best", across years on purpose. For a timeline, truncate.
 
+```viz tables
+title: A month on a timeline, or a month of the year
+steps:
+- say: '`date_trunc` keeps the year; `extract` keeps only the month number. Two sales are from January
+    **2025** and January **2026**.'
+  tables:
+  - name: sales
+    cols: [placed, date_trunc, extract]
+    rows:
+    - ['2025-01-11', '2025-01-01', 1]
+    - ['2025-12-30', '2025-12-01', 12]
+    - ['2026-01-05', '2026-01-01', 1]
+    - ['2026-01-20', '2026-01-01', 1]
+    - ['2026-01-31', '2026-01-01', 1]
+    - ['2026-02-02', '2026-02-01', 2]
+    - ['2026-02-14', '2026-02-01', 2]
+    marks: [hit, null, hit, hit, hit, null, null]
+- say: Grouping by `date_trunc` keeps each month of each year apart.
+  tables:
+  - name: GROUP BY date_trunc
+    cols: [month, sales]
+    rows:
+    - ['2025-01-01', 1]
+    - ['2025-12-01', 1]
+    - ['2026-01-01', 3]
+    - ['2026-02-01', 2]
+- say: 'Grouping by `extract(month …)` piles every January together: 4 sales, from two different years,
+    with no warning.'
+  tables:
+  - name: GROUP BY extract
+    cols: [month, sales]
+    rows:
+    - [1, 4]
+    - [2, 2]
+    - [12, 1]
+    marks: [out]
+```
+
 ### Rounding, and the division that rounds for you
 
 `round(x)` rounds to a whole number, `round(x, n)` to `n` decimal places. Divided and
@@ -809,6 +965,36 @@ ORDER BY customer;
 Every customer stays, each aggregate sees its own rows, and the table is read once. Look at
 `cy`'s `paid_total`: empty, because a `sum` over no rows is NULL (part 5), even when those
 "no rows" are inside a group. `coalesce(sum(amount) FILTER (WHERE …), 0)` when you mean 0.
+
+```viz tables
+title: One WHERE for all, or one FILTER each
+steps:
+- say: '`WHERE status = ''paid''` removes rows before grouping, for **every** aggregate. `cy` had no paid
+    rows, so `cy` disappears, and so does the count of attempts.'
+  code: '... WHERE status = ''paid'' GROUP BY customer'
+  tables:
+  - name: payments
+    cols: [customer, status, amount]
+    rows:
+    - [ana, paid, '120.00']
+    - [ana, paid, '40.00']
+    - [bo, refunded, '500.00']
+    - [bo, paid, '30.00']
+    - [cy, failed, '90.00']
+    - [cy, failed, '25.00']
+    marks: [null, null, out, null, out, out]
+- say: '`FILTER (WHERE …)` gives one aggregate its own condition. Every row still reaches `count(*)`,
+    so every customer stays, and `cy`''s paid total is NULL (a sum over no rows).'
+  code: count(*) AS attempts, count(*) FILTER (WHERE status = 'paid') AS paid
+  tables:
+  - name: result
+    cols: [customer, attempts, paid, paid_total]
+    rows:
+    - [ana, 2, 2, '160.00']
+    - [bo, 2, 1, '30.00']
+    - [cy, 2, 0, null]
+    marks: [null, null, hit]
+```
 
 ### The older spelling, and its trap
 

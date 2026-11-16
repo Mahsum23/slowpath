@@ -958,6 +958,14 @@ lessons, "text only usually doesn't work".
   not 9217. A visual is keyed by its data, so moving to another lesson starts at step 1 (a
   stale step index past the end of a shorter visual had crashed it), and its code wraps.
 
+- Third set (35), so every **part** has one, not just every day: a reader on day 5's part 1 saw
+  nothing because that day's visuals sat in parts 2 and 3. `test-viz.mjs` now fails on any page
+  without a visual. A width pass over all 207 steps at 390px found 24 that scrolled sideways;
+  table cells now wrap (`overflow-wrap: anywhere`, table `max-width: 100%`) and slice cells
+  shrink to fit about 300px. `scripts/check-viz-width.mjs` repeats that pass against a running
+  dev server. Go facts in them (closed buffered channel, append growth 1/2/4/8) were run on
+  Go 1.24.7.
+
 ## 9. Offline & local storage
 
 - **Content cache:** Cache API / IndexedDB — loaded weeks fully offline.

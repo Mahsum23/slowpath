@@ -39,6 +39,29 @@ The design payoff is that zero values are chosen to be *useful*, not merely defi
 unlocked mutex, so `var mu sync.Mutex` is ready to use with no constructor. Go has no
 constructors at all, and this is why it can get away with that.
 
+```viz tables
+title: Declared, never assigned
+steps:
+- say: Every variable starts at its type's zero value. There is no garbage to read.
+  tables:
+  - name: zero values
+    cols: [declaration, value]
+    rows:
+    - [var i int, '0']
+    - [var s string, '""']
+    - [var p *int, <nil>]
+    - ['var pt struct{X, Y int}', '{X:0 Y:0}']
+    - ['var xs []int', '[] (len 0)']
+- say: 'And the zero values are chosen to be usable: a nil slice can already be appended to.'
+  tables:
+  - name: zero values
+    cols: [declaration, value]
+    rows:
+    - ['var xs []int', '[] (len 0)']
+    - ['xs = append(xs, 1)', '[1]']
+    marks: [null, hit]
+```
+
 ### Check yourself
 
 1. What is `var count int` before you assign anything, and how does that differ from
@@ -198,6 +221,40 @@ in variable declaration (overflows)
 
 Note that the compiler tells you the *value* it computed. That is an error message you
 can only get from a language that does its constant arithmetic before choosing a type.
+
+```viz tables
+title: No silent conversions
+steps:
+- say: '`int` and `int64` are different types, even where both are 64 bits. Go will not add them.'
+  code: 'var a int = 3
+
+    var b int64 = 4'
+  tables:
+  - name: go build
+    cols: [expression, result]
+    rows:
+    - [a + b, mismatched types int and int64]
+    marks: [out]
+- say: Write the conversion and it is visible exactly where it happens.
+  tables:
+  - name: go run
+    cols: [expression, result]
+    rows:
+    - [int64(a) + b, '7']
+    marks: [hit]
+- say: Untyped constants are worked out at compile time with arbitrary precision. `big * 4` is past every
+    integer type, and that is fine until it has to fit one.
+  code: 'const big = 1 << 62
+
+    const huge = big * 4'
+  tables:
+  - name: constants
+    cols: [expression, result]
+    rows:
+    - [1 << 62, '4611686018427387904']
+    - [float64(big * 4) / 1e18, '18.446744073709553']
+    hl: [1]
+```
 
 ### Check yourself
 

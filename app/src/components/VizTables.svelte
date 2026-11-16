@@ -63,6 +63,11 @@
     align-items: flex-start;
   }
 
+  .tbl {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .name {
     margin: 0 0 4px;
     font-family: var(--font-mono);
@@ -72,20 +77,23 @@
   }
 
   table {
+    max-width: 100%;
     border-collapse: collapse;
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 12.5px;
     background: var(--surface);
     border-radius: 8px;
     overflow: hidden;
     border: 1px solid var(--border);
   }
 
+  /* Cells wrap rather than push the table off a phone screen: a long timestamp or error
+     message on two lines is readable, a column scrolled out of sight is not. */
   th,
   td {
-    padding: 4px 10px;
+    padding: 4px 8px;
     text-align: left;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
     border-bottom: 1px solid var(--border);
   }
 

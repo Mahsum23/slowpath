@@ -196,6 +196,39 @@ variable declaration: Broken does not implement Greeter (missing method Greet)
 ``` You will find this line near the top of a great many real Go files, and
 it is one of those things that looks like line noise until someone explains it once.
 
+```viz tables
+title: Satisfied without asking
+steps:
+- say: '`Greeter` asks for one method.'
+  tables:
+  - name: Greeter needs
+    cols: [method]
+    rows:
+    - [Greet() string]
+- say: '`English` has that method. It never mentions `Greeter`, and it satisfies it anyway.'
+  code: 'var g Greeter = English{Name: "world"}'
+  tables:
+  - name: Greeter needs
+    cols: [method]
+    rows:
+    - [Greet() string]
+  - name: English has
+    cols: [method]
+    rows:
+    - [Greet() string]
+    marks: [hit]
+- say: 'A type without the method is caught where it is used as one: at compile time.'
+  code: var _ Greeter = Broken{}  // missing method Greet
+  tables:
+  - name: Greeter needs
+    cols: [method]
+    rows:
+    - [Greet() string]
+  - name: Broken has
+    cols: [method]
+    rows: []
+```
+
 ### Check yourself
 
 1. What does a Go type have to write in order to implement an interface?

@@ -7,10 +7,11 @@
   import type { SlicesStep } from '../lib/viz';
 
   let { step }: { step: SlicesStep } = $props();
-  const CELL = 44;
+  // Cells shrink for a long array so it still fits a phone (about 300px of frame).
+  const CELL = $derived(Math.min(44, Math.floor(300 / Math.max(1, ...step.arrays.map((a) => a.cells.length)))));
 </script>
 
-<div class="slices">
+<div class="slices" style="--cell: {CELL}px">
   {#each step.arrays as a, ai}
     <div class="arr">
       <p class="name">{a.name}</p>
@@ -51,8 +52,8 @@
   }
 
   .cell {
-    width: 44px;
-    height: 44px;
+    width: var(--cell);
+    height: var(--cell);
     display: grid;
     place-items: center;
     position: relative;
