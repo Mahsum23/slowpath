@@ -906,6 +906,24 @@ test it. `hooks.ts` is pure and tested (`test-hooks.mjs`).
 - First set: 107 hooks (SQL 53, Go 23, C++ 31). The mentor's prompt now offers a hook when
   something "won't stick".
 
+## 8.17 Coming back after a long break (2026-11-16)
+
+He came back after a long break afraid of a "200+ card debt" and unsure where to start.
+`comeback(scores, now)` in `motivation.ts` (pure, tested in `test-motivation.mjs`) returns
+`{ gap, day }` when today is one of the first three active days after 7+ empty ones,
+derived from the activity record so it needs no stored state and syncs for free.
+
+- `app.dueNow` uses it: slice size `COMEBACK_RAMP[day-1]` (5, 8, 12, capped by the setting),
+  no new cards, and on day 1 `todayQueue(…, easyFirst = true)`, which deals the cards with the
+  *highest* recall first (tested in `test-review.mjs`).
+- `Review.queueFollowUps` does nothing while it lasts, so misses do not grow the day.
+- Today shows a "Welcome back" card with one button on day 1 (and hides the ambush, which
+  would say the same thing twice), a one-line "Easing back in, day N of 3" on days 2–3, and
+  "That's today's plan, done" once the slice is empty.
+- Verified in Chromium, light and dark: last active 30 October, 59 cards due, opened 16
+  November: "16 days away. Today is 5 cards", exactly five dealt even when every answer was
+  wrong, then the done line.
+
 ## 9. Offline & local storage
 
 - **Content cache:** Cache API / IndexedDB — loaded weeks fully offline.

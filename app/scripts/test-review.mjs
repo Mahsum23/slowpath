@@ -320,6 +320,14 @@ ok('a parsons id round-trips', parseCardId(`parsons:day-01:${keyed}`).questionId
   ok('no more new cards once the day has had its share', todayQueue(fresh, st4, now).filter((c) => !st4.cards[c.id]).length === 0);
   ok('a small budget is honoured', todayQueue(deck, st, now, 4).length === 4);
   ok('an empty deck is an empty day', todayQueue([], st, now).length === 0);
+
+  // Coming back after a break: a small slice, nothing new, what is still known first.
+  const back = todayQueue(deck, st, now, 5, 0, true);
+  ok('the first day back is five cards', back.length === 5);
+  ok('…with nothing new in it', back.every((c) => cards[c.id]));
+  const easy = back.map(r);
+  const rest = deck.filter((c) => cards[c.id] && !back.includes(c)).map(r);
+  ok('…and the ones most likely still known come first', Math.min(...easy) >= Math.max(...rest) - 1e-12);
 }
 
 console.log(fails ? `\n  ${fails} FAILING` : '\n  all review cases pass');

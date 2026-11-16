@@ -8,7 +8,7 @@
 
   import MoreLessons from '../components/MoreLessons.svelte';
   import { LAND_AT, practiceStatus, ROUND_SIZE } from '../lib/practice';
-  import { freshStart, knownNow, lastActiveBefore } from '../lib/motivation';
+  import { COMEBACK_RAMP, freshStart, knownNow, lastActiveBefore } from '../lib/motivation';
   import { today } from '../lib/date';
   import { partDone, partQuestions } from '../lib/parts';
   import { knock } from '../lib/eggs';
@@ -53,6 +53,9 @@
     return freshStart(lastActiveBefore(app.scores));
   });
   const stillKnown = $derived(knownNow(app.progress.review));
+  /** Easing back in after a week or more away (motivation.ts comeback). */
+  const back = $derived(app.ready ? app.comingBack : null);
+  const doneToday = $derived((app.scores.get(today()) ?? 0) > 0);
   const wins = $derived(app.winsToday);
   /** A review card takes about half a minute, a written one more; this is a fair middle. */
   const reviewMinutes = $derived(Math.max(1, Math.round(app.dueNow.length * 0.5)));
@@ -96,7 +99,7 @@
   <!-- Deliberately above the lesson: the deck's whole job is to catch you before you
        move on to new material, not to wait politely underneath it. Spent for the day
        the moment the deck is opened. -->
-  {#if app.ready && app.ambush}
+  {#if app.ready && app.ambush && !(back && back.day === 1 && !doneToday)}
     <button class="ambush" onclick={() => router.go('/review')}>
       <span class="glyph" aria-hidden="true">
         <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5" /></svg>
@@ -123,7 +126,38 @@
     </div>
   {/if}
 
-  {#if fresh}
+  {#if back && back.day === 1 && !doneToday && app.dueNow.length}
+    <!-- The first day back after a long break. One thing to do, and it is small: the pile is
+         real but it is not today's business, and the first cards are the ones most likely
+         still known, so the way back in starts with getting things right. -->
+    <article class="card back">
+      <p class="eyebrow">Welcome back</p>
+      <h2>{back.gap} days away. Today is {app.dueNow.length} card{app.dueNow.length === 1 ? '' : 's'}.</h2>
+      <p>
+        That is the whole plan for today, about {reviewMinutes} minute{reviewMinutes === 1 ? '' : 's'}, starting with the ones you
+        most likely still remember. Whatever else is waiting stays out of sight: it comes back a few
+        cards at a time, and nothing is owed for the gap.
+      </p>
+      <p class="fine">
+        Tomorrow {COMEBACK_RAMP[1]}, then {COMEBACK_RAMP[2]}, then your usual review. No new cards
+        until then. Something you knew once comes back faster than it went in the first time.
+      </p>
+      <Button full onclick={() => router.go('/review')}>
+        Start with {app.dueNow.length}
+        <svg class="arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
+      </Button>
+    </article>
+  {:else if back && doneToday && app.clearedToday && !app.dueNow.length}
+    <div class="fresh">
+      <strong>That's today's plan, done.</strong>
+      Everything below is extra, only if you feel like it.
+    </div>
+  {:else if back && back.day > 1 && !doneToday}
+    <div class="fresh">
+      <strong>Easing back in, day {back.day} of {COMEBACK_RAMP.length}.</strong>
+      Today's review is {Math.min(app.dailyReview, COMEBACK_RAMP[back.day - 1])} cards, and still nothing new.
+    </div>
+  {:else if fresh}
     <div class="fresh">
       {#if fresh.kind === 'return'}
         <strong>Welcome back.</strong>
@@ -740,6 +774,28 @@
   .strip em b {
     font-weight: 700;
     color: var(--text);
+  }
+
+  .back {
+    margin: 0 0 16px;
+    padding: 20px 20px 18px;
+  }
+
+  .back h2 {
+    margin: 4px 0 8px;
+    font-size: 21px;
+    letter-spacing: -0.015em;
+  }
+
+  .back p {
+    margin: 0 0 10px;
+    line-height: 1.55;
+  }
+
+  .back .fine {
+    font-size: 13.5px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
   }
 
   .fresh {

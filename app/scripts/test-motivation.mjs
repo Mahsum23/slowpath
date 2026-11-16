@@ -95,5 +95,23 @@ ok('a Monday is a new week', M.freshStart('2026-10-11', new Date(2026, 9, 12, 9)
 ok('the first of the month is a new month', M.freshStart('2026-10-31', new Date(2026, 10, 1, 9))?.kind === 'month');
 ok('last active before today ignores today', M.lastActiveBefore(new Map([['2026-10-08', 3], ['2026-10-06', 1], ['2026-10-01', 2]]), NOW) === '2026-10-06');
 
+console.log('\n— coming back after a long break —');
+{
+  const at = (y, m, d, h = 10) => new Date(y, m - 1, d, h);
+  const before = [['2026-10-20', 4], ['2026-10-21', 2], ['2026-10-30', 6]];
+  const s = (extra = []) => new Map([...before, ...extra]);
+  // Last active 30 October; back on 16 November, sixteen empty days later.
+  ok('the first day back is day 1, even before anything is done', JSON.stringify(M.comeback(s(), at(2026, 11, 16))) === JSON.stringify({ gap: 16, day: 1 }));
+  ok('…and still day 1 once something has been done', M.comeback(s([['2026-11-16', 3]]), at(2026, 11, 16))?.day === 1);
+  ok('the next active day is day 2, however long after', M.comeback(s([['2026-11-16', 3]]), at(2026, 11, 18))?.day === 2);
+  ok('…then day 3', M.comeback(s([['2026-11-16', 3], ['2026-11-18', 2]]), at(2026, 11, 19))?.day === 3);
+  ok('…then it is over: back to the usual review', M.comeback(s([['2026-11-16', 3], ['2026-11-18', 2], ['2026-11-19', 1]]), at(2026, 11, 20)) === null);
+  ok('six empty days is a fresh start, not an easing-in', M.comeback(new Map([['2026-10-30', 6]]), at(2026, 11, 6)) === null);
+  ok('seven empty days is', M.comeback(new Map([['2026-10-30', 6]]), at(2026, 11, 7))?.gap === 7);
+  ok('a first visit ever is not a comeback', M.comeback(new Map(), at(2026, 11, 16)) === null);
+  ok('days with nothing done do not count as active', M.comeback(new Map([['2026-10-30', 6], ['2026-11-10', 0]]), at(2026, 11, 16))?.gap === 16);
+  ok('the ramp grows to the usual review', M.COMEBACK_RAMP.join() === '5,8,12');
+}
+
 console.log(fails ? `\n${fails} failed` : '\nall passed');
 process.exit(fails ? 1 : 0);
