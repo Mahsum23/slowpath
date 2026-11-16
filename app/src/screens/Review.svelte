@@ -808,6 +808,10 @@
    */
   function queueFollowUps(missed: CardRef) {
     if (followsDealt >= MAX_FOLLOWS) return;
+    // Easing back in after a long break, the day is a promise of a few cards. Misses are
+    // expected then, and three more on each would quietly turn five cards into fifteen; the
+    // card's hook still appears, and the idea comes back on its own schedule.
+    if (app.comingBack) return;
     const day = app.dayById(missed.dayId);
     if (!day) return;
     const label = themeLabel(day, missed);

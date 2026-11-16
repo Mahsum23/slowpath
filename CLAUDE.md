@@ -90,6 +90,13 @@ So after each fix: push, then check whether the branch's PR is still open. If it
 merged, open a new one for the commits that came after it and give him that link. One
 link per fix, in the reply, every time.
 
+**Then merge and deploy it, without waiting to be asked.** He said so (2026-11-16): every
+feature I write gets merged and deployed unless he says otherwise for that piece of work.
+So once the checks pass and the PR is open, merge it, wait for the "Deploy app" workflow on
+`main`, and confirm in the reply that it succeeded (or say plainly that it failed, and why).
+The PR link still goes in the reply. The exception is work he has asked to look at first,
+or anything outside this repo; those wait for him.
+
 ## Tone
 
 Don't write this like a textbook or run it like a ticket queue. Act like an actual
@@ -591,6 +598,24 @@ existed, so "everything due" only grew. Now (`review.ts todayQueue`, tested in
 - **Never show the backlog as a number to be paid off.** Today and the deck say "Today's
   review · N left" and "about M min". The total waiting exists (`waitingCount`) but is not
   put in front of him.
+
+**Coming back after a long break is an easing-in, not a reckoning.** He came back after a
+couple of weeks away "terrified" of a 200-card debt, unsure where to start, and thinking of
+resetting everything. Even with the backlog hidden, the slice dealt the most-forgotten cards
+first, which after a break means a first session of mostly misses. So after 7+ empty days
+(`comeback` in `motivation.ts`, derived from activity, never stored) the next three active
+days are:
+
+- **a ramp**: 5, 8, then 12 cards (`COMEBACK_RAMP`), then the usual review;
+- **nothing new** while it lasts, and **no follow-ups after a miss** (the hook still shows),
+  so five cards stays five;
+- **easy first on day one**: the cards most likely still known come first
+  (`todayQueue(…, easyFirst)`), because coming back starts with getting things right;
+- **one thing on Today**: a "Welcome back · N days away · today is 5 cards" card with a single
+  button, and once it is done, "That's today's plan, done. Everything below is extra."
+
+Never answer "I'm overwhelmed" with a reset of his record or a bigger push. Shrink the
+next step until it is obviously doable, and say plainly that nothing is owed for the gap.
 
 ## Motivation comes from seeing progress, not from points
 

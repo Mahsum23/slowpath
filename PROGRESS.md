@@ -669,3 +669,11 @@ Ariadne's thread for keyset paging, a hermit crab for `append`. They close each 
 it stick"), come back under a card he just missed, and live in a gallery (Stats → Memory
 hooks) with a "cover the facts" mode. He can replace any with his own, which then wins:
 made-up-by-you holds better than read.
+
+**Coming back (2026-11-16).** Back after about two weeks away and, in his words, a bit
+terrified: 200+ cards of material learned but not mastered, no idea where to start, half
+wanting to reset all progress. Didn't reset anything. The backlog was already hidden, but the
+first review back would have dealt the most-forgotten cards first. Now a return after 7+ days
+is three days of easing in: 5 cards (easiest first), then 8, then 12, nothing new, no
+follow-up pile-ups, and one "Welcome back" card on Today with one button. Worth checking in
+on how the first few days back felt before writing any new lessons.

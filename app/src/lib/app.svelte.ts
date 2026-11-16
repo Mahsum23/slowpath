@@ -35,7 +35,7 @@ import type { DayPart } from './types';
 import { heatMap, themeKey, themeLabel, type Heat } from './focus';
 import { hookKey } from './hooks';
 import {
-  activityScores, conceptStrength, freshStart, knownNow, lastActiveBefore, logAnswer, type ConceptStrength,
+  activityScores, comeback, COMEBACK_RAMP, conceptStrength, freshStart, knownNow, lastActiveBefore, logAnswer, type ConceptStrength,
 } from './motivation';
 import {
   answerEgg, beastFor, calendarEgg, clockEgg, emptyEggs, FACT_CHANCE, LETTERS, milestoneCrossed, pickFact,
@@ -199,7 +199,19 @@ class AppStore {
    * number that only grows reads as a debt.
    */
   get dueNow(): CardRef[] {
+    const back = this.comingBack;
+    if (back) {
+      // Easing back in after a long break (motivation.ts comeback): a small slice that grows,
+      // nothing new, and on the first day what is still known first.
+      const size = Math.min(this.dailyReview, COMEBACK_RAMP[back.day - 1]);
+      return todayQueue(this.deck, this.progress.review, new Date(), size, 0, back.day === 1);
+    }
     return todayQueue(this.deck, this.progress.review, new Date(), this.dailyReview);
+  }
+
+  /** Which day of easing back in after a long break today is, if it is one. */
+  get comingBack(): { gap: number; day: number } | null {
+    return comeback(this.scores);
   }
 
   /** Cards due again beyond today's slice. Shown nowhere loudly; they come in later slices. */

@@ -387,6 +387,8 @@ export function todayQueue(
   now: Date = new Date(),
   budget = DAILY_REVIEW,
   newPerDay = NEW_PER_DAY,
+  /** The first day back after a long break: what is most likely still known comes first. */
+  easyFirst = false,
 ): CardRef[] {
   const on = today(now);
   let answered = 0;
@@ -405,7 +407,7 @@ export function todayQueue(
     if (!rc || rc.seen === 0) fresh.push(c);
     else if (rc.due <= on) again.push({ c, r: recallNow(rc, now) });
   }
-  again.sort((a, b) => a.r - b.r);
+  again.sort((a, b) => (easyFirst ? b.r - a.r : a.r - b.r));
 
   const newRoom = Math.min(Math.max(0, newPerDay - introduced), fresh.length);
   // New cards are guaranteed a third of the room (at least one); reviews take the rest,

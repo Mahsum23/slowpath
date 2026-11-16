@@ -261,6 +261,38 @@ export function freshStart(lastActive: string | null, now: Date = new Date()): F
   return null;
 }
 
+/**
+ * Coming back after a long break: the first days back are an easing-in, not a reckoning.
+ *
+ * After a week or more away the review deck holds a lot that is due, and the slice would deal
+ * the most-forgotten first: a first session back made almost entirely of misses, which is the
+ * fastest way to make someone close the app again. Self-efficacy is built mostly by success
+ * experiences (Bandura's "mastery experiences"), and relearning something once known is
+ * faster than learning it ("savings", Ebbinghaus 1885), so the cards are not lost, only quiet.
+ *
+ * So for the first COMEBACK_RAMP.length active days after such a gap: a small review that
+ * grows (5, 8, 12, then the usual), no brand-new cards (the same advice Anki users give
+ * each other after a break: pause new cards until reviews are manageable), and on the first
+ * day the cards most likely still known come first, so the session starts with wins.
+ *
+ * Derived from the activity record, never stored: `day` is which active day of the
+ * easing-in today is (today counts even before anything is done), `gap` the empty days.
+ */
+export const COMEBACK_GAP = 7;
+export const COMEBACK_RAMP = [5, 8, 12] as const;
+
+export function comeback(scores: Map<string, number>, now: Date = new Date()): { gap: number; day: number } | null {
+  const t = today(now);
+  const days = [...scores].filter(([d, v]) => v > 0 && d <= t).map(([d]) => d).sort();
+  if (days[days.length - 1] !== t) days.push(t);
+  for (let back = 1; back <= COMEBACK_RAMP.length && back < days.length; back++) {
+    const i = days.length - back;
+    const gap = daysBetween(days[i - 1], days[i]) - 1;
+    if (gap >= COMEBACK_GAP) return { gap, day: back };
+  }
+  return null;
+}
+
 /** The most recent date with anything done, before today. */
 export function lastActiveBefore(scores: Map<string, number>, now: Date = new Date()): string | null {
   const t = today(now);
