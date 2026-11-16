@@ -45,6 +45,48 @@ after pointer receiver: 1
 discarded, and your original is untouched — and nothing warns you, because incrementing a
 local is perfectly legal. `BumpPointer` receives the address and modifies the real thing.
 
+```viz tables
+title: A copy, or the real thing
+steps:
+  - say: "One `Counter` in the caller, `n` at 0."
+    code: var c Counter
+    tables:
+      - name: caller's c
+        cols: [n]
+        rows: [[0]]
+  - say: "A value receiver gets a **copy**. `c.n++` inside the method changes the copy."
+    code: "c.BumpValue() // func (c Counter) BumpValue() { c.n++ }"
+    tables:
+      - name: caller's c
+        cols: [n]
+        rows: [[0]]
+      - name: the method's c (a copy)
+        cols: [n]
+        rows: [[1]]
+        marks: [new]
+  - say: The method returns and the copy is thrown away. The caller still prints 0.
+    tables:
+      - name: caller's c
+        cols: [n]
+        rows: [[0]]
+        marks: [hit]
+      - name: the method's c (a copy)
+        cols: [n]
+        rows: [[1]]
+        marks: [out]
+  - say: "A pointer receiver gets the address (Go writes the `&` for you), so `c.n++` changes the caller's own value: 1."
+    code: "c.BumpPointer() // func (c *Counter) BumpPointer() { c.n++ }"
+    tables:
+      - name: caller's c
+        cols: [n]
+        rows: [[1]]
+        marks: [hit]
+      - name: the method's c (a pointer)
+        cols: [points at]
+        rows: [["caller's c"]]
+        marks: [new]
+```
+
 The rule in practice: **if the method modifies the receiver, or the struct is large, use
 a pointer. Then use a pointer for all its methods**, even the ones that don't need it,
 because a type whose method set is half values and half pointers is a type whose

@@ -45,6 +45,22 @@ go run hello.go      # compile to a temp dir and execute, in one step
 go build hello.go    # leave an executable called ./hello next to the source
 ```
 
+```viz seq
+title: What go run actually does
+lanes: [you, go tool, temp dir, your program]
+steps:
+  - say: You ask for a run, and it looks like a script would.
+    msg: {from: 0, to: 1, text: go run hello.go}
+  - say: But the go tool **compiles** first, a real machine-code binary, into a temporary directory.
+    msg: {from: 1, to: 2, text: "compile → hello"}
+    notes: {"2": "hello: static binary, runtime inside"}
+  - say: Then it executes that binary as an ordinary process.
+    msg: {from: 2, to: 3, text: exec}
+  - say: Your program prints, and when it exits the temporary directory is cleaned up. `go build` does the same compile and keeps the file.
+    msg: {from: 3, to: 0, text: hello from Go}
+    notes: {"2": "removed"}
+```
+
 `go run` feels like a scripting language and isn't one — it really is compiling. On this
 machine, a warm `go build` of that file takes **0.3 seconds** and produces a **2.2 MB**
 binary. That size is not bloat so much as honesty: the Go runtime, garbage collector and

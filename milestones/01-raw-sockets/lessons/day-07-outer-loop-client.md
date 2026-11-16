@@ -112,6 +112,24 @@ to read the response. The response never comes, because `close()` tore down both
 directions and the server's reply hit a socket that no longer exists — it gets an RST for
 its trouble. `shutdown(SHUT_WR)` then read, *then* `close()`, is the correct sequence.
 
+```viz seq
+title: Half close, then read the reply
+lanes: [client, server]
+steps:
+  - say: The client sends its whole request.
+    msg: {from: 0, to: 1, text: request}
+  - say: "`shutdown(fd, SHUT_WR)` sends FIN: \"that's all from me\". The client's read side stays open."
+    msg: {from: 0, to: 1, text: "FIN (shutdown SHUT_WR)"}
+    notes: {"0": "can still read", "1": "recv() returned 0: request complete"}
+  - say: The server knows the request is complete, so it answers.
+    msg: {from: 1, to: 0, text: reply}
+  - say: The server is done too and closes its side.
+    msg: {from: 1, to: 0, text: FIN}
+    notes: {"0": "recv() returned 0: reply complete"}
+  - say: "Only now does the client `close()`. With `close()` instead of `shutdown()` back at step 2, the reply would have hit a socket that no longer reads, and the server would get an RST."
+    notes: {"0": "close()"}
+```
+
 There's also a refcount difference worth knowing: after `fork()`, two processes hold the
 same socket, and `close()` in one only decrements the count — the connection stays up
 until the last holder closes. `shutdown()` ignores refcounts entirely and acts on the

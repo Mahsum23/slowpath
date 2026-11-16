@@ -686,3 +686,7 @@ answers in the first sentence and stays under ~80 words unless asked for depth. 
 pipeline, the LEFT JOIN ghost row, fan-out, window frames, BETWEEN vs half-open, NOT IN with a
 NULL, the UPDATE that moves a row, Go's sub-slice trap, the TCP handshake and accept queue.
 Worth asking which of them actually helped, before making more of the same kind.
+
+**Visuals on every day (2026-11-16).** Asked for visuals on the remaining days: 13 more, so all
+24 written days now have at least one (25 in total). Drawing C++ day 2's byte swap caught a
+wrong number in that lesson (port 9000 swapped is 10275, not 9217), now fixed.

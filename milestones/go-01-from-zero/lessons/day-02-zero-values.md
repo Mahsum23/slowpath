@@ -78,6 +78,39 @@ The inner `count` is a different variable that happens to share a name, and it d
 the closing brace. The outer one was never touched. This is **shadowing**, it compiles
 without a murmur, and it is the single most common way a Go program silently does nothing.
 
+```viz tables
+title: Two variables called count
+steps:
+  - say: "`count := 1` declares a variable in the function's scope."
+    code: count := 1
+    tables:
+      - name: variables in scope
+        cols: [scope, name, value]
+        rows: [[function, count, 1]]
+        marks: [new]
+  - say: "Inside the `if`, `:=` **declares a new one**. It has the same name, so it hides the outer one; it is not an assignment to it."
+    code: "count := 2 // inside if true { … }"
+    tables:
+      - name: variables in scope
+        cols: [scope, name, value]
+        rows: [[function, count, 1], [if block, count, 2]]
+        marks: [null, new]
+  - say: The closing brace ends the inner variable. The outer one was never touched.
+    code: "}"
+    tables:
+      - name: variables in scope
+        cols: [scope, name, value]
+        rows: [[function, count, 1], [if block, count, 2]]
+        marks: [null, out]
+  - say: "So the program prints 1. It compiled cleanly, and the 2 went nowhere."
+    code: fmt.Println("outer count is", count)
+    tables:
+      - name: variables in scope
+        cols: [scope, name, value]
+        rows: [[function, count, 1]]
+        marks: [hit]
+```
+
 The version that actually bites in real code looks like this, because it does not even
 have an obvious inner scope:
 

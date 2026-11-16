@@ -16,7 +16,11 @@
 <div class="prose">
   {#each segments as s}
     {#if s.kind === 'viz'}
-      <Viz viz={s.viz} {lang} />
+      <!-- Keyed by the visual itself: moving to another lesson starts its visual at step 1
+           instead of reusing the last one's place. -->
+      {#key s.viz}
+        <Viz viz={s.viz} {lang} />
+      {/key}
     {:else}
       {@html render(s.text)}
     {/if}

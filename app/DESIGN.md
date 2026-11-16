@@ -949,6 +949,14 @@ lessons, "text only usually doesn't work".
   sub-slice trap, capacity 4 checked on Go 1.24.7); C++ 3 (the handshake and accept queue).
 - Verified: `test-viz.mjs`, build validation, `check-sql-lesson.py` unchanged (days 4–10 0
   problems, same block counts), Chromium light and dark clicking through each kind.
+- Second set (13), so every written day has one: SQL 9 (three spellings of a rate, values
+  checked on PostgreSQL 16); Go 1 (`go run` compiles), 2 (`:=` shadowing), 4 (value vs pointer
+  receiver), 5 (`defer` takes its argument early), 6 (a lost increment, a marked sketch); C++ 1
+  (the fd table across `fork`), 2 (port 9000 byte by byte), 4 (listener and accepted fds), 5
+  (`MSG_PEEK` vs `recv`), 6 (two sends, three receives), 7 (half close), 8 (who ends up in
+  TIME_WAIT). Drawing day 2 caught a wrong figure in the lesson: 9000 byte-swapped is 10275,
+  not 9217. A visual is keyed by its data, so moving to another lesson starts at step 1 (a
+  stale step index past the end of a shorter visual had crashed it), and its code wraps.
 
 ## 9. Offline & local storage
 

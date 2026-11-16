@@ -147,6 +147,50 @@ at the end i = 99
 deferred saw i = 1
 ```
 
+```viz tables
+title: The argument is taken when you defer
+steps:
+  - say: "`i` starts at 1."
+    code: i := 1
+    tables:
+      - name: variables
+        cols: [i]
+        rows: [[1]]
+  - say: "`defer` evaluates its arguments **now** and stacks the call, with the 1 already inside it."
+    code: defer fmt.Println("deferred saw i =", i)
+    tables:
+      - name: variables
+        cols: [i]
+        rows: [[1]]
+      - name: deferred calls (last in, first out)
+        cols: [call]
+        rows: [["Println(\"deferred saw i =\", 1)"]]
+        marks: [new]
+  - say: "Changing `i` afterwards changes the variable, not the stacked call."
+    code: i = 99
+    tables:
+      - name: variables
+        cols: [i]
+        rows: [[99]]
+        hl: [0]
+      - name: deferred calls (last in, first out)
+        cols: [call]
+        rows: [["Println(\"deferred saw i =\", 1)"]]
+  - say: The body prints first.
+    code: fmt.Println("at the end i =", i)
+    tables:
+      - name: printed
+        cols: [line]
+        rows: [["at the end i = 99"]]
+        marks: [new]
+  - say: When the function returns, the stacked call runs, with the value it captured.
+    tables:
+      - name: printed
+        cols: [line]
+        rows: [["at the end i = 99"], ["deferred saw i = 1"]]
+        marks: [null, hit]
+```
+
 The arguments were evaluated the moment the `defer` statement ran; only the *call* was
 postponed. If you want the late value, defer a closure instead — `defer func() {
 fmt.Println(i) }()` — which captures the variable rather than its value.
