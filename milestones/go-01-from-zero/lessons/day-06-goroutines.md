@@ -154,6 +154,24 @@ total: 985
 total: 953
 ```
 
+```viz seq
+title: "A sketch: how two increments become one"
+lanes: [goroutine A, total, goroutine B]
+steps:
+  - say: "`total++` is three steps: read the value, add one, write it back. Say `total` is 41."
+    notes: {"1": "41"}
+  - say: A reads 41.
+    msg: {from: 1, to: 0, text: read 41}
+  - say: Before A writes, B reads too, and gets the same 41.
+    msg: {from: 1, to: 2, text: read 41}
+  - say: A writes 42.
+    msg: {from: 0, to: 1, text: write 42}
+    notes: {"1": "42"}
+  - say: B writes 42 as well. Two increments ran, and the total went up by one. Nothing crashed and nothing warned.
+    msg: {from: 2, to: 1, text: write 42}
+    notes: {"1": "42, one increment lost"}
+```
+
 Three runs, three wrong answers, no crash, no error. `total++` is read-modify-write, and
 the increments interleave. Now build with `-race`:
 

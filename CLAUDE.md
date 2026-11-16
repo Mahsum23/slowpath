@@ -323,8 +323,10 @@ DESIGN.md §8.18):
   (`say`) is one or two sentences. A sketch with made-up data says so in its title.
 - `build-content.mjs` validates each one with the app's own `vizProblems` and fails the build
   on a bad one; `test-viz.mjs` checks every shipped visual splits out and draws.
-- Write the visual with the day. Days without one yet: SQL day 9, Go days 1, 2, 4–6 and the
-  C++ days other than day 3; add them as those days are next revisited.
+- Write the visual with the day. Every written day has at least one (25 across the three
+  tracks as of 2026-11-16); a new day is not finished without its own.
+- Keep a visual narrow enough for a phone: two or three short columns, or the frame scrolls
+  sideways and the point is off-screen. Code in a visual wraps rather than scrolls.
 
 **The app has its own mentor, and it obeys this file.** Settings → Mentor chat turns on
 an in-app chat that carries the persona and the prime directive above, plus the current

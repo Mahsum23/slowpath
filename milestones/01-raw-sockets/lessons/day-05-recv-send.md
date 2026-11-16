@@ -70,6 +70,60 @@ Run that and the first two calls return the same bytes and the same count. Nothi
 the connection changed between them; the data was sitting in kernel memory the whole
 time, and "reading" is a copy-and-remove operation, not an event.
 
+```viz tables
+title: Reading is copy-and-remove
+steps:
+  - say: "Five bytes arrived. They sit in the kernel's receive buffer whether or not you have called `recv()`."
+    tables:
+      - name: kernel receive buffer
+        cols: [bytes]
+        rows: [[hello]]
+      - name: your buf
+        cols: [bytes]
+        rows: []
+  - say: "`MSG_PEEK` copies them into your buffer and **leaves them** in the kernel's."
+    code: recv(fd, buf, sizeof(buf), MSG_PEEK);   // returns 5
+    tables:
+      - name: kernel receive buffer
+        cols: [bytes]
+        rows: [[hello]]
+        marks: [hit]
+      - name: your buf
+        cols: [bytes]
+        rows: [[hello]]
+        marks: [new]
+  - say: Peek again and you get the identical bytes. Nothing was consumed.
+    code: recv(fd, buf, sizeof(buf), MSG_PEEK);   // 5 again
+    tables:
+      - name: kernel receive buffer
+        cols: [bytes]
+        rows: [[hello]]
+        marks: [hit]
+      - name: your buf
+        cols: [bytes]
+        rows: [[hello]]
+  - say: A normal `recv()` copies **and removes**.
+    code: recv(fd, buf, sizeof(buf), 0);          // returns 5
+    tables:
+      - name: kernel receive buffer
+        cols: [bytes]
+        rows: [[hello]]
+        marks: [out]
+      - name: your buf
+        cols: [bytes]
+        rows: [[hello]]
+  - say: "The buffer is empty now, so a non-blocking read has nothing to give: -1 with `EAGAIN`."
+    code: recv(fd, buf, sizeof(buf), MSG_DONTWAIT); // -1, EAGAIN
+    tables:
+      - name: kernel receive buffer
+        cols: [bytes]
+        rows: []
+      - name: recv returned
+        cols: [value, errno]
+        rows: [[-1, EAGAIN]]
+        marks: [hit]
+```
+
 `MSG_PEEK` is genuinely useful beyond the demo: protocol dispatchers use it to look at
 the first few bytes and decide which handler should own the connection before any of the
 data has been consumed. It's also a good way to lose an afternoon, because peeking in a

@@ -27,6 +27,27 @@ may produce, on the server, any of:
 All three are correct TCP. Nothing is broken. The stream was delivered in order and
 intact; only your assumption about framing was imaginary.
 
+```viz seq
+title: Two sends, three receives
+lanes: [client, server kernel, server process]
+steps:
+  - say: The client sends five bytes.
+    msg: {from: 0, to: 1, text: "send HELLO"}
+    notes: {"1": "buffer: HELLO"}
+  - say: Then five more. In the receive buffer they are one run of bytes; the boundary between the two sends is **not recorded anywhere**.
+    msg: {from: 0, to: 1, text: "send WORLD"}
+    notes: {"1": "buffer: HELLOWORLD"}
+  - say: "The server's `recv()` gets whatever is there when it asks, cut anywhere."
+    msg: {from: 1, to: 2, text: "recv → HEL"}
+    notes: {"1": "buffer: LOWORLD"}
+  - say: The next read straddles the old boundary without knowing it was there.
+    msg: {from: 1, to: 2, text: "recv → LOWOR"}
+    notes: {"1": "buffer: LD"}
+  - say: All ten bytes arrived, in order, exactly once. That is everything TCP promises; where a message ends is up to your protocol.
+    msg: {from: 1, to: 2, text: "recv → LD"}
+    notes: {"1": "buffer: empty"}
+```
+
 This is why every real protocol over TCP has to define its own message boundaries, and
 there are only three ways to do it: a **length prefix** (send the size, then that many
 bytes — what most binary protocols do), a **delimiter** (read until `\n` — what HTTP

@@ -28,6 +28,38 @@ If you only remember one sentence from this milestone, make it this one: **the l
 socket is a factory, the accepted socket is a product.** You close products when you're
 done with them. You do not close the factory.
 
+```viz tables
+title: One factory, one product per client
+steps:
+  - say: "The listening socket: bound to port 9000 on every interface, remote side unknown."
+    code: listen(listen_fd, SOMAXCONN);
+    tables:
+      - name: sockets on port 9000
+        cols: [fd, state, local, remote]
+        rows: [[3, LISTEN, "0.0.0.0:9000", "*:*"]]
+  - say: "`accept()` returns a **new** fd for the client. Same local port, and the remote half is what makes it a different connection."
+    code: int conn = accept(listen_fd, …);
+    tables:
+      - name: sockets on port 9000
+        cols: [fd, state, local, remote]
+        rows: [[3, LISTEN, "0.0.0.0:9000", "*:*"], [4, ESTAB, "127.0.0.1:9000", "127.0.0.1:51234"]]
+        marks: [null, new]
+  - say: A second client gets its own fd. Only the remote port differs (the port here is an example), and that is enough.
+    code: int conn2 = accept(listen_fd, …);
+    tables:
+      - name: sockets on port 9000
+        cols: [fd, state, local, remote]
+        rows: [[3, LISTEN, "0.0.0.0:9000", "*:*"], [4, ESTAB, "127.0.0.1:9000", "127.0.0.1:51234"], [5, ESTAB, "127.0.0.1:9000", "127.0.0.1:51236"]]
+        marks: [null, null, new]
+  - say: "Done with the first client: close **its** fd. The listener keeps collecting new handshakes."
+    code: close(conn);
+    tables:
+      - name: sockets on port 9000
+        cols: [fd, state, local, remote]
+        rows: [[3, LISTEN, "0.0.0.0:9000", "*:*"], [4, ESTAB, "127.0.0.1:9000", "127.0.0.1:51234"], [5, ESTAB, "127.0.0.1:9000", "127.0.0.1:51236"]]
+        marks: [hit, out]
+```
+
 ### Why a new fd is the only design that works
 
 The deeper answer is about how TCP identifies a connection at all. A connection is not

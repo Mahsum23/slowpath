@@ -89,7 +89,7 @@ different hardware vendors picked independently.
 That's fine as long as a number never leaves the machine that produced it. The moment
 two different computers need to agree on what bytes on the wire *mean*, they need to
 agree on an order — otherwise a little-endian machine sends `9000` and a big-endian
-machine reads it back as `9217`. The internet's answer, baked into TCP/IP from the
+machine reads it back as `10275`. The internet's answer, baked into TCP/IP from the
 start, is: **network byte order is always big-endian**, full stop, regardless of what
 either endpoint's CPU prefers internally. Four functions convert between the two, and
 they only ever differ in direction and width:
@@ -116,6 +116,37 @@ and undoing it on the way back, once you have a peer's address to print (Day 4):
 
 ```cpp
 uint16_t port = ntohs(peer.sin_port);     // network order -> host uint16_t, e.g. 9000
+```
+
+```viz tables
+title: Port 9000, byte by byte
+steps:
+  - say: "9000 is `0x2328`. A little-endian CPU (x86, usually ARM) stores the low byte first."
+    code: uint16_t port = 9000;
+    tables:
+      - name: in memory, on x86
+        cols: [address, byte]
+        rows: [["addr + 0", "0x28"], ["addr + 1", "0x23"]]
+  - say: "`htons` swaps them into network order, big byte first, which is what goes on the wire."
+    code: addr.sin_port = htons(9000);
+    tables:
+      - name: in sin_port
+        cols: [address, byte]
+        rows: [["addr + 0", "0x23"], ["addr + 1", "0x28"]]
+        marks: [new, new]
+  - say: The other end reads big-endian and gets `0x2328`, which is 9000.
+    tables:
+      - name: read by the peer
+        cols: [bytes, value]
+        rows: [["0x23 0x28", 9000]]
+        marks: [hit]
+  - say: "Forget the `htons` and the low byte goes first. The peer reads `0x2823`: port 10275."
+    code: addr.sin_port = 9000;   // no htons
+    tables:
+      - name: read by the peer
+        cols: [bytes, value]
+        rows: [["0x28 0x23", 10275]]
+        marks: [out]
 ```
 
 Here's the detail that trips people up the first time: on a big-endian machine,

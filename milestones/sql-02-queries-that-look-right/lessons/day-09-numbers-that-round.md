@@ -56,6 +56,39 @@ error, gives no warning, and draws a perfectly flat line on a chart. Moving the 
 front gets 12, which is closer and still wrong, because the remainder is still discarded,
 just later. Start the expression with `100.0`, or cast one side with `::numeric`.
 
+```viz tables
+title: Three spellings, evaluated left to right
+steps:
+  - say: "`rate_wrong`: `25 / 200` is two integers, so the result is an integer, and the 0.125 is thrown away. Multiplying 0 by 100 cannot bring it back."
+    code: count(*) FILTER (WHERE converted) / count(*) * 100
+    tables:
+      - name: step by step
+        cols: [expression, value]
+        rows:
+          - ["25 / 200", 0]
+          - ["0 * 100", 0]
+        marks: [out, out]
+  - say: "`rate_truncated`: multiply first and the division happens later, on a bigger number. Closer, but the .5 is still discarded."
+    code: 100 * count(*) FILTER (WHERE converted) / count(*)
+    tables:
+      - name: step by step
+        cols: [expression, value]
+        rows:
+          - ["100 * 25", 2500]
+          - ["2500 / 200", 12]
+        marks: [null, out]
+  - say: "`rate_right`: `100.0` is `numeric`, and one numeric operand makes the whole expression numeric. Nothing is thrown away until `round` decides to."
+    code: round(100.0 * count(*) FILTER (WHERE converted) / count(*), 2)
+    tables:
+      - name: step by step
+        cols: [expression, value]
+        rows:
+          - ["100.0 * 25", "2500.0"]
+          - ["2500.0 / 200", "12.5000000000000000"]
+          - ["round(…, 2)", "12.50"]
+        marks: [null, null, hit]
+```
+
 (`count(*) FILTER (WHERE …)` counts only the rows that pass the condition. It is the clean
 way to put several conditional counts in one row.)
 

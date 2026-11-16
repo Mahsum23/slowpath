@@ -49,6 +49,34 @@ socket. Two processes sharing a socket after `fork()` show the *same* inode unde
 different fd numbers, which makes the handle-versus-object distinction impossible to
 misremember afterwards.
 
+```viz tables
+title: The fd table, before and after socket()
+steps:
+  - say: Every process starts with three entries, pointing at the terminal.
+    tables:
+      - name: fd table of your process
+        cols: [fd, points at]
+        rows: [[0, /dev/pts/3], [1, /dev/pts/3], [2, /dev/pts/3]]
+  - say: "`socket()` creates a kernel object and puts it in the **lowest free slot**: 3. The `int` you get back is just that slot's number."
+    code: int fd = socket(AF_INET, SOCK_STREAM, 0);
+    tables:
+      - name: fd table of your process
+        cols: [fd, points at]
+        rows: [[0, /dev/pts/3], [1, /dev/pts/3], [2, /dev/pts/3], [3, "socket:[123456]"]]
+        marks: [null, null, null, new]
+  - say: "After `fork()`, the child has its own table, and its fd 3 points at **the same** socket: same inode. The number is a handle; the object is shared."
+    code: fork();
+    tables:
+      - name: parent
+        cols: [fd, points at]
+        rows: [[3, "socket:[123456]"]]
+        marks: [hit]
+      - name: child
+        cols: [fd, points at]
+        rows: [[3, "socket:[123456]"]]
+        marks: [hit]
+```
+
 ### The call itself
 
 ```cpp

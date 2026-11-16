@@ -166,6 +166,26 @@ its (address, port) pair on purpose, and it's protecting against two things:
    `TIME_WAIT` socket's other job. Vanish immediately and the peer gets an RST and a
    confusing error instead of a clean close.
 
+```viz seq
+title: Who ends up in TIME_WAIT
+lanes: [your server (closes first), client]
+steps:
+  - say: "The server calls `close()` first and sends FIN."
+    msg: {from: 0, to: 1, text: FIN}
+    notes: {"0": FIN_WAIT_1, "1": ESTABLISHED}
+  - say: "The client's kernel acknowledges it. The client's `recv()` returns 0, and its socket waits in CLOSE_WAIT until **its code** calls `close()`."
+    msg: {from: 1, to: 0, text: ACK}
+    notes: {"0": FIN_WAIT_2, "1": CLOSE_WAIT}
+  - say: The client closes and sends its own FIN.
+    msg: {from: 1, to: 0, text: FIN}
+    notes: {"1": LAST_ACK}
+  - say: "The server sends the final ACK. The side that closed **first** now holds the four-tuple in TIME_WAIT for 60 seconds on Linux, ready to resend that ACK if it was lost."
+    msg: {from: 0, to: 1, text: ACK}
+    notes: {"0": "TIME_WAIT (60 s)", "1": CLOSED}
+  - say: "A minute later the tuple is free again. Restart the server inside that minute without `SO_REUSEADDR` and `bind()` fails with `EADDRINUSE`."
+    notes: {"0": CLOSED}
+```
+
 So `TIME_WAIT` is not a bug or a leak. It's a deliberate cooling-off period, and the
 reason your server needed `SO_REUSEADDR` to restart promptly.
 

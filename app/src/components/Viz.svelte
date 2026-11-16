@@ -18,7 +18,9 @@
 
   let at = $state(0);
   const n = $derived(viz.steps.length);
-  const step = $derived(viz.steps[at]);
+  // Never past the end: a step index left over from a longer visual must not index off it.
+  const cur = $derived(Math.min(at, n - 1));
+  const step = $derived(viz.steps[cur]);
   const code = $derived('code' in step ? (step as { code?: string }).code : undefined);
 </script>
 
@@ -31,11 +33,11 @@
 
   <div class="frame">
     {#if viz.kind === 'tables'}
-      <VizTables step={viz.steps[at]} />
+      <VizTables step={viz.steps[cur]} />
     {:else if viz.kind === 'slices'}
-      <VizSlices step={viz.steps[at]} />
+      <VizSlices step={viz.steps[cur]} />
     {:else}
-      <VizSeq lanes={viz.lanes} steps={viz.steps} {at} />
+      <VizSeq lanes={viz.lanes} steps={viz.steps} at={cur} />
     {/if}
   </div>
 
@@ -85,6 +87,9 @@
   .code {
     margin: 0 0 10px;
     font-size: 12.5px;
+    /* Wrapped, not scrolled: on a phone the end of the line is usually the part that matters. */
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
   .frame {
