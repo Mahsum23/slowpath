@@ -90,6 +90,13 @@ So after each fix: push, then check whether the branch's PR is still open. If it
 merged, open a new one for the commits that came after it and give him that link. One
 link per fix, in the reply, every time.
 
+**Then merge and deploy it, without waiting to be asked.** He said so (2026-11-16): every
+feature I write gets merged and deployed unless he says otherwise for that piece of work.
+So once the checks pass and the PR is open, merge it, wait for the "Deploy app" workflow on
+`main`, and confirm in the reply that it succeeded (or say plainly that it failed, and why).
+The PR link still goes in the reply. The exception is work he has asked to look at first,
+or anything outside this repo; those wait for him.
+
 ## Tone
 
 Don't write this like a textbook or run it like a ticket queue. Act like an actual
