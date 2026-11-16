@@ -145,6 +145,31 @@ head=[1 2] len=2 cap=2
 full is now: [1 2 3 4 5]
 ```
 
+```viz slices
+title: Two slices, one array
+steps:
+  - say: "`full` is a header pointing at a five-cell array: length 5, capacity 5."
+    code: "full := []int{1, 2, 3, 4, 5}"
+    arrays: [{name: backing array, cells: [1, 2, 3, 4, 5]}]
+    slices: [{name: full, array: 0, from: 0, len: 5, cap: 5}]
+  - say: "`head` shows two cells, but its capacity runs **to the end of the same array**. The dashed part is room an `append` is allowed to use."
+    code: "head := full[:2]"
+    arrays: [{name: backing array, cells: [1, 2, 3, 4, 5]}]
+    slices: [{name: full, array: 0, from: 0, len: 5, cap: 5}, {name: head, array: 0, from: 0, len: 2, cap: 5}]
+  - say: "`append` finds room, so it allocates nothing and writes 99 **into the shared array**: `full[2]` changed, and nobody touched `full`."
+    code: "head = append(head, 99)"
+    arrays: [{name: backing array, cells: [1, 2, 99, 4, 5], hl: [2]}]
+    slices: [{name: full, array: 0, from: 0, len: 5, cap: 5}, {name: head, array: 0, from: 0, len: 3, cap: 5}]
+  - say: "Start again with a three-index slice: `full[:2:2]` caps `head` at 2. No dashed room left."
+    code: "head := full[:2:2]"
+    arrays: [{name: backing array, cells: [1, 2, 3, 4, 5]}]
+    slices: [{name: full, array: 0, from: 0, len: 5, cap: 5}, {name: head, array: 0, from: 0, len: 2, cap: 2}]
+  - say: "Now `append` has to allocate: a **new** array (capacity 4 on Go 1.24) gets 1, 2, 99. `full` is untouched."
+    code: "head = append(head, 99)"
+    arrays: [{name: backing array, cells: [1, 2, 3, 4, 5]}, {name: new array, cells: [1, 2, 99, 0], hl: [2]}]
+    slices: [{name: full, array: 0, from: 0, len: 5, cap: 5}, {name: head, array: 1, from: 0, len: 3, cap: 4}]
+```
+
 `full[:2:2]` means low 0, high 2, **max 2** — capacity 2. Now `append` has no room, must
 allocate, and `full` is untouched. When you hand a sub-slice to code you don't control,
 this is how you do it safely.

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Day, DayPart } from '../../lib/types';
+  import { TRACKS, type Day, type DayPart } from '../../lib/types';
   import { partDone, partQuestions, partsOf } from '../../lib/parts';
   import { app } from '../../lib/app.svelte';
   import Markdown from '../../components/Markdown.svelte';
@@ -53,8 +53,8 @@
    * instruction rather than the thing being asked about.
    */
   const explainPrompt = (text: string) =>
-    `Explain this passage from today's material in detail — what it means, why it is` +
-    ` true, and what it would look like in practice:\n\n> ${text.replace(/\n/g, '\n> ')}`;
+    `Explain this passage from today's material: what it means and why it is true, briefly:` +
+    `\n\n> ${text.replace(/\n/g, '\n> ')}`;
 
   function next() {
     // A part is finished by its questions (Session), not by scrolling past it.
@@ -88,7 +88,7 @@
 {/if}
 
 <SelectionAsk onask={(text) => { ask = explainPrompt(text); asking = true; }}>
-  <Markdown source={part ? part.markdown : day.theoryMarkdown} />
+  <Markdown source={part ? part.markdown : day.theoryMarkdown} viz lang={TRACKS[week?.track ?? app.track]?.lang ?? 'sql'} />
 </SelectionAsk>
 
 <!-- The facts from this reading that will not hold on their own, each with something to

@@ -24,6 +24,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, rmSync
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseYaml } from 'yaml';
+import { build as esbuild } from 'esbuild';
 
 const SCHEMA_VERSION = 1;
 
@@ -579,6 +580,32 @@ function loadHooks(path, dayId, { parts, items }) {
   return out.length ? out : null;
 }
 
+/**
+ * A lesson's step-through visuals (src/lib/viz.ts): a ```` ```viz tables ```` fence holding
+ * YAML. The YAML is turned into JSON here, so the app never ships a YAML parser, and checked
+ * with the app's own `vizProblems`, so a visual that would not draw fails the build rather
+ * than silently showing as code on a phone.
+ */
+const vizLib = await (async () => {
+  const outfile = join(here, '../node_modules/.cache/slowpath/viz-build.mjs');
+  await esbuild({ entryPoints: [join(here, '../src/lib/viz.ts')], bundle: true, format: 'esm', platform: 'node', outfile, logLevel: 'silent' });
+  return import(outfile);
+})();
+
+function readLesson(path, dayId) {
+  return readFileSync(path, 'utf8').replace(/^```viz[ \t]+(\w+)([^\n]*)\n([\s\S]*?)^```[ \t]*$/gm, (_, kind, rest, body) => {
+    let doc;
+    try {
+      doc = parseYaml(body);
+    } catch (e) {
+      fail(`${dayId}: a viz ${kind} block is not valid YAML: ${e.message.split('\n')[0]}`);
+    }
+    const problems = vizLib.vizProblems({ ...doc, kind });
+    if (problems.length) fail(`${dayId}: viz ${kind}${doc?.title ? ` "${doc.title}"` : ''}: ${problems.join('; ')}`);
+    return '```viz ' + kind + rest + '\n' + JSON.stringify(doc) + '\n```';
+  });
+}
+
 function buildTopic(milestone) {
   const lessonsDir = join(milestonesDir, milestone, 'lessons');
   const topicYaml = join(lessonsDir, 'topic.yaml');
@@ -607,7 +634,7 @@ function buildTopic(milestone) {
     }
 
     const slug = mdName.replace(/^day-\d+-/, '').replace(/\.md$/, '');
-    const sections = splitSections(readFileSync(join(lessonsDir, mdName), 'utf8'));
+    const sections = splitSections(readLesson(join(lessonsDir, mdName), d.id));
     const quiz = loadQuiz(join(lessonsDir, mdName.replace(/\.md$/, '.quiz.yaml')), d.id);
     const drill = loadDrill(join(lessonsDir, mdName.replace(/\.md$/, '.drill.yaml')), d.id);
     const write = loadWrite(join(lessonsDir, mdName.replace(/\.md$/, '.write.yaml')), d.id);
@@ -617,7 +644,7 @@ function buildTopic(milestone) {
     }
     if (!drill) warn(`${d.id}: no .drill.yaml — this day can only be done at a machine`);
 
-    const raw = readFileSync(join(lessonsDir, mdName), 'utf8');
+    const raw = readLesson(join(lessonsDir, mdName), d.id);
     const parts = parseParts(raw, d.id, mdName, d.added);
     const hooks = loadHooks(join(lessonsDir, mdName.replace(/\.md$/, '.hooks.yaml')), d.id, {
       parts: parts.length,

@@ -332,6 +332,44 @@ SELECT id FROM logins WHERE at >= '2026-06-01' AND at < '2026-06-08' ORDER BY id
   2
 ```
 
+```viz tables
+title: Where each range really ends
+steps:
+  - say: "The date `'2026-06-07'` becomes **midnight at the start** of the 7th. Login 2, late that evening, is outside the range."
+    code: "WHERE at BETWEEN '2026-06-01' AND '2026-06-07'"
+    tables:
+      - name: logins (2026, UTC)
+        cols: [id, at]
+        rows:
+          - [1, "06-01 09:00"]
+          - [2, "06-07 23:59:59.5"]
+          - [3, "06-08 00:00:00"]
+          - [4, "06-08 10:00"]
+        marks: [hit, out, out, out]
+  - say: "Stretch it to the 8th and login 3, at exactly midnight, is in. Next week's `BETWEEN '2026-06-08' AND …` counts it **again**."
+    code: "WHERE at BETWEEN '2026-06-01' AND '2026-06-08'"
+    tables:
+      - name: logins (2026, UTC)
+        cols: [id, at]
+        rows:
+          - [1, "06-01 09:00"]
+          - [2, "06-07 23:59:59.5"]
+          - [3, "06-08 00:00:00"]
+          - [4, "06-08 10:00"]
+        marks: [hit, hit, hit, out]
+  - say: "Half-open: include the start, exclude the end. Every instant falls in exactly one week, whatever the precision."
+    code: "WHERE at >= '2026-06-01' AND at < '2026-06-08'"
+    tables:
+      - name: logins (2026, UTC)
+        cols: [id, at]
+        rows:
+          - [1, "06-01 09:00"]
+          - [2, "06-07 23:59:59.5"]
+          - [3, "06-08 00:00:00"]
+          - [4, "06-08 10:00"]
+        marks: [hit, hit, out, out]
+```
+
 Half-open ranges tile perfectly: every instant belongs to exactly one week, with no gaps
 and no overlaps, at any precision. The same "Don't Do This" page lists "don't use
 `BETWEEN`, especially with timestamps" for exactly this reason.

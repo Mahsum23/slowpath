@@ -101,8 +101,8 @@
    * asks what a step means, never for the step to be done.
    */
   const explainPrompt = (text: string) =>
-    `Explain this part of today's task in detail — what it is asking for and why, and` +
-    ` what I should understand before attempting it. Do not write it for me:` +
+    `Explain this part of today's task, briefly: what it is asking for, and what I should` +
+    ` understand before attempting it. Do not write it for me:` +
     `\n\n> ${text.replace(/\n/g, '\n> ')}`;
 
   function onNotesInput(e: Event) {

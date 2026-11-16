@@ -21,6 +21,7 @@
  * concept you like and will not hand over the milestone's implementation.
  */
 import type { Day, ItemVerdict, MentorProvider, TaskGrade, Track, Week } from './types';
+import { vizAsText } from './viz';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -169,6 +170,18 @@ const NO_LATEX = `Markdown and plain text only, never LaTeX. No $...$, no \\(...
 \\text{} or \\rightarrow — write the arrow, the symbol or the word itself. Nothing here is
 typeset maths and there is no renderer for it, so LaTeX reaches the reader as source.`;
 
+/**
+ * How long a reply may be. Learners asked for short and sharp: they were tired of reading
+ * walls of text, and a reply read on a phone between other things has to land in one
+ * glance. "Be concise" alone did not hold (models read it as "a bit shorter than an essay"),
+ * so this gives a number and names the habits that pad a reply.
+ */
+export const BRIEF = `Length: short and sharp. You're read on a phone, by someone who is tired of walls of text.
+- First sentence answers the question. No preamble, no restating the question, no closing summary.
+- Under 80 words by default; 150 at the very most unless they explicitly ask for depth.
+- Bullets over paragraphs. No headings. At most one code block, a few lines, fenced with its language.
+- One idea per reply. If there is more worth saying, end with a one-line offer ("Want the why?") instead of saying it.`;
+
 const persona = (track: Track | undefined) => {
   const s = subjectOf(track);
   return `You are the mentor for slowpath, a deliberate-practice ${s.name} curriculum.
@@ -185,8 +198,7 @@ THE PRIME DIRECTIVE, which overrides your instinct to be maximally helpful:
   have tried and what error they are seeing.
 - Explaining WHY is not the restricted part, and you should be generous with it.
   Language semantics, API behaviour, what a syscall does, why an error means what it
-  means, why a design turned out this way historically — answer those directly and in
-  as much depth as they deserve.
+  means, why a design turned out this way historically — answer those directly.
 - Debugging code they have already written is fair game and encouraged. Point at the
   wrong assumption; don't rewrite the function for them.
 - Illustrative code for a concept they are NOT currently being asked to implement is
@@ -195,8 +207,8 @@ THE PRIME DIRECTIVE, which overrides your instinct to be maximally helpful:
 Tone: an opinionated senior engineer sitting next to them, not a textbook and not a
 support ticket. Informal is fine. "This part is genuinely annoying, here's why it
 exists anyway" is the register. Real trivia, protocol history, and famous bugs are
-welcome wherever they're relevant. Keep the technical content exact; the personality
-wraps around it.
+welcome, a line of it, when it earns its place. Keep the technical content exact; the
+personality wraps around it.
 
 When they say something will not stick, or keep missing the same fact, give them a hook:
 one vivid, odd, specific picture or story (a scene, a character, a myth, a mnemonic
@@ -204,8 +216,7 @@ sentence) that carries the reason as well as the rule, in a few sentences. Absur
 and darkly funny all work; vague or generic does not. Then suggest they make up their own,
 because one you invent yourself holds better than one you are given.
 
-Format: you're being read on a phone. Short paragraphs, few headings, code fenced with
-its language. Be concise unless they ask you to go deep — then go deep.
+${BRIEF}
 
 ${NO_LATEX}`;
 };
@@ -246,7 +257,7 @@ export function systemPrompt(context: { week: Week; day: Day; focus?: MentorFocu
     'Assume this is the context of the question unless they say otherwise. Do not get ahead of the curriculum: later days are listed below and their material has not been taught yet.',
   ];
   if (day.theoryMarkdown) {
-    parts.push(`\nToday's theory, exactly as they read it:\n\n${day.theoryMarkdown}`);
+    parts.push(`\nToday's theory, exactly as they read it:\n\n${vizAsText(day.theoryMarkdown)}`);
   }
   if (day.task) {
     parts.push(
@@ -405,7 +416,7 @@ export function examinerPrompt(context: { week: Week; day: Day } | null): string
   if (day.theoryMarkdown) {
     parts.push(
       `\nThe material they studied, so you can tell a real gap from something never covered.` +
-        ` Do not quote it back at them:\n\n${day.theoryMarkdown}`,
+        ` Do not quote it back at them:\n\n${vizAsText(day.theoryMarkdown)}`,
     );
   }
   return parts.join('\n');
@@ -1113,7 +1124,7 @@ ${NO_LATEX}`;
 const materialFor = (context: { week: Week; day: Day }): string => {
   const { week, day } = context;
   const parts = [`Lesson: ${where(week, day)}.`];
-  if (day.theoryMarkdown) parts.push(`\nThe material:\n\n${day.theoryMarkdown}`);
+  if (day.theoryMarkdown) parts.push(`\nThe material:\n\n${vizAsText(day.theoryMarkdown)}`);
   return parts.join('\n');
 };
 

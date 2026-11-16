@@ -298,6 +298,34 @@ The phone app (`app/`, see `app/DESIGN.md`) is built from these files, so:
 None of this replaces running the session in chat — it's the same lesson, written down
 so it also reaches his phone.
 
+**Mentor replies are short and sharp.** He said he is tired of reading a ton of material.
+`BRIEF` in `mentor.ts` is part of every mentor prompt: the first sentence answers, under 80
+words by default and 150 at most unless he asks for depth, bullets over paragraphs, one
+short code block at most, one idea per reply, and an offer ("Want the why?") instead of the
+rest. The same goes for me in chat when answering a question: the answer first, short. This
+is about replies, not lessons: lesson text stays, and gets pictures (below).
+
+**Every lesson day has at least one step-through visual.** He asked for images, graphics
+and interactive things because text alone does not work for him, and the research agrees on
+which kind: pictures beside words beat words alone (Mayer's multimedia principle), but only
+pictures that show the idea; decorative ones do nothing (Sung & Mayer 2012); and a complex
+process lands better in steps the learner advances (the segmenting principle). So a visual
+here is a mechanism, shown one step at a time on the lesson's own data, advanced by tapping
+Next: rows struck out at WHERE, the ghost row a LEFT JOIN invents, a slice's capacity
+reaching past its length, a handshake finishing before `accept()`. Never stock images,
+never decoration, never an animation that plays by itself. How (`app/src/lib/viz.ts`,
+DESIGN.md §8.18):
+
+- A ```` ```viz tables ```` / `slices` / `seq` fence holding YAML, placed at the key moment of
+  a part, **after** an output block, never between a `sql` block and its output (that would
+  stop `check-sql-lesson.py` checking the output).
+- Every value in it comes from the lesson's real data and verified output; a step's caption
+  (`say`) is one or two sentences. A sketch with made-up data says so in its title.
+- `build-content.mjs` validates each one with the app's own `vizProblems` and fails the build
+  on a bad one; `test-viz.mjs` checks every shipped visual splits out and draws.
+- Write the visual with the day. Days without one yet: SQL day 9, Go days 1, 2, 4–6 and the
+  C++ days other than day 3; add them as those days are next revisited.
+
 **The app has its own mentor, and it obeys this file.** Settings → Mentor chat turns on
 an in-app chat that carries the persona and the prime directive above, plus the current
 day's theory and task. It will explain anything and refuses to write the milestone

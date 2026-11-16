@@ -132,6 +132,44 @@ at was created by the `UPDATE` and not by the insert. Every query you run is rea
 to my transaction id", which is why a long-running `SELECT` can sit there returning a
 consistent snapshot of a table being rewritten underneath it.
 
+```viz tables
+title: Inside the file, during an UPDATE
+steps:
+  - say: Before the update, row 1 lives in page 0, slot 1, written by transaction 797. `xmax` 0 means nobody has ended it.
+    tables:
+      - name: t, in the order its slots sit on disk
+        cols: [ctid, xmin, xmax, id, note]
+        rows:
+          - ["(0,1)", 797, 0, 1, "xxxx…"]
+          - ["(0,2)", 797, 0, 2, "xxxx…"]
+          - ["(0,3)", 797, 0, 3, "xxxx…"]
+        marks: [hit]
+  - say: "`UPDATE` (transaction 798) does not touch the old row's data. It writes a **new version** wherever there is room, `(22,56)`, and stamps the old one with `xmax = 798`: ended."
+    code: UPDATE t SET note = 'changed' WHERE id = 1;
+    tables:
+      - name: t, in the order its slots sit on disk
+        cols: [ctid, xmin, xmax, id, note]
+        rows:
+          - ["(0,1)", 797, 798, 1, "xxxx…"]
+          - ["(0,2)", 797, 0, 2, "xxxx…"]
+          - ["(0,3)", 797, 0, 3, "xxxx…"]
+          - ["(22,56)", 798, 0, 1, changed]
+        marks: [dead, null, null, new]
+  - say: Every later query sees one row 1, the version whose `xmax` is still 0. The dead version stays in the file, taking up space, until `VACUUM` reclaims the slot.
+    code: SELECT ctid, xmin, xmax, id FROM t WHERE id = 1;
+    tables:
+      - name: what the query sees
+        cols: [ctid, xmin, xmax, id]
+        rows:
+          - ["(22,56)", 798, 0, 1]
+        marks: [hit]
+      - name: still in the file
+        cols: [ctid, xmin, xmax, id]
+        rows:
+          - ["(0,1)", 797, 798, 1]
+        marks: [dead]
+```
+
 The bill arrives as **bloat**:
 
 ```sql order

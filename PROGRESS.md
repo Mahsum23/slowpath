@@ -677,3 +677,12 @@ first review back would have dealt the most-forgotten cards first. Now a return 
 is three days of easing in: 5 cards (easiest first), then 8, then 12, nothing new, no
 follow-up pile-ups, and one "Welcome back" card on Today with one button. Worth checking in
 on how the first few days back felt before writing any new lessons.
+
+**Shorter mentor, pictures in lessons (2026-11-16).** He asked for short and sharp mentor
+replies ("tired of reading a ton of material") and for visuals: "text only usually doesn't
+work", add cool images, graphics, interactive stuff, without removing the text. The mentor now
+answers in the first sentence and stays under ~80 words unless asked for depth. Lessons got
+12 step-through diagrams at their key moments, tapped through one step at a time: the clause
+pipeline, the LEFT JOIN ghost row, fan-out, window frames, BETWEEN vs half-open, NOT IN with a
+NULL, the UPDATE that moves a row, Go's sub-slice trap, the TCP handshake and accept queue.
+Worth asking which of them actually helped, before making more of the same kind.
