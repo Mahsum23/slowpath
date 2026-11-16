@@ -690,3 +690,8 @@ Worth asking which of them actually helped, before making more of the same kind.
 **Visuals on every day (2026-11-16).** Asked for visuals on the remaining days: 13 more, so all
 24 written days now have at least one (25 in total). Drawing C++ day 2's byte swap caught a
 wrong number in that lesson (port 9000 swapped is 10275, not 9217), now fixed.
+
+**A visual on every page (2026-11-16).** He opened day 5 part 1 ("What a LEFT JOIN promises")
+and saw no visual: the day's visuals were in parts 2 and 3, and he reads part by part. Added 35
+more, so all 60 pages (every part, and every day read in one go) now have at least one. A
+width check found 24 steps that scrolled sideways on a phone; fixed for all of them.

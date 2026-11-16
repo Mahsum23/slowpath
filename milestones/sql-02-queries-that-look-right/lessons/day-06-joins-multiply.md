@@ -200,6 +200,42 @@ at, and when a join's output is larger than the row count of the table you meant
 report on, you have fan-out. (Your `Memory Usage` figures may differ slightly. The `rows=`
 numbers will not.)
 
+```viz tables
+title: Row counts, read from the bottom of the plan
+steps:
+- say: 'The scans: 2 orders, 3 payments, 4 items. Nothing has multiplied yet.'
+  tables:
+  - name: plan nodes
+    cols: [node, actual rows]
+    rows:
+    - [Seq Scan on orders, 2]
+    - [Seq Scan on payments, 3]
+    - [Seq Scan on items, 4]
+- say: 'Join payments to orders: 3 rows out of 2 orders. Order 1 has two payments, so it already appears
+    twice.'
+  tables:
+  - name: plan nodes
+    cols: [node, actual rows]
+    rows:
+    - [Seq Scan on orders, 2]
+    - [Seq Scan on payments, 3]
+    - [Seq Scan on items, 4]
+    - [Hash Join (payments), 3]
+    marks: [null, null, null, new]
+- say: 'Join items: 7 rows, for 2 orders. That is the number to look at: more rows than the thing you
+    report on means **fan-out**.'
+  tables:
+  - name: plan nodes
+    cols: [node, actual rows]
+    rows:
+    - [Seq Scan on orders, 2]
+    - [Seq Scan on payments, 3]
+    - [Seq Scan on items, 4]
+    - [Hash Join (payments), 3]
+    - [Hash Join (items), 7]
+    marks: [hit, null, null, null, out]
+```
+
 ### Grain: what one row means
 
 The idea that prevents all of this has a name from data warehousing: **grain**. The grain of
@@ -266,6 +302,33 @@ ORDER BY o.customer;
 Either form keeps the grain honest. A customer with several orders would need one more
 `GROUP BY customer` on top. The principle does not change: aggregate the "many" side
 before it meets anything else.
+
+```viz tables
+title: Boil down first, then join
+steps:
+- say: Collapse each "many" table to one row per order **before** it meets anything.
+  tables:
+  - name: items, per order
+    cols: [order_id, lines]
+    rows:
+    - [1, 3]
+    - [2, 1]
+    marks: [new, new]
+  - name: payments, per order
+    cols: [order_id, paid]
+    rows:
+    - [1, '100.00']
+    - [2, '80.00']
+    marks: [new, new]
+- say: Now every join is one row to one row. Nothing can multiply, and every number is right.
+  tables:
+  - name: result
+    cols: [customer, revenue, paid, lines]
+    rows:
+    - [ana, '100.00', '100.00', 3]
+    - [bo, '80.00', '80.00', 1]
+    marks: [hit, hit]
+```
 
 ### The tempting fix that loses money
 
@@ -357,6 +420,28 @@ SELECT order_id, count(*) FROM payments GROUP BY order_id HAVING count(*) > 1;
  order_id | count
 ----------+-------
         1 |     2
+```
+
+```viz tables
+title: Two counts that should agree
+steps:
+- say: 'Over the join you are about to sum: 7 rows, but only 2 orders. They should match at a grain of
+    one row per order; they don''t, so every `sum` here is suspect.'
+  code: SELECT count(*) AS rows, count(DISTINCT o.id) AS orders FROM ...
+  tables:
+  - name: detector
+    cols: [rows, orders]
+    rows:
+    - [7, 2]
+    marks: [out]
+- say: 'Check the belief behind it directly: which order has more than one payment?'
+  code: SELECT order_id, count(*) FROM payments GROUP BY order_id HAVING count(*) > 1;
+  tables:
+  - name: payments, grouped
+    cols: [order_id, count]
+    rows:
+    - [1, 2]
+    marks: [hit]
 ```
 
 Somebody once said "each order has one payment", the schema never enforced it, and here

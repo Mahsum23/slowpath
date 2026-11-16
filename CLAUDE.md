@@ -305,7 +305,7 @@ short code block at most, one idea per reply, and an offer ("Want the why?") ins
 rest. The same goes for me in chat when answering a question: the answer first, short. This
 is about replies, not lessons: lesson text stays, and gets pictures (below).
 
-**Every lesson day has at least one step-through visual.** He asked for images, graphics
+**Every page of a lesson has at least one step-through visual.** He asked for images, graphics
 and interactive things because text alone does not work for him, and the research agrees on
 which kind: pictures beside words beat words alone (Mayer's multimedia principle), but only
 pictures that show the idea; decorative ones do nothing (Sung & Mayer 2012); and a complex
@@ -323,10 +323,14 @@ DESIGN.md §8.18):
   (`say`) is one or two sentences. A sketch with made-up data says so in its title.
 - `build-content.mjs` validates each one with the app's own `vizProblems` and fails the build
   on a bad one; `test-viz.mjs` checks every shipped visual splits out and draws.
-- Write the visual with the day. Every written day has at least one (25 across the three
-  tracks as of 2026-11-16); a new day is not finished without its own.
-- Keep a visual narrow enough for a phone: two or three short columns, or the frame scrolls
-  sideways and the point is off-screen. Code in a visual wraps rather than scrolls.
+- **Per page, not per day.** He reads a day part by part, so a visual in part 2 does nothing
+  for the reader of part 1: he opened "What a LEFT JOIN promises", the day's first part, saw no
+  visual, and reasonably concluded nothing had changed. Every part (and every day read in one
+  go) carries its own: 60 pages, 60+ visuals as of 2026-11-16. `test-viz.mjs` fails on a page
+  without one, so a new part is not finished until it has one.
+- Keep a visual narrow enough for a phone. Cells wrap and long arrays shrink, but prefer
+  two or three short columns. `node app/scripts/check-viz-width.mjs` (dev server running)
+  steps through every visual at 390px and fails on any frame that scrolls sideways.
 
 **The app has its own mentor, and it obeys this file.** Settings → Mentor chat turns on
 an in-app chat that carries the persona and the prime directive above, plus the current

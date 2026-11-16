@@ -144,6 +144,35 @@ That second one is not a hack — it is the standard way to register something. 
 `net/http/pprof` for its side effect is how you bolt a live profiler onto a running Go
 server, which is a genuinely great trick you will meet again.
 
+```viz tables
+title: What the compiler refuses
+steps:
+- say: A variable declared and never used is not a warning. The build stops.
+  code: count := 42
+  tables:
+  - name: go build
+    cols: [where, message]
+    rows:
+    - ['bad.go:6:2', 'declared and not used: count']
+    marks: [out]
+- say: An unused import stops it too.
+  code: import "os"
+  tables:
+  - name: go build
+    cols: [where, message]
+    rows:
+    - ['bad2.go:5:2', '"os" imported and not used']
+    marks: [out]
+- say: Mid-debug, assigning to the blank identifier says "I know", and the build goes through.
+  code: _ = count
+  tables:
+  - name: go build
+    cols: [where, message]
+    rows:
+    - ['', (builds)]
+    marks: [hit]
+```
+
 ### Check yourself
 
 1. Your build fails with `"os" imported and not used`. Give two reasons this is an error
@@ -206,6 +235,32 @@ you are using exercises that permission, so in practice it is a rule — but it 
 the toolchain chose, not one the language demands, which is a distinction almost nobody
 who complains about it knows. Reading the actual spec of a language you are learning is
 an unreasonably high-value hour, and Go's is short enough to make that realistic.
+
+```viz tables
+title: One way to lay it out
+steps:
+- say: Written any old way, it still compiles.
+  tables:
+  - name: ugly.go
+    cols: [line]
+    rows:
+    - ['func main(){']
+    - ['x:=1']
+    - [fmt.Println( x )]
+    - ['}']
+- say: '`gofmt -w` rewrites it the one way every Go file is laid out: tabs, spaces around `:=`, a blank
+    line after the imports. There are no settings to argue about.'
+  code: gofmt -w ugly.go
+  tables:
+  - name: after gofmt -w
+    cols: [line]
+    rows:
+    - ['func main() {']
+    - ['    x := 1']
+    - ['    fmt.Println(x)']
+    - ['}']
+    marks: [null, new, new, null]
+```
 
 ### Check yourself
 

@@ -81,5 +81,25 @@ const fence = (kind, body) => '```viz ' + kind + '\n' + JSON.stringify(body) + '
   ok(`every shipped visual (${n}) splits out and is valid`, n > 0 && !bad.length, bad.join(', '));
 }
 
+// --- every page has one --------------------------------------------------------------
+// A day is read part by part, so a visual somewhere in the day does not reach the reader
+// of the part without one. Each part (or a day read in one go) carries its own.
+{
+  const dir = new URL('../public/content/weeks/', import.meta.url).pathname;
+  const bare = [];
+  let pages = 0;
+  for (const f of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
+    for (const day of JSON.parse(readFileSync(join(dir, f), 'utf8')).days) {
+      if (day.status !== 'available') continue;
+      const texts = day.parts?.length ? day.parts.map((p) => [`${day.id} part ${p.n}`, p.markdown]) : [[day.id, day.theoryMarkdown ?? '']];
+      for (const [where, md] of texts) {
+        pages++;
+        if (!V.splitViz(md).some((s) => s.kind === 'viz')) bare.push(where);
+      }
+    }
+  }
+  ok(`every page (${pages}) has at least one visual`, pages > 0 && !bare.length, bare.join(', '));
+}
+
 console.log(fails ? `\nviz: ${fails} failed` : '\nviz: all passed');
 process.exit(fails ? 1 : 0);

@@ -153,6 +153,49 @@ equal keys in its own order. On a real table you do not set anything: the planne
 plans by itself when the statistics change, after an `ANALYZE`, a bit of growth, or a
 version upgrade. Your leaderboard changes its mind and nobody deployed anything.
 
+```viz tables
+title: Two plans, two winners
+steps:
+- say: '`ORDER BY score DESC` says 90 comes before 75. Between the two 90s it says nothing.'
+  tables:
+  - name: players
+    cols: [name, score]
+    rows:
+    - [ana, 90]
+    - [bo, 75]
+    - [cy, 90]
+    - [dee, 60]
+    - [eli, 75]
+    marks: [hit, null, hit]
+- say: 'Read the heap and sort it: `cy` comes out on top.'
+  code: SELECT name, score FROM players ORDER BY score DESC LIMIT 2;
+  tables:
+  - name: LIMIT 2, sorted
+    cols: [name, score]
+    rows:
+    - [cy, 90]
+    - [ana, 90]
+- say: 'Same query, walking an index on `score` backwards: `ana` comes out on top. Nothing is wrong with
+    either; the query never asked.'
+  code: -- with an index on score, sequential scans discouraged
+  tables:
+  - name: LIMIT 2, index
+    cols: [name, score]
+    rows:
+    - [ana, 90]
+    - [cy, 90]
+- say: End the `ORDER BY` with something unique and no two rows can tie. One answer, whatever the plan.
+  code: SELECT name, score FROM players ORDER BY score DESC, id LIMIT 3;
+  tables:
+  - name: ORDER BY score DESC, id
+    cols: [name, score]
+    rows:
+    - [ana, 90]
+    - [cy, 90]
+    - [bo, 75]
+    marks: [hit]
+```
+
 The fix is to make the order **total**. Add a column that is unique as the last sort key,
 so no two rows can ever tie:
 
@@ -243,6 +286,41 @@ SELECT id, title FROM posts ORDER BY created_at DESC, id DESC LIMIT 3 OFFSET 3;
 the new post pushed everything down by one. A delete does the opposite and silently skips a
 row. Every infinite-scroll feed built on `OFFSET` has this bug, and on a busy feed it fires
 constantly.
+
+```viz tables
+title: OFFSET counts rows, not the rows you saw
+steps:
+- say: Page 1 is the newest three posts.
+  code: '... ORDER BY created_at DESC, id DESC LIMIT 3;'
+  tables:
+  - name: page 1
+    cols: [id, title]
+    rows:
+    - [100000, post 100000]
+    - [99999, post 99999]
+    - [99998, post 99998]
+- say: While you read it, a new post arrives at the top. Everything below moves down one place.
+  tables:
+  - name: the feed now
+    cols: [id, title]
+    rows:
+    - [100001, breaking news]
+    - [100000, post 100000]
+    - [99999, post 99999]
+    - [99998, post 99998]
+    - [99997, post 99997]
+    marks: [new]
+- say: '`OFFSET 3` skips three rows, the new one included, so page 2 begins with a post you already saw.'
+  code: '... LIMIT 3 OFFSET 3;'
+  tables:
+  - name: page 2
+    cols: [id, title]
+    rows:
+    - [99998, post 99998]
+    - [99997, post 99997]
+    - [99996, post 99996]
+    marks: [out]
+```
 
 ### And OFFSET is slow, however good the index
 
@@ -387,6 +465,39 @@ ORDER BY created_at DESC, id DESC LIMIT 2;
   5 | imported late
 ```
 
+```viz tables
+title: What comes after (10:05, 3)?
+steps:
+- say: 'Page 1 ended at `third`: `(10:05, 3)`. In feed order, page 2 should be `second` and then `imported
+    late`.'
+  tables:
+  - name: feed, newest first
+    cols: [id, created_at, title]
+    rows: &id001
+    - [4, '10:10', fourth]
+    - [3, '10:05', third]
+    - [2, '10:05', second]
+    - [5, '10:02', imported late]
+    - [1, '10:00', first]
+    marks: [dead, dead, hit, hit]
+- say: 'Two separate conditions: `created_at < 10:05 AND id < 3`. `second` fails the first (same timestamp);
+    `imported late` fails the second (id 5). Both lost.'
+  code: WHERE created_at < '10:05' AND id < 3
+  tables:
+  - name: feed, newest first
+    cols: [id, created_at, title]
+    rows: *id001
+    marks: [dead, dead, out, out, hit]
+- say: The row comparison means *earlier, or the same moment with a smaller id*, which is the feed's own
+    order. Both come back.
+  code: WHERE (created_at, id) < ('10:05', 3)
+  tables:
+  - name: feed, newest first
+    cols: [id, created_at, title]
+    rows: *id001
+    marks: [dead, dead, hit, hit]
+```
+
 ### Check yourself
 
 1. Why must keyset pagination write `(created_at, id) < (x, y)` rather than
@@ -469,6 +580,24 @@ DROP TABLE big;
   1
   2
   3
+```
+
+```viz seq
+title: 'A sketch: two scans of one big table'
+lanes: [cursor (scan A), table big, new query (scan B)]
+steps:
+- say: A cursor starts scanning `big` from the beginning and stops near row 100,000.
+  msg: {from: 0, to: 1, text: 'scan rows 1 … ~100,000'}
+  notes: {'1': 'a scan is at ~100,000'}
+- say: A second scan does not start at row 1. It joins the scan already in progress, so they can share
+    disk reads.
+  msg: {from: 2, to: 1, text: SELECT id FROM big LIMIT 3}
+- say: So "the first three rows" are whatever is near row 100,000. Nothing was written to the table.
+  msg: {from: 1, to: 2, text: 'ids near 100,000'}
+- say: With `synchronize_seqscans` off, the scan starts at the beginning again. Only `ORDER BY` makes
+    it reliable either way.
+  msg: {from: 1, to: 2, text: 'ids 1, 2, 3'}
+  notes: {'2': synchronize_seqscans = off}
 ```
 
 The manual warns that this "can result in unpredictable changes in the row ordering

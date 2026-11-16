@@ -45,6 +45,21 @@ would overflow it, it allocates a bigger stack, copies the frames across and fix
 pointers. You cannot do that in C, where a pointer to a local must stay valid at a fixed
 address — which is exactly why C stacks must be reserved large and up front.
 
+```viz seq
+title: go, then wait for the answer
+lanes: [main, done (channel), worker goroutine]
+steps:
+- say: '`go` starts the function in a new goroutine and returns immediately.'
+  msg: {from: 0, to: 2, text: 'go func() {…}()'}
+- say: '`main` asks the channel for a value. Nothing is there yet, so `main` blocks.'
+  notes: {'0': blocked on <-done}
+- say: The worker sends its message into the channel.
+  msg: {from: 2, to: 1, text: '"worker finished"'}
+- say: The receive completes, `main` wakes, and prints it.
+  msg: {from: 1, to: 0, text: '"worker finished"'}
+  notes: {'0': prints it}
+```
+
 ### Check yourself
 
 1. What is a goroutine, and how does it differ from an OS thread in cost and in what
@@ -91,6 +106,46 @@ that **the sender closes**, never the receiver.
 > a rule that you must never use a mutex — the standard library is full of them, and
 > `sync.Mutex` is often the simpler answer for guarding one counter. It is a claim about
 > which model to reach for first.
+
+```viz tables
+title: A closed channel still delivers what it holds
+steps:
+- say: A buffered channel with room for three. One value goes in.
+  code: 'ch := make(chan int, 3)
+
+    ch <- 1'
+  tables:
+  - name: ch (cap 3)
+    cols: [slot, value]
+    rows:
+    - [1, 1]
+    marks: [new]
+- say: '`close` means no more sends. The value already inside is still there.'
+  code: close(ch)
+  tables:
+  - name: ch (closed)
+    cols: [slot, value]
+    rows:
+    - [1, 1]
+- say: 'The first receive gets it: `1 true`.'
+  code: v, ok := <-ch
+  tables:
+  - name: received
+    cols: [v, ok]
+    rows:
+    - [1, true]
+    marks: [hit]
+- say: 'Once it is empty, a closed channel never blocks: it hands out the zero value with `ok == false`.
+    Sending on it would panic.'
+  code: v, ok = <-ch
+  tables:
+  - name: received
+    cols: [v, ok]
+    rows:
+    - [1, true]
+    - [0, false]
+    marks: [null, hit]
+```
 
 ### Check yourself
 

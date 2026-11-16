@@ -61,6 +61,47 @@ ORDER BY id;
   7 | south  |     10 |          410 |  2.4
 ```
 
+```viz tables
+title: Collapse, or keep
+steps:
+- say: Seven sales, in two regions.
+  tables:
+  - name: sales
+    cols: [id, region, amount]
+    rows:
+    - [1, north, 100]
+    - [2, north, 50]
+    - [3, north, 70]
+    - [4, north, 30]
+    - [5, south, 200]
+    - [6, south, 200]
+    - [7, south, 10]
+- say: '`GROUP BY region` collapses them: two rows come out, and the individual sales are gone.'
+  code: SELECT region, sum(amount) FROM sales GROUP BY region;
+  tables:
+  - name: GROUP BY region
+    cols: [region, sum]
+    rows:
+    - [north, 250]
+    - [south, 410]
+    marks: [new, new]
+- say: '`OVER (PARTITION BY region)` computes the same sum but **keeps every row**, writing the total
+    next to each one.'
+  code: sum(amount) OVER (PARTITION BY region) AS region_total
+  tables:
+  - name: with OVER
+    cols: [id, region, amount, region_total]
+    rows:
+    - [1, north, 100, 250]
+    - [2, north, 50, 250]
+    - [3, north, 70, 250]
+    - [4, north, 30, 250]
+    - [5, south, 200, 410]
+    - [6, south, 200, 410]
+    - [7, south, 10, 410]
+    hl: [3]
+```
+
 Seven in, seven out. For each row, the window function looks at a **window** of related
 rows, here every row in the same region, computes the aggregate over that window, and
 writes the result next to the row. Nothing collapses. The rest of this lesson is about
@@ -173,6 +214,31 @@ ORDER BY region, id;
  north  |  1 |    100
  south  |  5 |    200
  south  |  6 |    200
+```
+
+```viz tables
+title: Three ways to number a tie
+steps:
+- say: South has two sales of 200. `row_number` gives them 1 and 2 anyway; `rank` gives both 1 and skips
+    to 3; `dense_rank` gives both 1 and goes on with 2.
+  tables:
+  - name: south, by amount DESC
+    cols: [id, amount, row_number, rank, dense_rank]
+    rows:
+    - [5, 200, 1, 1, 1]
+    - [6, 200, 2, 1, 1]
+    - [7, 10, 3, 3, 2]
+    hl: [2, 3, 4]
+- say: '`WHERE r = 1` in the outer query keeps both 200s, because `rank` called both of them first.'
+  code: SELECT ... FROM (SELECT ..., rank() OVER (...) AS r FROM sales) ranked WHERE r = 1
+  tables:
+  - name: rank = 1
+    cols: [region, id, amount]
+    rows:
+    - [north, 1, 100]
+    - [south, 5, 200]
+    - [south, 6, 200]
+    marks: [null, hit, hit]
 ```
 
 South returns two rows, because `rank` gave both 200s first place. That is a decision you
@@ -408,6 +474,41 @@ ORDER BY id;
   2 |     50 |   250
   3 |     70 |   250
   4 |     30 |   250
+```
+
+```viz tables
+title: A window sees only what WHERE kept
+steps:
+- say: 'The whole table totals 660: north 250, south 410.'
+  tables:
+  - name: sales
+    cols: [id, region, amount]
+    rows: &id001
+    - [1, north, 100]
+    - [2, north, 50]
+    - [3, north, 70]
+    - [4, north, 30]
+    - [5, south, 200]
+    - [6, south, 200]
+    - [7, south, 10]
+- say: '`WHERE region = ''north''` runs first and throws south away. Only then does the window run.'
+  code: '... WHERE region = ''north'''
+  tables:
+  - name: sales
+    cols: [id, region, amount]
+    rows: *id001
+    marks: [null, null, null, null, out, out, out]
+- say: 'So `sum(amount) OVER ()` is "all the rows that are left": 250, not 660.'
+  code: SELECT id, amount, sum(amount) OVER () AS total ...
+  tables:
+  - name: result
+    cols: [id, amount, total]
+    rows:
+    - [1, 100, 250]
+    - [2, 50, 250]
+    - [3, 70, 250]
+    - [4, 30, 250]
+    hl: [2]
 ```
 
 `OVER ()` is a window of "all rows", but only the rows that survived `WHERE`. So the total

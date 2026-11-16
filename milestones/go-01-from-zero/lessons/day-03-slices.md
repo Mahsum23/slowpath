@@ -54,6 +54,49 @@ owns its backing array in the eyes of the garbage collector, and it can grow.
 mostly appear as the thing a slice points at, and as fixed-size buffers like `[32]byte`
 for a hash.
 
+```viz slices
+title: Copying an array, copying a slice
+steps:
+- say: 'Assigning an array copies every element: two separate arrays.'
+  code: 'a := [3]int{1, 2, 3}
+
+    b := a'
+  arrays:
+  - name: a
+    cells: [1, 2, 3]
+  - name: b
+    cells: [1, 2, 3]
+  slices: []
+- say: Changing `b` changes only `b`.
+  code: b[0] = 99
+  arrays:
+  - name: a
+    cells: [1, 2, 3]
+  - name: b
+    cells: [99, 2, 3]
+    hl: [0]
+  slices: []
+- say: Assigning a slice copies only its header. `s` and `t` point at **one** backing array.
+  code: 's := []int{1, 2, 3}
+
+    t := s'
+  arrays:
+  - name: backing array
+    cells: [1, 2, 3]
+  slices:
+  - {name: s, array: 0, from: 0, len: 3, cap: 3}
+  - {name: t, array: 0, from: 0, len: 3, cap: 3}
+- say: So a write through `t` is visible through `s`.
+  code: t[0] = 99
+  arrays:
+  - name: backing array
+    cells: [99, 2, 3]
+    hl: [0]
+  slices:
+  - {name: s, array: 0, from: 0, len: 3, cap: 3}
+  - {name: t, array: 0, from: 0, len: 3, cap: 3}
+```
+
 ### Check yourself
 
 1. `a := [3]int{1,2,3}; b := a; b[0] = 99`. What is `a[0]` afterwards, and what if both had
@@ -98,6 +141,51 @@ If you know roughly how many elements you'll have, say so and skip the copying:
 
 ```go
 s := make([]int, 0, 1000)   // len 0, cap 1000
+```
+
+```viz slices
+title: append, and when it moves
+steps:
+- say: Appending to a nil slice allocates an array of 1.
+  code: s = append(s, 1)
+  arrays:
+  - name: array A
+    cells: [1]
+  slices:
+  - {name: s, array: 0, from: 0, len: 1, cap: 1}
+- say: Full. The next append allocates a bigger array (2) and copies across.
+  code: s = append(s, 2)
+  arrays:
+  - name: array B
+    cells: [1, 2]
+    hl: [1]
+  slices:
+  - {name: s, array: 0, from: 0, len: 2, cap: 2}
+- say: 'Full again: a new array of 4. The spare cell is already there, holding a zero.'
+  code: s = append(s, 3)
+  arrays:
+  - name: array C
+    cells: [1, 2, 3, 0]
+    hl: [2]
+  slices:
+  - {name: s, array: 0, from: 0, len: 3, cap: 4}
+- say: 'This time there is room: no allocation, the same array.'
+  code: s = append(s, 4)
+  arrays:
+  - name: array C
+    cells: [1, 2, 3, 4]
+    hl: [3]
+  slices:
+  - {name: s, array: 0, from: 0, len: 4, cap: 4}
+- say: 'Full: a new array of 8. Each move is why you must write `s = append(s, x)`: the old header points
+    at the old array.'
+  code: s = append(s, 5)
+  arrays:
+  - name: array D
+    cells: [1, 2, 3, 4, 5, 0, 0, 0]
+    hl: [4]
+  slices:
+  - {name: s, array: 0, from: 0, len: 5, cap: 8}
 ```
 
 ### Check yourself
