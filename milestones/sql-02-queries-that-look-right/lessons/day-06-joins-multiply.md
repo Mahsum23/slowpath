@@ -103,6 +103,50 @@ ORDER BY o.id, i.sku, p.amount;
   2 | kettle |  80.00
 ```
 
+```viz tables
+title: One order, joined twice
+steps:
+  - say: Order 1 is one row, and its total is 100.00.
+    tables:
+      - name: orders
+        cols: [o.id, o.total]
+        rows: [[1, "100.00"]]
+        marks: [hit]
+  - say: "Joined to its three items, the order is **repeated once per item**. Each copy still carries the full 100.00."
+    code: JOIN items i ON i.order_id = o.id
+    tables:
+      - name: orders × items
+        cols: [o.id, o.total, i.sku]
+        rows:
+          - [1, "100.00", mug]
+          - [1, "100.00", spoon]
+          - [1, "100.00", tea]
+        marks: [new, new, new]
+  - say: "Now join the two payments. They have nothing to do with the items, so **every item pairs with every payment**: 3 × 2 = 6 rows."
+    code: JOIN payments p ON p.order_id = o.id
+    tables:
+      - name: orders × items × payments
+        cols: [o.id, o.total, i.sku, p.amount]
+        rows:
+          - [1, "100.00", mug, "50.00"]
+          - [1, "100.00", mug, "50.00"]
+          - [1, "100.00", spoon, "50.00"]
+          - [1, "100.00", spoon, "50.00"]
+          - [1, "100.00", tea, "50.00"]
+          - [1, "100.00", tea, "50.00"]
+        marks: [new, new, new, new, new, new]
+  - say: "Sum anything at this grain and it counts once per pair: revenue ×6, payments ×3, lines ×2."
+    tables:
+      - name: what the report says for order 1
+        cols: [revenue, paid, lines]
+        rows: [["600.00", "300.00", 6]]
+        marks: [out]
+      - name: the truth
+        cols: [revenue, paid, lines]
+        rows: [["100.00", "100.00", 3]]
+        marks: [hit]
+```
+
 Items and payments have nothing to do with each other. They are both about the order,
 not about each other, so the join paired **every item with every payment**: 3 × 2 = 6 rows
 for order 1. Revenue counted the order once per row (×6). Payments were counted once per

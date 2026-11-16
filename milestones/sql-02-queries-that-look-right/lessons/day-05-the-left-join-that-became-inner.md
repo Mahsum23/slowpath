@@ -99,6 +99,43 @@ ORDER BY c.name;
  cy   | 13 | paid
 ```
 
+```viz tables
+title: The ghost row, and what WHERE does to it
+steps:
+  - say: "`LEFT JOIN` promises every customer a row. `dee` matched nothing, so the join invents a **ghost**: dee glued to NULLs."
+    code: SELECT c.name, o.id, o.status FROM customers c LEFT JOIN orders o ON o.customer_id = c.id;
+    tables:
+      - name: after the join
+        cols: [name, o.id, o.status]
+        rows:
+          - [ana, 10, paid]
+          - [ana, 11, refunded]
+          - [bo, 12, refunded]
+          - [cy, 13, paid]
+          - [dee, null, null]
+        marks: [null, null, null, null, ghost]
+  - say: "`WHERE o.status = 'paid'` runs after the join, on every row. The refunds are false; the ghost's `NULL = 'paid'` is **unknown**. Both are thrown out."
+    code: "... WHERE o.status = 'paid'"
+    tables:
+      - name: after the join
+        cols: [name, o.id, o.status]
+        rows:
+          - [ana, 10, paid]
+          - [ana, 11, refunded]
+          - [bo, 12, refunded]
+          - [cy, 13, paid]
+          - [dee, null, null]
+        marks: [null, out, out, null, out]
+        hl: [2]
+  - say: No ghost survives, and `bo` went with its refund. What is left is exactly an inner join, which is why the plan below shows a plain `Nested Loop`, with no `Left` in it.
+    tables:
+      - name: result
+        cols: [name, o.id, o.status]
+        rows:
+          - [ana, 10, paid]
+          - [cy, 13, paid]
+```
+
 `bo` and `dee` have vanished, and the report asked for every customer. Follow the two
 rows through the pipeline from day 4. The join runs first (`FROM`), then `WHERE` filters
 what it produced:
@@ -171,6 +208,32 @@ ORDER BY c.name;
  bo   |    |
  cy   | 13 | paid
  dee  |    |
+```
+
+```viz tables
+title: The same test, in ON instead of WHERE
+steps:
+  - say: In `ON`, the status test decides **who counts as a partner**, before any ghost is made. `bo`'s refund is not a partner now.
+    code: "... LEFT JOIN orders o ON o.customer_id = c.id AND o.status = 'paid'"
+    tables:
+      - name: candidate pairings
+        cols: [name, o.id, o.status]
+        rows:
+          - [ana, 10, paid]
+          - [ana, 11, refunded]
+          - [bo, 12, refunded]
+          - [cy, 13, paid]
+        marks: [null, out, out]
+  - say: Every customer left without a partner gets a ghost, `bo` included. Nothing runs afterwards to throw the ghosts away, so every customer is in the report.
+    tables:
+      - name: result
+        cols: [name, o.id, o.status]
+        rows:
+          - [ana, 10, paid]
+          - [bo, null, null]
+          - [cy, 13, paid]
+          - [dee, null, null]
+        marks: [null, ghost, null, ghost]
 ```
 
 Now `bo`'s refund is not a match, so `bo` has no surviving pairing and gets a

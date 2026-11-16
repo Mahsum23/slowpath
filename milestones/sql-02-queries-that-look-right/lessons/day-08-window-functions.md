@@ -219,6 +219,68 @@ is:
 RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
 ```
 
+```viz tables
+title: Which rows each running total adds up
+steps:
+  - say: "Row 1. The default frame is everything up to the current row **and its peers** (rows with the same `day`). Only row 1 so far: 100."
+    code: "sum(amount) OVER (ORDER BY day)"
+    tables:
+      - name: north sales
+        cols: [id, day, amount, running]
+        rows:
+          - [1, "03-01", 100, 100]
+          - [2, "03-02", 50, "…"]
+          - [3, "03-02", 70, "…"]
+          - [4, "03-03", 30, "…"]
+        marks: [hit, null, null, null]
+        hl: [3]
+  - say: "Row 2, on 03-02. Row 3 has the same `day`, so it is a **peer** and joins the frame: 100 + 50 + 70 = 220, not 150."
+    tables:
+      - name: north sales
+        cols: [id, day, amount, running]
+        rows:
+          - [1, "03-01", 100, 100]
+          - [2, "03-02", 50, 220]
+          - [3, "03-02", 70, "…"]
+          - [4, "03-03", 30, "…"]
+        marks: [win, hit, win, null]
+        hl: [3]
+  - say: "Row 3 sees row 2 as its peer in the same way: 220 again. The total jumped two rows at once."
+    tables:
+      - name: north sales
+        cols: [id, day, amount, running]
+        rows:
+          - [1, "03-01", 100, 100]
+          - [2, "03-02", 50, 220]
+          - [3, "03-02", 70, 220]
+          - [4, "03-03", 30, "…"]
+        marks: [win, win, hit, null]
+        hl: [3]
+  - say: "Row 4: everything, 250. The last value is right; the middle ones are not a running total."
+    tables:
+      - name: north sales
+        cols: [id, day, amount, running]
+        rows:
+          - [1, "03-01", 100, 100]
+          - [2, "03-02", 50, 220]
+          - [3, "03-02", 70, 220]
+          - [4, "03-03", 30, 250]
+        marks: [win, win, win, hit]
+        hl: [3]
+  - say: "With `ROWS` and a tiebreaker (`ORDER BY day, id`), the frame counts physical rows and stops at the current one: row 2 gets 150."
+    code: "sum(amount) OVER (ORDER BY day, id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)"
+    tables:
+      - name: north sales
+        cols: [id, day, amount, running]
+        rows:
+          - [1, "03-01", 100, 100]
+          - [2, "03-02", 50, 150]
+          - [3, "03-02", 70, "…"]
+          - [4, "03-03", 30, "…"]
+        marks: [win, hit, null, null]
+        hl: [3]
+```
+
 `RANGE` means "up to the current row **and all of its peers**", where peers are rows
 that are equal on the `ORDER BY` key. Both 03-02 rows are peers, so each sees the other.
 For a running total you want `ROWS`, which counts physical rows, plus a tiebreaker so the

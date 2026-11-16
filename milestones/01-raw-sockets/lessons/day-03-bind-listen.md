@@ -46,6 +46,29 @@ server is busy elsewhere and has never heard of it. The handshake is the kernel'
 business, not yours. `accept()` doesn't create the connection — it hands you one the
 kernel finished earlier.
 
+```viz seq
+title: A connection your code never saw
+lanes: [client, server kernel, your server]
+steps:
+  - say: "`listen()` hands the handshakes to the kernel. From here on it answers them without asking your code."
+    msg: {from: 2, to: 1, text: "listen(fd, 128)"}
+    notes: {"1": "accept queue: empty"}
+  - say: A client starts a handshake. Your server is busy with someone else and never sees it.
+    msg: {from: 0, to: 1, text: SYN}
+    notes: {"1": "SYN queue: A"}
+  - say: The kernel answers on its own.
+    msg: {from: 1, to: 0, text: SYN-ACK}
+  - say: "The handshake is done, so `connect()` returns on the client. A moves to the **accept queue**, and that queue's length is what the backlog sets."
+    msg: {from: 0, to: 1, text: ACK}
+    notes: {"0": "connected", "1": "accept queue: A"}
+  - say: The client can even send data and have it acknowledged, still without your code doing anything.
+    msg: {from: 0, to: 1, text: "hello"}
+    notes: {"1": "accept queue: A (5 bytes waiting)"}
+  - say: "`accept()` takes A off the queue and hands back a new fd for it. It did not create the connection; it collected one the kernel finished earlier."
+    msg: {from: 1, to: 2, text: "accept() → fd 4 (A)"}
+    notes: {"1": "accept queue: empty", "2": "fd 4: conversation with A"}
+```
+
 So the backlog is a shock absorber. If ten clients connect during the second your
 process spends serving someone else, they sit in that queue and get accepted as soon as
 you come back around. If the queue is full when an eleventh arrives, the kernel's

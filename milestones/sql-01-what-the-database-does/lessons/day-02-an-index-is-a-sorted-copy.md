@@ -37,6 +37,71 @@ holding three columns. This is why index bloat is a real budget line, and why
 `pg_stat_user_indexes.idx_scan = 0` (an index nobody has ever used) is the first thing a
 Postgres consultant greps for.
 
+```viz tables
+title: "A sketch: the table, and its sorted copy"
+steps:
+  - say: "The table keeps rows wherever they landed. The index is a **second, sorted** copy of `name`, each entry pointing back at a `ctid`."
+    tables:
+      - name: s (the heap)
+        cols: [ctid, name]
+        rows:
+          - ["(0,1)", "cy"]
+          - ["(0,2)", "ana"]
+          - ["(0,3)", "eli"]
+          - ["(0,4)", "bo"]
+          - ["(0,5)", "dee"]
+      - name: idx_name (sorted by name)
+        cols: [name, ctid]
+        rows:
+          - ["ana", "(0,2)"]
+          - ["bo", "(0,4)"]
+          - ["cy", "(0,1)"]
+          - ["dee", "(0,5)"]
+          - ["eli", "(0,3)"]
+  - say: "`WHERE name = 'dee'`: the sorted copy finds `dee` in a few steps, and its `ctid` says exactly which slot to read. One row touched."
+    code: "SELECT * FROM s WHERE name = 'dee';"
+    tables:
+      - name: s (the heap)
+        cols: [ctid, name]
+        rows:
+          - ["(0,1)", "cy"]
+          - ["(0,2)", "ana"]
+          - ["(0,3)", "eli"]
+          - ["(0,4)", "bo"]
+          - ["(0,5)", "dee"]
+        marks: [null, null, null, null, hit]
+      - name: idx_name (sorted by name)
+        cols: [name, ctid]
+        rows:
+          - ["ana", "(0,2)"]
+          - ["bo", "(0,4)"]
+          - ["cy", "(0,1)"]
+          - ["dee", "(0,5)"]
+          - ["eli", "(0,3)"]
+        marks: [null, null, null, hit]
+  - say: "`WHERE lower(name) = 'dee'` asks about a different value, and the copy is not sorted by it. So the index is no help: **every** row is read and tested (`Seq Scan`)."
+    code: "SELECT * FROM s WHERE lower(name) = 'dee';"
+    tables:
+      - name: s (the heap)
+        cols: [ctid, name]
+        rows:
+          - ["(0,1)", "cy"]
+          - ["(0,2)", "ana"]
+          - ["(0,3)", "eli"]
+          - ["(0,4)", "bo"]
+          - ["(0,5)", "dee"]
+        marks: [hit, hit, hit, hit, hit]
+      - name: idx_name (sorted by name)
+        cols: [name, ctid]
+        rows:
+          - ["ana", "(0,2)"]
+          - ["bo", "(0,4)"]
+          - ["cy", "(0,1)"]
+          - ["dee", "(0,5)"]
+          - ["eli", "(0,3)"]
+        marks: [out, out, out, out, out]
+```
+
 ### Ask the planner, never guess
 
 Every engine will tell you its plan. In Postgres:

@@ -51,6 +51,46 @@ SELECT ctid, * FROM players;
  (0,6) |  1 | ana  |    91
 ```
 
+```viz tables
+title: Slot order is the only order there is
+steps:
+  - say: A table without `ORDER BY` comes back in the order the scan meets its slots. Right now that happens to be insertion order.
+    tables:
+      - name: page 0, slot by slot
+        cols: [ctid, id, name, score]
+        rows:
+          - ["(0,1)", 1, ana, 90]
+          - ["(0,2)", 2, bo, 75]
+          - ["(0,3)", 3, cy, 90]
+          - ["(0,4)", 4, dee, 60]
+          - ["(0,5)", 5, eli, 75]
+  - say: "The `UPDATE` writes ana's new version into the next free slot, `(0,6)`, and ends the old one."
+    code: UPDATE players SET score = 91 WHERE id = 1;
+    tables:
+      - name: page 0, slot by slot
+        cols: [ctid, id, name, score]
+        rows:
+          - ["(0,1)", 1, ana, 90]
+          - ["(0,2)", 2, bo, 75]
+          - ["(0,3)", 3, cy, 90]
+          - ["(0,4)", 4, dee, 60]
+          - ["(0,5)", 5, eli, 75]
+          - ["(0,6)", 1, ana, 91]
+        marks: [dead, null, null, null, null, new]
+  - say: The same query, unchanged, now meets ana last. Nothing about the query promised otherwise.
+    code: SELECT ctid, * FROM players;
+    tables:
+      - name: result
+        cols: [ctid, id, name, score]
+        rows:
+          - ["(0,2)", 2, bo, 75]
+          - ["(0,3)", 3, cy, 90]
+          - ["(0,4)", 4, dee, 60]
+          - ["(0,5)", 5, eli, 75]
+          - ["(0,6)", 1, ana, 91]
+        marks: [null, null, null, null, hit]
+```
+
 `ana` was first. One update later, `ana` is last. Nobody touched the query. The new version
 of the row went into the next free slot on the page, `(0,6)`, and the scan meets it there.
 On a busy table the same thing happens through updates, deletes, `VACUUM` freeing space

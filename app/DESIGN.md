@@ -924,6 +924,32 @@ derived from the activity record so it needs no stored state and syncs for free.
   November: "16 days away. Today is 5 cards", exactly five dealt even when every answer was
   wrong, then the done line.
 
+## 8.18 Short mentor replies, and step-through visuals (2026-11-16)
+
+He asked for short, sharp mentor replies (tired of reading a ton) and for visuals in the
+lessons, "text only usually doesn't work".
+
+- **Replies**: `BRIEF` (mentor.ts) replaces "be concise unless they ask": answer first, under
+  80 words (150 max) unless depth is asked for, bullets, one short code block, one idea, then a
+  one-line offer. The "explain this passage/part" prompts no longer ask for detail.
+- **Visuals**: a ```` ```viz KIND ```` fence of YAML in a lesson. The build converts it to JSON
+  and validates it with `vizProblems` (bundled from viz.ts by esbuild at build time);
+  `Markdown.svelte` (only with `viz`, which only the lesson view passes) splits the text with
+  `splitViz` and mounts `Viz.svelte`: a figure with the frame, the caption under it, and
+  Back / dots / Next (Again at the end). Learner-paced, no autoplay.
+  - `tables`: tables per step; rows keep identity across steps (`rowKeys`) so survivors slide
+    (`animate:flip`), leavers fade; marks `out`, `new`, `hit`, `ghost` (NULL-extended),
+    `dead` (ended row version), `win` (inside a window frame); `hl` highlights columns.
+  - `slices`: backing arrays as cells, slices as bars solid over len and dashed to cap.
+  - `seq`: lanes, one arrow per step, newest bright, per-lane notes that persist.
+  - Reduced motion turns the transitions off. Colours come from the theme tokens.
+- First set, 12 visuals: SQL 1 (UPDATE writes a new version), 2 (the sorted copy, a marked
+  sketch), 3 (NOT IN with a NULL), 4 (the clause pipeline), 5 (the ghost row, twice), 6
+  (fan-out), 7 (slot order), 8 (RANGE peers vs ROWS), 10 (BETWEEN vs half-open); Go 3 (the
+  sub-slice trap, capacity 4 checked on Go 1.24.7); C++ 3 (the handshake and accept queue).
+- Verified: `test-viz.mjs`, build validation, `check-sql-lesson.py` unchanged (days 4–10 0
+  problems, same block counts), Chromium light and dark clicking through each kind.
+
 ## 9. Offline & local storage
 
 - **Content cache:** Cache API / IndexedDB — loaded weeks fully offline.

@@ -52,6 +52,70 @@ order every name-resolution rule follows.
 
 The rule that matters most: **a clause can only see what the steps before it produced.**
 
+```viz tables
+title: The pipeline, one clause at a time
+steps:
+  - say: "**FROM** builds the input: every row of `orders`."
+    code: |
+      SELECT customer, sum(amount) AS total
+      FROM orders WHERE status = 'paid'
+      GROUP BY customer HAVING sum(amount) > 150
+      ORDER BY customer;
+    tables:
+      - name: orders
+        cols: [customer, status, amount]
+        rows:
+          - [ana, paid, "120.00"]
+          - [ana, paid, "40.00"]
+          - [bo, cancelled, "500.00"]
+          - [bo, paid, "30.00"]
+          - [cy, paid, "90.00"]
+          - [cy, paid, "25.00"]
+  - say: "**WHERE** looks at one row at a time and throws away the cancelled one, before any sum exists."
+    tables:
+      - name: orders
+        cols: [customer, status, amount]
+        rows:
+          - [ana, paid, "120.00"]
+          - [ana, paid, "40.00"]
+          - [bo, cancelled, "500.00"]
+          - [bo, paid, "30.00"]
+          - [cy, paid, "90.00"]
+          - [cy, paid, "25.00"]
+        marks: [null, null, out]
+        hl: [1]
+  - say: "**GROUP BY** collapses the rows into one per customer. Only now can anything be summed."
+    tables:
+      - name: groups
+        cols: [customer, rows in the group, sum(amount)]
+        rows:
+          - [ana, "120.00, 40.00", "160.00"]
+          - [bo, "30.00", "30.00"]
+          - [cy, "90.00, 25.00", "115.00"]
+        hl: [2]
+  - say: "**HAVING** judges whole groups. Two of them fail `sum(amount) > 150`."
+    tables:
+      - name: groups
+        cols: [customer, rows in the group, sum(amount)]
+        rows:
+          - [ana, "120.00, 40.00", "160.00"]
+          - [bo, "30.00", "30.00"]
+          - [cy, "90.00, 25.00", "115.00"]
+        marks: [null, out, out]
+  - say: "**SELECT** computes the output columns and gives `total` its name. This is the first moment the alias exists, which is why `WHERE` and `HAVING` could not use it."
+    tables:
+      - name: result
+        cols: [customer, total]
+        rows: [[ana, "160.00"]]
+        marks: [new]
+        hl: [1]
+  - say: "**ORDER BY** runs after SELECT, so it can use `total` (or `customer`). **LIMIT** would come last of all."
+    tables:
+      - name: result
+        cols: [customer, total]
+        rows: [[ana, "160.00"]]
+```
+
 ### The argument about whether SELECT should come first
 
 The order you write a query in and the order it runs in disagree, and plenty of people

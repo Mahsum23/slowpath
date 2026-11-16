@@ -76,6 +76,46 @@ number 2. Whatever value you test, the second term stays unknown, so the whole `
 is at best unknown and the row is always dropped. A single NULL anywhere in the list
 makes `NOT IN` return nothing for every possible input.
 
+```viz tables
+title: One NULL in the list, row by row
+steps:
+  - say: "`NOT IN (1, NULL)` is two comparisons joined by AND: `id <> 1 AND id <> NULL`."
+    code: SELECT name FROM users WHERE id NOT IN (SELECT user_id FROM orders);
+    tables:
+      - name: users
+        cols: [id, name]
+        rows: [[1, ana], [2, bo], [3, cy]]
+      - name: orders.user_id
+        cols: [user_id]
+        rows: [[1], [null]]
+        marks: [null, hit]
+  - say: "Every `id <> NULL` is **unknown**. For ana the AND is false (1 = 1); for bo and cy it is `true AND unknown`, which is still unknown."
+    tables:
+      - name: the condition, per user
+        cols: [name, "id <> 1", "id <> NULL", NOT IN]
+        rows:
+          - [ana, false, null, false]
+          - [bo, true, null, null]
+          - [cy, true, null, null]
+        hl: [2, 3]
+  - say: "`WHERE` keeps a row only when the condition is **true**. False and unknown are both thrown out, so nobody survives, for any `id`."
+    tables:
+      - name: the condition, per user
+        cols: [name, "id <> 1", "id <> NULL", NOT IN]
+        rows:
+          - [ana, false, null, false]
+          - [bo, true, null, null]
+          - [cy, true, null, null]
+        marks: [out, out, out]
+  - say: "`NOT EXISTS` asks about rows, not values: is there an order row for this user? For bo and cy there is none, so they come back."
+    code: SELECT name FROM users WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id = users.id);
+    tables:
+      - name: result
+        cols: [name]
+        rows: [[bo], [cy]]
+        marks: [new, new]
+```
+
 `IN` is not symmetric with it: `2 IN (1, NULL)` is also unknown and also drops the row,
 but at least it can return true when there *is* a match, so the bug hides only the misses.
 `NOT IN` hides everything.
